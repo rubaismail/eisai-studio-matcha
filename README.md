@@ -14,9 +14,7 @@ Everyone working on the website or API follows these steps once per laptop. Mobi
 
 - **Git** to clone the repository.
 - **Node.js 18 or newer** to run the setup script. Step 3 installs the exact version our team uses.
-- **Docker Desktop** for the local database and email preview. **Open it and wait until Docker is running.** Linux users can use Docker Engine with Compose v2 instead.
-
-Accept your GitHub invitation to this private repository before continuing.
+- **Docker Desktop** for the local database and email preview. **Open it and wait until Docker is running.**
 
 ### 2. Clone the repository and open its folder
 
