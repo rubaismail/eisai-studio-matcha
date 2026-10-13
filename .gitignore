@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.fvm/
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+.idea/
+*.iml
+# Local source documents and one-time roadmap publication state
+/*.pdf
+/planning/*.py
+/planning/backlog.json
+/planning/github-state.json
+
+.tools/
