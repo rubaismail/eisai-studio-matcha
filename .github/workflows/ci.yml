@@ -1,0 +1,78 @@
+name: Development checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web-api:
+    name: Web and API (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Verify project-local bootstrap
+        run: node scripts/bootstrap.mjs
+      - name: Verify bash activation
+        if: runner.os != 'Windows'
+        shell: bash
+        run: source ./scripts/activate.sh
+      - name: Verify PowerShell activation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: . ./scripts/activate.ps1
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run check
+  integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run services:up
+      - run: npm run db:seed
+      - run: npm run test:integration
+      - run: npm run mail:test
+      - if: always()
+        run: docker compose down
+  flutter:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - name: Install pinned Flutter SDK
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$(cat .flutter-version)" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = "adc901062556672b4138e18a4dc62a4be8f4b3c2"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Select runner JDK 17
+        shell: bash
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+      - run: npm run mobile:check
+      - name: Flutter formatting
+        working-directory: apps/mobile
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Android debug build
+        working-directory: apps/mobile
+        run: flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:4000/api
