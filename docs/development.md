@@ -2,6 +2,8 @@
 
 This is a working development foundation, not the finished client application. React and Flutter read sample menu data from Express and MongoDB. Account creation, verification/reset workflows, admin editing, uploads, final design and cloud deployment remain roadmap tasks.
 
+Start with the **[8 numbered setup steps in the README](../README.md#first-time-setup-follow-these-8-steps)**. This page is the detailed reference for configuration, mobile development, checks and troubleshooting.
+
 ## Prerequisites
 
 | Tool        | Team version                                                                                       | Who needs it                    |
@@ -32,25 +34,9 @@ Mobile contributors use `node scripts/bootstrap.mjs --mobile`; it also checks ou
 
 If Node is missing, install the pinned official Node release manually first. Docker and native Android/iOS tools are separate prerequisites and are not installed by bootstrap.
 
-## First run: web and API
+## First run and daily startup
 
-Accept the private repository invitation first. Authenticate GitHub using your normal Git/CLI setup.
-
-```sh
-git clone https://github.com/rubaismail/eisai-studio-matcha.git
-cd eisai-studio-matcha
-node scripts/bootstrap.mjs
-# bash/zsh (PowerShell: . ./scripts/activate.ps1)
-source ./scripts/activate.sh
-npm ci
-npm run setup
-npm run doctor
-npm run services:up
-npm run db:seed
-npm run dev
-```
-
-`npm run setup` copies each `.env.example` only if its `.env` does not exist. Rerunning it preserves your settings. It does not install global tools or request cloud credentials. `npm ci` uses the committed lockfile. Docker Compose waits for both services to become healthy.
+Follow the [first-time setup steps](../README.md#first-time-setup-follow-these-8-steps) once per laptop, then use [Starting work next time](../README.md#starting-work-next-time) for later sessions. Both guides include terminal activation; you must activate the project tools in each new terminal.
 
 | Service                    | Address                                               |
 | -------------------------- | ----------------------------------------------------- |
@@ -60,20 +46,9 @@ npm run dev
 | Captured development email | http://localhost:8025                                 |
 | MongoDB                    | mongodb://127.0.0.1:27017, database `eisai_dev_local` |
 
-Expect the web app to display two explicitly marked sample drinks and “API and database connected.” These are fixtures, not approved client content. There are no seeded accounts yet because authentication has not been implemented.
+There are no seeded accounts yet because authentication has not been implemented. Mailpit's inbox is temporary; the MongoDB volume persists when services stop.
 
-Run `npm run mail:test` in a second terminal to send a message into Mailpit. It goes only to the local capture inbox; it never contacts a real email provider. Authentication issues will later reuse the documented SMTP settings.
-
-Press Ctrl+C to stop web/API. `npm run services:down` stops MongoDB/Mailpit; it preserves the MongoDB volume. Mailpit's inbox is temporary. We intentionally do not provide a destructive reset command. Local services bind to loopback only and have no production credentials.
-
-## Daily workflow
-
-```sh
-git pull --ff-only
-npm ci
-npm run services:up
-npm run dev
-```
+## Dependencies and checks
 
 Stop development processes before changing dependencies. Use `npm install <package> --workspace @eisai/web` or `--workspace @eisai/api` when deliberately adding a dependency, then commit both the package manifest and root lockfile. Do not use a second JavaScript package manager.
 
