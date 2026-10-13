@@ -6,27 +6,112 @@ COP 4331C large project: a real-client matcha pop-up website and course-required
 - [Project plan](planning/team22-roadmap.md)
 - [Development guide](docs/development.md)
 
-## Local development
+## First-time setup: follow these 8 steps
 
-Prerequisites: Git, an existing Node 18+ for bootstrap, and running Docker Desktop/Compose v2. Bootstrap installs project-local **Node 24.21.0 / npm 11.19.0** without replacing your system versions.
+Everyone working on the website or API follows these steps once per laptop. Mobile contributors also follow the [Flutter instructions](docs/development.md#flutter-development) afterward.
+
+### 1. Install the prerequisites
+
+- **Git** to clone the repository.
+- **Node.js 18 or newer** to run the setup script. Step 3 installs the exact version our team uses.
+- **Docker Desktop** for the local database and email preview. **Open it and wait until Docker is running.** Linux users can use Docker Engine with Compose v2 instead.
+
+Accept your GitHub invitation to this private repository before continuing.
+
+### 2. Clone the repository and open its folder
+
+Open Terminal on Mac/Linux or PowerShell on Windows, then run:
 
 ```sh
 git clone https://github.com/rubaismail/eisai-studio-matcha.git
 cd eisai-studio-matcha
+```
+
+Already cloned? Open a terminal in your existing `eisai-studio-matcha` folder instead. **Run all remaining commands from this folder**, where `package.json` and `compose.yaml` are located.
+
+### 3. Install the team's Node version
+
+```sh
 node scripts/bootstrap.mjs
+```
+
+Wait for it to finish. This downloads Node **24.21.0** and npm **11.19.0** into the project’s `.tools` folder without replacing your computer’s Node installation.
+
+### 4. Activate the tools in your terminal
+
+Run **only the command for your terminal**.
+
+**Mac/Linux (Terminal, bash or zsh):**
+
+```sh
 source ./scripts/activate.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+. ./scripts/activate.ps1
+```
+
+Repeat this step whenever you open a new terminal for this project.
+
+### 5. Install packages and create your local settings
+
+```sh
 npm ci
 npm run setup
+```
+
+Setup creates `apps/api/.env` and `apps/web/.env` from the committed examples. **You do not need a teammate’s `.env` file, passwords, or cloud credentials for local development.** Keep the generated defaults. Existing `.env` files are preserved.
+
+### 6. Start the database and add sample drinks
+
+Make sure Docker is running, then run:
+
+```sh
 npm run services:up
 npm run db:seed
+```
+
+Wait for both commands to finish. Each teammate gets their own local database. Seeding adds missing sample drinks and preserves edits to existing ones.
+
+### 7. Start the website and API
+
+```sh
 npm run dev
 ```
 
-On **PowerShell**, replace `source ./scripts/activate.sh` with `. ./scripts/activate.ps1`. Activate again in each new terminal. If the pinned Node/npm are already on PATH, skip bootstrap/activation.
+Leave this terminal running while you work. Use a second terminal for other commands; remember to activate the tools there too.
 
-Open **http://localhost:5173**. The starter displays sample menu data through React → Express → MongoDB. Run `npm run mail:test` and open **http://localhost:8025** to verify local email capture. No cloud credentials are needed for this local workflow.
+### 8. Open the website and check it works
 
-`npm run setup` preserves existing configuration; seeding preserves existing sample-item edits. `npm run services:down` stops containers while retaining MongoDB data.
+Open **http://localhost:5173** in your browser.
+
+You are ready when you see **two sample drinks** and **“API and database connected.”** These are sample items, not the client's final menu.
+
+If something fails, run `npm run doctor` in a second activated terminal and see [troubleshooting](docs/development.md#troubleshooting).
+
+## Starting work next time
+
+1. Open Docker Desktop and wait until it is running.
+2. Open a terminal in `eisai-studio-matcha` and activate the tools using the command in **step 4** above.
+3. With your previous development server stopped, run:
+
+   ```sh
+   git pull --ff-only
+   npm ci
+   npm run services:up
+   npm run dev
+   ```
+
+4. Open **http://localhost:5173**. You do not need to repeat setup or seeding every day.
+
+**When you finish:** press **Ctrl+C** in the running terminal to stop the website/API. Run `npm run services:down` to stop the database and email service. Your database data is kept.
+
+## Viewing your local database and email
+
+- **Database:** open MongoDB Compass, connect to `mongodb://127.0.0.1:27017`, then open the `eisai_dev_local` database → `menuItems` collection. No username or password is needed for this local database. Docker must be running and step 6 must be complete. Compass is optional; it is a separate desktop app, not a browser page.
+- **Email preview:** run `npm run mail:test` in an activated terminal, then open **http://localhost:8025**. Test messages stay in the local inbox.
 
 ## Structure and checks
 
