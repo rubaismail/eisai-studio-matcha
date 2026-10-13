@@ -1,0 +1,9 @@
+node_modules
+package-lock.json
+apps/mobile
+planning
+*.pdf
+coverage
+dist
+
+.tools
