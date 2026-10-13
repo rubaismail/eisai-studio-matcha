@@ -158,7 +158,7 @@ iOS builds require macOS and Xcode with its platform components. Device signing 
 
 ## CI and reproducibility checks
 
-GitHub Actions uses pinned Node and Flutter versions and committed lockfiles. Web/API checks run on Linux, Windows and macOS. Linux integration starts the same Compose services and validates real database behavior and local SMTP. Flutter analysis/tests/web compilation and Android debug compilation run on Linux with JDK 17. These jobs require GitHub Actions availability for the private repository.
+GitHub Actions uses pinned Node and Flutter versions and committed lockfiles. Web/API checks and the project-local bootstrap run on Ubuntu 24.04, Windows Server 2025 and macOS 15. Explicit runner OS labels avoid automatic major-OS changes during the project. Linux integration starts the same Compose services and validates real database behavior and local SMTP. Flutter analysis/tests/web compilation and Android debug compilation run on Linux with JDK 17. These jobs require GitHub Actions availability for the private repository.
 
 When changing SDKs/dependencies, update the version files, CI where necessary, and lockfiles in the same PR. Keep the toolchain fixed across the team until CI and a clean-clone smoke test pass.
 
