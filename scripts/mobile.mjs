@@ -23,6 +23,9 @@ function run(args, capture = false) {
   }
   return result.stdout;
 }
+// First use downloads the Dart SDK and may print progress before JSON.
+// Initialize with normal output before requesting machine-readable version data.
+run(['--version']);
 const version = JSON.parse(run(['--version', '--machine'], true));
 if (version.frameworkVersion !== expected) {
   console.error(`Use Flutter ${expected}; found ${version.frameworkVersion}.`);
@@ -33,9 +36,9 @@ if (action === 'doctor') run(['doctor', '-v']);
 else if (action === 'setup') run(['pub', 'get', '--enforce-lockfile']);
 else if (action === 'check') {
   run(['pub', 'get', '--enforce-lockfile']);
-  run(['analyze']);
-  run(['test']);
-  run(['build', 'web', '--dart-define=API_BASE_URL=/api']);
+  run(['analyze', '--no-pub']);
+  run(['test', '--no-pub']);
+  run(['build', 'web', '--no-pub', '--dart-define=API_BASE_URL=/api']);
 } else if (action === 'run') run(['run', ...process.argv.slice(3)]);
 else {
   console.error('Expected doctor, setup, check, or run.');
