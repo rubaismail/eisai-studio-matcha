@@ -16,7 +16,9 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   late Future<List<MenuItem>> _menu = widget.loadMenu();
 
-  void _retry() => setState(() => _menu = widget.loadMenu());
+  void _retry() => setState(() {
+    _menu = widget.loadMenu();
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(
