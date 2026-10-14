@@ -1,11 +1,10 @@
-## Change
+Closes #
 
-Describe the behavior and link the issue.
+## What changed
 
-## Validation
+## How I tested it
 
-- [ ] `npm run check`
-- [ ] `npm run test:integration` when API/data behavior changes
-- [ ] `npm run mobile:check` when Flutter changes
-- [ ] Configuration examples and setup docs updated where needed
-- [ ] No credentials or generated local configuration committed
+- [ ] `npm run check` passes (web/API changes)
+- [ ] `flutter analyze` and `flutter test` pass (mobile changes)
+- [ ] I tried it in the browser / simulator
+- [ ] No passwords or `.env` files committed
