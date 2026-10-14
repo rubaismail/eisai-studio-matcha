@@ -1,21 +1,22 @@
+# Dependencies and build output
 node_modules/
 dist/
 coverage/
+*.log
+.DS_Store
+
+# Secrets — only .env.example is committed
 .env
 .env.*
 !.env.example
-*.log
-.DS_Store
-.fvm/
+
+# Flutter / IDE
 .dart_tool/
 .flutter-plugins-dependencies
 build/
 .idea/
 *.iml
-# Local source documents and one-time roadmap publication state
-/*.pdf
-/planning/*.py
-/planning/backlog.json
-/planning/github-state.json
 
-.tools/
+# Local-only files (course PDFs, one-time GitHub scripts)
+/*.pdf
+/planning/

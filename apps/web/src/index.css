@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+/* Brand colors and fonts. Replace these with the client's exact codes from Figma.
+   Use them in classes like bg-matcha, text-ink, border-cream. */
+@theme {
+  --color-matcha: #345b40;
+  --color-matcha-light: #c5d0c5;
+  --color-cream: #f8f8f4;
+  --color-ink: #25352b;
+  --font-sans: system-ui, sans-serif;
+}
+
+body {
+  @apply bg-cream text-ink font-sans;
+}
