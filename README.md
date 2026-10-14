@@ -1,143 +1,54 @@
 # Eisai Studio — Team 22
 
-COP 4331C large project: a real-client matcha pop-up website and course-required Flutter app. Final deadline: **November 15, 2026**; exact submission time to confirm.
+Website and mobile app for Eisai Studio, the matcha pop-up at UCF. COP 4331C Large Project, due **November 15, 2026**.
 
-- [Team22’s Roadmap](https://github.com/users/rubaismail/projects/13/views/1?groupedBy%5BcolumnId%5D=425722583)
-- [Project plan](planning/team22-roadmap.md)
-- [Development guide](docs/development.md)
+- **Tasks and dates:** [Team 22 Roadmap](https://github.com/users/rubaismail/projects/13)
+- **Where your code goes and how to open a PR:** [docs/team-guide.md](docs/team-guide.md)
 
-## First-time setup: follow these 8 steps
+| Part       | Tech                        | Folder                               |
+| ---------- | --------------------------- | ------------------------------------ |
+| Website    | React, TypeScript, Tailwind | [`apps/web`](apps/web)               |
+| API        | Node, Express, Mongoose     | [`apps/api`](apps/api)               |
+| Database   | MongoDB Atlas               | (cloud; connect via `apps/api/.env`) |
+| Mobile app | Flutter                     | [`apps/mobile`](apps/mobile)         |
 
-Everyone working on the website or API follows these steps once per laptop. Mobile contributors also follow the [Flutter instructions](docs/development.md#flutter-development) afterward.
+## Setup (once per laptop)
 
-### 1. Install the prerequisites
-
-- **Git** to clone the repository.
-- **Node.js 18 or newer** to run the setup script. Step 3 installs the exact version our team uses.
-- **Docker Desktop** for the local database and email preview. **Open it and wait until Docker is running.**
-
-### 2. Clone the repository and open its folder
-
-Open Terminal on Mac/Linux or PowerShell on Windows, then run:
+You need **Node.js 24 LTS** ([download](https://nodejs.org); `node -v` should say v24) and **Git**.
 
 ```sh
 git clone https://github.com/rubaismail/eisai-studio-matcha.git
 cd eisai-studio-matcha
-```
-
-Already cloned? Open a terminal in your existing `eisai-studio-matcha` folder instead. **Run all remaining commands from this folder**, where `package.json` and `compose.yaml` are located.
-
-### 3. Install the team's Node version
-
-```sh
-node scripts/bootstrap.mjs
-```
-
-Wait for it to finish. This downloads Node **24.21.0** and npm **11.19.0** into the project’s `.tools` folder without replacing your computer’s Node installation.
-
-### 4. Activate the tools in your terminal
-
-Run **only the command for your terminal**.
-
-**Mac/Linux (Terminal, bash or zsh):**
-
-```sh
-source ./scripts/activate.sh
-```
-
-**Windows (PowerShell):**
-
-```powershell
-. ./scripts/activate.ps1
-```
-
-Repeat this step whenever you open a new terminal for this project.
-
-### 5. Install packages and create your local settings
-
-```sh
-npm ci
+npm install
 npm run setup
 ```
 
-Setup creates `apps/api/.env` and `apps/web/.env` from the committed examples. **You do not need a teammate’s `.env` file, passwords, or cloud credentials for local development.** Keep the generated defaults. Existing `.env` files are preserved.
+`npm run setup` creates `apps/api/.env`. Open it and paste the Atlas connection string after `MONGODB_URI=`. Get it from the Database person on the team chat, never from GitHub.
 
-### 6. Start the database and add sample drinks
-
-Make sure Docker is running, then run:
+Then load sample drinks (once) and start everything:
 
 ```sh
-npm run services:up
-npm run db:seed
-```
-
-Wait for both commands to finish. Each teammate gets their own local database. Seeding adds missing sample drinks and preserves edits to existing ones.
-
-### 7. Start the website and API
-
-```sh
+npm run seed
 npm run dev
 ```
 
-Leave this terminal running while you work. Use a second terminal for other commands; remember to activate the tools there too.
+Open **http://localhost:5173**. You should see the home page, and the Menu page should list two sample drinks. The API runs at http://localhost:4000/api.
 
-### 8. Open the website and check it works
+Working on mobile? Follow [apps/mobile/README.md](apps/mobile/README.md) after the steps above.
 
-Open **http://localhost:5173** in your browser.
+## Everyday commands (run from this folder)
 
-You are ready when you see **two sample drinks** and **“API and database connected.”** These are sample items, not the client's final menu.
+| Command          | What it does                                                                 |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`    | Starts the website and API together. Ctrl+C to stop.                         |
+| `npm run seed`   | Adds the sample menu items if they're missing.                               |
+| `npm test`       | Runs the web and API tests.                                                  |
+| `npm run check`  | Lint + type check + tests + build. Run before every PR (GitHub runs it too). |
+| `npm run format` | Auto-formats your code.                                                      |
 
-If something fails, run `npm run doctor` in a second activated terminal and see [troubleshooting](docs/development.md#troubleshooting).
+## Something not working?
 
-## Starting work next time
-
-1. Open Docker Desktop and wait until it is running.
-2. Open a terminal in `eisai-studio-matcha` and activate the tools using the command in **step 4** above.
-3. With your previous development server stopped, run:
-
-   ```sh
-   git pull --ff-only
-   npm ci
-   npm run services:up
-   npm run dev
-   ```
-
-4. Open **http://localhost:5173**. You do not need to repeat setup or seeding every day.
-
-**When you finish:** press **Ctrl+C** in the running terminal to stop the website/API. Run `npm run services:down` to stop the database and email service. Your database data is kept.
-
-## Viewing your local database and email
-
-- **Database:** open MongoDB Compass, connect to `mongodb://127.0.0.1:27017`, then open the `eisai_dev_local` database → `menuItems` collection. No username or password is needed for this local database. Docker must be running and step 6 must be complete. Compass is optional; it is a separate desktop app, not a browser page.
-- **Email preview:** run `npm run mail:test` in an activated terminal, then open **http://localhost:8025**. Test messages stay in the local inbox.
-
-## Structure and checks
-
-```text
-apps/web/       React + TypeScript
-apps/api/       Express + TypeScript, MongoDB
-apps/mobile/    Flutter (Android, iOS, web)
-scripts/        Bootstrap, setup and tool checks
-docs/           Team onboarding and troubleshooting
-compose.yaml    Pinned local MongoDB and Mailpit
-```
-
-```sh
-npm run check
-npm run test:integration
-```
-
-Mobile contributors run `node scripts/bootstrap.mjs --mobile`, activate tools, then `npm run mobile:setup` and `npm run mobile:check`. Flutter is pinned to **3.35.7 / Dart 3.9.2** for compatibility with the development laptop. See the [Flutter instructions](docs/development.md#flutter-development) for emulator addresses, JDK 17, Android SDK and Xcode prerequisites. `mobile:check` builds Flutter web; Android/iOS need their native toolchains.
-
-## Scope and milestones
-
-This is a development foundation with sample content. Authentication, client-only menu/photo administration, approved Figma design, and cloud deployment remain roadmap work. The course deployment must use remote MongoDB; local Docker supports isolated development and integration tests. GrubHub is a feasibility/link task; custom ordering and loyalty are outside the baseline.
-
-| Milestone                     | Target      |
-| ----------------------------- | ----------- |
-| Scope and design              | October 21  |
-| Core implementation           | November 1  |
-| Integration and client review | November 8  |
-| Release and submission        | November 15 |
-
-Production target is November 12, followed by handoff and rehearsal. Issues remain unassigned until the team chooses owners.
+- **"MONGODB_URI is empty"**: you skipped pasting the connection string into `apps/api/.env`.
+- **Can't connect to MongoDB**: ask the Database person to add your IP in Atlas (Network Access), or check your Wi-Fi isn't blocking it.
+- **Menu page says "Couldn't load the menu"**: the API isn't running or crashed. Look at the green `[api]` lines in your terminal.
+- **Port already in use**: another `npm run dev` is still running in a different terminal. Stop it.

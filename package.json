@@ -8,31 +8,18 @@
     "apps/api"
   ],
   "engines": {
-    "node": "24.21.0",
-    "npm": "11.19.0"
+    "node": ">=24"
   },
-  "packageManager": "npm@11.19.0",
   "scripts": {
-    "preinstall": "node scripts/check-versions.mjs",
     "setup": "node scripts/setup.mjs",
-    "doctor": "node scripts/doctor.mjs",
-    "services:up": "docker compose up -d --wait",
-    "services:down": "docker compose down",
-    "db:seed": "npm run db:seed --workspace @eisai/api",
-    "dev": "concurrently --kill-others --names api,web \"npm run dev -w @eisai/api\" \"npm run dev -w @eisai/web\"",
+    "dev": "concurrently --names api,web --prefix-colors green,magenta \"npm run dev -w @eisai/api\" \"npm run dev -w @eisai/web\"",
+    "seed": "npm run seed -w @eisai/api",
+    "test": "npm run test --workspaces",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces",
-    "test:integration": "npm run test:integration -w @eisai/api",
     "build": "npm run build --workspaces",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build && npm run format:check",
-    "mobile:doctor": "node scripts/mobile.mjs doctor",
-    "mobile:setup": "node scripts/mobile.mjs setup",
-    "mobile:check": "node scripts/mobile.mjs check",
-    "mobile:run": "node scripts/mobile.mjs run",
-    "mail:test": "npm run mail:test -w @eisai/api"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
