@@ -36,7 +36,7 @@ npm run dev
 
 Open **http://localhost:5173**. You should see the home page, and the Menu page should list two sample drinks. The API runs at http://localhost:4000/api.
 
-Working on mobile? Follow [apps/mobile/README.md](apps/mobile/README.md) after the steps above.
+Working on mobile? Follow [apps/mobile/README.md](apps/mobile/mobileREADME.md) after the steps above.
 
 ## Everyday commands (run from this folder)
 
