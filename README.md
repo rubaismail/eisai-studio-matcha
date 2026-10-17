@@ -2,7 +2,7 @@
 
 Website and mobile app for Eisai Studio, the matcha pop-up at UCF. COP 4331C Large Project, due **November 15, 2026**.
 
-- **Tasks and dates:** [Team 22 Roadmap](https://github.com/users/rubaismail/projects/13/views/1?groupedBy%5BcolumnId%5D=425722583)
+- **Tasks and dates:** [Team 11 Roadmap](https://github.com/users/rubaismail/projects/13/views/1?groupedBy%5BcolumnId%5D=425722583)
 - **Where your code goes and how to open a PR:** [docs/team-guide.md](docs/team-guide.md)
 - **API endpoints, authentication and examples:** [API reference](apps/api/README.md)
 - **App development guides:** [Website](apps/web/README.md) · [Mobile](apps/mobile/README.md)
