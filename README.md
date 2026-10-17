@@ -1,4 +1,4 @@
-# Eisai Studio — Team 22
+# Eisai Studio
 
 Website and mobile app for Eisai Studio, the matcha pop-up at UCF. COP 4331C Large Project, due **November 15, 2026**.
 
