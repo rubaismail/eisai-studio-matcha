@@ -34,10 +34,10 @@ Exact JWT and action-token lifetimes, email provider and deployed URLs remain se
 
 ## SwaggerHub and maintaining the contract
 
-**Publication pending:** the YAML is ready to import, but no authenticated SwaggerHub session was available when preparing this PR. Issue [#11](https://github.com/rubaismail/eisai-studio-matcha/issues/11) remains open until its SwaggerHub publication/link requirement is complete.
+**SwaggerHub:** [Eisai Studio API 1.0.0](https://app.swaggerhub.com/apis/ucf-1f0/eisai-studio-api/1.0.0), saved in the UCF workspace with private visibility. Workspace access is required. SwaggerHub reports zero validation issues. The checked-in YAML is the exact source imported into this version.
 
-1. Import `docs/api/openapi.yaml` as OpenAPI 3.0 into the team's SwaggerHub account, keeping version `1.0.0`.
-2. Review the rendered operations, schemas and bearer authorization. Share the resulting API/version link on issue #11 and replace this publication note with that link.
+1. Use the linked version to browse the API and schemas; use the checked-in YAML independently for tooling.
+2. For a downloadable SwaggerHub copy, choose **Export → Download API → YAML Unresolved** to preserve reusable schema references.
 3. If edits happen in SwaggerHub, export YAML back to this file and review the diff in a PR. If edits start in Git, reimport the reviewed version so the two copies match. Do not maintain competing contracts.
 4. For endpoint changes, update this spec, the API README and relevant client types/mocks in the same PR. Coordinate breaking changes before implementations merge. Add server integration tests against these status codes and response shapes as each endpoint lands.
 
