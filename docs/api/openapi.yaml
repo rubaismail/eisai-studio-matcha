@@ -1,0 +1,914 @@
+openapi: 3.0.3
+info:
+  title: Eisai Studio API
+  version: 1.0.0
+  description: >-
+    Shared target contract for React TypeScript and Flutter clients calling the Express/Node API
+    with MongoDB Atlas. Based on apps/api/apiREADME.md. Only GET /menu and GET /health are
+    implemented at this revision; other operations are planned. See docs/api/README.md for
+    validation decisions, client token handling and publication status. JSON request bodies reject
+    unknown fields and null; clients must tolerate additional response fields except the explicit
+    safe login user projection. No checkout, favorites, refresh-token or logout endpoints.
+servers:
+  - url: http://localhost:4000/api
+    description: Local development; replace with deployed API base URL for staging.
+tags:
+  - name: Auth
+  - name: Menu
+  - name: Admin menu
+  - name: Uploads
+  - name: Health
+security: []
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      summary: Create a customer account
+      description: >-
+        Create an unverified customer and send a verification email. Reject unknown fields including
+        role. Hash passwords before storage; never return hashes or action tokens.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '201':
+          description: Create a customer account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Account created. Check your email to verify your account.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              firstName: Jane
+              lastName: Doe
+              email: jane@example.com
+              password: example-password
+  /auth/verify:
+    get:
+      operationId: verifyEmail
+      summary: Verify an email address
+      description: >-
+        Consume an expiring, single-use verification token. Missing, invalid, expired or reused
+        tokens return 400.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Verify an email address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Email verified. You can now log in.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Verification action token from the email link; not a login JWT.
+  /auth/resend-verification:
+    post:
+      operationId: resendVerification
+      summary: Request a verification email
+      description: >-
+        For valid input, return the same success status and message regardless of account existence
+        or eligibility. Tokens expire and can be used once.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Request a verification email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: If this account needs verification, a verification email has been sent.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+            example:
+              email: jane@example.com
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      summary: Request a password-reset email
+      description: >-
+        For valid input, return the same success status and message regardless of account existence
+        or eligibility. Tokens expire and can be used once.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Request a password-reset email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: If an account exists for this email, a password-reset link has been sent.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+            example:
+              email: jane@example.com
+  /auth/login:
+    post:
+      operationId: login
+      summary: Log in a verified user
+      description: >-
+        Check credentials before disclosing verification status. Incorrect credentials return 401;
+        valid credentials for an unverified user return 403. Return only the documented user fields.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Log in a verified user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                token: example.jwt.token
+                user:
+                  _id: 507f1f77bcf86cd799439011
+                  email: jane@example.com
+                  role: customer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: jane@example.com
+              password: example-password
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      summary: Reset a password
+      description: >-
+        Validate and consume the single-use reset token and hash the new password. No automatic
+        login. Existing login JWT revocation is outside this baseline.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Reset a password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Password reset. Log in with your new password.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              token: example-reset-token
+              password: new-example-password
+  /menu:
+    get:
+      operationId: listMenu
+      summary: List available menu items
+      description: >-
+        Public list sorted by name ascending. Exclude isAvailable=false. No pagination in this
+        baseline; an empty list is {"items": []}.
+      tags:
+        - Menu
+      security: []
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: List available menu items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+              example:
+                items:
+                  - _id: 507f1f77bcf86cd799439012
+                    name: Matcha Latte
+                    description: Matcha with your choice of milk.
+                    price: 6.5
+                    category: Drinks
+                    imageUrl: https://example.com/images/matcha-latte.webp
+                    isSeasonal: false
+                    isAvailable: true
+                    createdAt: '2026-10-20T12:00:00.000Z'
+                    updatedAt: '2026-10-20T12:00:00.000Z'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      operationId: createMenuItem
+      summary: Create a menu item
+      description: >-
+        Admin only. Apply defaults to omitted optional fields. Reject unknown fields and explicit
+        null values; clients cannot set IDs or timestamps.
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: planned
+      responses:
+        '201':
+          description: Create a menu item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuResult'
+              example:
+                item:
+                  _id: 507f1f77bcf86cd799439012
+                  name: Matcha Latte
+                  description: Matcha with your choice of milk.
+                  price: 6.5
+                  category: Drinks
+                  imageUrl: https://example.com/images/matcha-latte.webp
+                  isSeasonal: false
+                  isAvailable: true
+                  createdAt: '2026-10-20T12:00:00.000Z'
+                  updatedAt: '2026-10-20T12:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuCreate'
+            example:
+              name: Matcha Latte
+              description: Matcha with your choice of milk.
+              price: 6.5
+              category: Drinks
+              imageUrl: https://example.com/images/matcha-latte.webp
+              isSeasonal: false
+              isAvailable: true
+  /menu/seasonal:
+    get:
+      operationId: listSeasonalMenu
+      summary: List available seasonal items
+      description: >-
+        Public list sorted by name ascending, filtered to isSeasonal=true AND isAvailable=true.
+        Empty result uses items: [].
+      tags:
+        - Menu
+      security: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: List available seasonal items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+              example:
+                items:
+                  - _id: 507f1f77bcf86cd799439012
+                    name: Matcha Latte
+                    description: Matcha with your choice of milk.
+                    price: 6.5
+                    category: Drinks
+                    imageUrl: https://example.com/images/matcha-latte.webp
+                    isSeasonal: true
+                    isAvailable: true
+                    createdAt: '2026-10-20T12:00:00.000Z'
+                    updatedAt: '2026-10-20T12:00:00.000Z'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /admin/menu:
+    get:
+      operationId: listAdminMenu
+      summary: List all menu items including hidden items
+      description: >-
+        Admin only. Return all menu items sorted by name ascending, including hidden items. Empty
+        result uses items: [].
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: List all menu items including hidden items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+              example:
+                items:
+                  - _id: 507f1f77bcf86cd799439012
+                    name: Matcha Latte
+                    description: Matcha with your choice of milk.
+                    price: 6.5
+                    category: Drinks
+                    imageUrl: https://example.com/images/matcha-latte.webp
+                    isSeasonal: false
+                    isAvailable: false
+                    createdAt: '2026-10-20T12:00:00.000Z'
+                    updatedAt: '2026-10-20T12:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+  /menu/{id}:
+    put:
+      operationId: updateMenuItem
+      summary: Update, hide or unhide a menu item
+      description: >-
+        Admin only. Partial update: omitted fields retain existing values. At least one editable
+        field is required. Set isAvailable=false to hide or true to unhide. Invalid ID/data returns
+        400; valid nonexistent ID returns 404.
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Update, hide or unhide a menu item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuResult'
+              example:
+                item:
+                  _id: 507f1f77bcf86cd799439012
+                  name: Matcha Latte
+                  description: Matcha with your choice of milk.
+                  price: 6.5
+                  category: Drinks
+                  imageUrl: https://example.com/images/matcha-latte.webp
+                  isSeasonal: false
+                  isAvailable: false
+                  createdAt: '2026-10-20T12:00:00.000Z'
+                  updatedAt: '2026-10-20T12:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuUpdate'
+            examples:
+              edit:
+                value:
+                  name: Seasonal Matcha Latte
+                  price: 7
+                  isSeasonal: true
+              hide:
+                value:
+                  isAvailable: false
+              unhide:
+                value:
+                  isAvailable: true
+    delete:
+      operationId: deleteMenuItem
+      summary: Delete a menu item permanently
+      description: >-
+        Admin only. Client confirms before sending. Send no body. Invalid ID returns 400; valid
+        nonexistent ID returns 404. Use availability updates for temporary hiding.
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: Delete a menu item permanently
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Menu item deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/ObjectId'
+        description: Menu item MongoDB _id.
+  /uploads:
+    post:
+      operationId: uploadMenuImage
+      summary: Upload one menu image to S3
+      description: >-
+        Admin only. One image part, JPEG/PNG/WebP, maximum 5 MiB (5,242,880 bytes). Missing or
+        multiple files return 400, oversized file 413, unsupported type 415. API must enforce byte
+        limit and validate file content, not trust filename. Store in S3; does not create or update
+        a menu record. Pass returned imageUrl to a menu write.
+      tags:
+        - Uploads
+      security:
+        - bearerAuth: []
+      x-implementation-status: planned
+      responses:
+        '201':
+          description: Upload one menu image to S3
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+              example:
+                imageUrl: https://example.com/images/uploaded-matcha.webp
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Exactly one JPEG, PNG or WebP file, at most 5,242,880 bytes.
+                  x-max-file-size: 5242880
+              additionalProperties: false
+            encoding:
+              image:
+                contentType: image/jpeg, image/png, image/webp
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check API and database readiness
+      description: >-
+        200 when MongoDB is connected; otherwise 503. The documented 503 status object is an
+        exception to the normal error envelope.
+      tags:
+        - Health
+      security: []
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: Check API and database readiness
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReady'
+              example:
+                status: ok
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          description: Database is disconnected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthUnavailable'
+              example:
+                status: database disconnected
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Login JWT. All protected operations additionally require role=admin; enforced by the API,
+        never client-provided role or user ID.
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          minLength: 1
+    Message:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ObjectId:
+      type: string
+      pattern: ^[0-9a-fA-F]{24}$
+      example: 507f1f77bcf86cd799439012
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          pattern: \S
+        lastName:
+          type: string
+          minLength: 1
+          pattern: \S
+        email:
+          type: string
+          format: email
+          description: Trim and lowercase before lookup or storage.
+          example: jane@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          writeOnly: true
+          description: >-
+            New passwords: at least 8 characters and at most 72 UTF-8 bytes; never silently truncate
+            for bcrypt.
+      additionalProperties: false
+    EmailRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Trim and lowercase before lookup or storage.
+          example: jane@example.com
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Trim and lowercase before lookup or storage.
+          example: jane@example.com
+        password:
+          type: string
+          format: password
+          minLength: 1
+          writeOnly: true
+      additionalProperties: false
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          format: password
+          minLength: 8
+          writeOnly: true
+          description: >-
+            New passwords: at least 8 characters and at most 72 UTF-8 bytes; never silently truncate
+            for bcrypt.
+      additionalProperties: false
+    User:
+      type: object
+      required:
+        - _id
+        - email
+        - role
+      properties:
+        _id:
+          $ref: '#/components/schemas/ObjectId'
+        email:
+          type: string
+          format: email
+          description: Trim and lowercase before lookup or storage.
+          example: jane@example.com
+        role:
+          type: string
+          enum:
+            - customer
+            - admin
+      additionalProperties: false
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Signed expiring login JWT. Treat as opaque; never log it.
+        user:
+          $ref: '#/components/schemas/User'
+      additionalProperties: false
+    UploadResponse:
+      type: object
+      required:
+        - imageUrl
+      properties:
+        imageUrl:
+          type: string
+          format: uri
+    HealthReady:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      additionalProperties: false
+    HealthUnavailable:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - database disconnected
+      additionalProperties: false
+    MenuCreate:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: \S
+          description: Trim leading/trailing whitespace; cannot be blank.
+        description:
+          type: string
+          default: ''
+        price:
+          type: number
+          minimum: 0
+          description: Price in dollars, not cents. JSON number; numeric strings are invalid.
+        category:
+          type: string
+          default: Drinks
+        imageUrl:
+          type: string
+          default: ''
+          description: Uploaded image URL, or an empty string when no image is set.
+        isSeasonal:
+          type: boolean
+          default: false
+        isAvailable:
+          type: boolean
+          default: true
+      additionalProperties: false
+    MenuUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: \S
+          description: Trim leading/trailing whitespace; cannot be blank.
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+          description: Price in dollars, not cents. JSON number; numeric strings are invalid.
+        category:
+          type: string
+        imageUrl:
+          type: string
+          description: Uploaded image URL, or an empty string when no image is set.
+        isSeasonal:
+          type: boolean
+        isAvailable:
+          type: boolean
+      description: 'Partial update despite PUT: omitted fields remain unchanged. Null is not accepted.'
+    MenuItem:
+      type: object
+      required:
+        - _id
+        - name
+        - description
+        - price
+        - category
+        - imageUrl
+        - isSeasonal
+        - isAvailable
+        - createdAt
+        - updatedAt
+      properties:
+        _id:
+          $ref: '#/components/schemas/ObjectId'
+        name:
+          type: string
+          minLength: 1
+          pattern: \S
+          description: Trim leading/trailing whitespace; cannot be blank.
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+          description: Price in dollars, not cents. JSON number; numeric strings are invalid.
+        category:
+          type: string
+        imageUrl:
+          type: string
+          description: Uploaded image URL, or an empty string when no image is set.
+        isSeasonal:
+          type: boolean
+        isAvailable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MenuList:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+    MenuResult:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: '#/components/schemas/MenuItem'
+  responses:
+    BadRequest:
+      description: Missing or invalid input, malformed ID, or invalid, expired or used action token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Missing or invalid input, malformed ID, or invalid, expired or used action token.
+    Unauthorized:
+      description: Missing, invalid or expired login JWT, or incorrect login credentials.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Missing, invalid or expired login JWT, or incorrect login credentials.
+    Forbidden:
+      description: Email verification required or authenticated user is not an admin.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Email verification required or authenticated user is not an admin.
+    NotFound:
+      description: Menu item or route not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Menu item or route not found.
+    Conflict:
+      description: Email address already registered.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Email address already registered.
+    PayloadTooLarge:
+      description: Image exceeds 5 MiB (5,242,880 bytes).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Image exceeds 5 MiB (5,242,880 bytes).
+    UnsupportedMediaType:
+      description: Unsupported image type; use JPEG, PNG or WebP.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unsupported image type; use JPEG, PNG or WebP.
+    ServerError:
+      description: Unexpected server, database, email or storage error. Do not expose internal details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unexpected server, database, email or storage error. Do not expose internal details.
