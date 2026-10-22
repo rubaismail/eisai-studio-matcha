@@ -6,6 +6,8 @@ The Express API accepts JSON requests and returns JSON responses. It connects to
 
 Start the API and website from the repository root with `npm run dev`. Set `MONGODB_URI` in `apps/api/.env` to the Atlas development connection string. Docker is not required. See the [project setup guide](../../README.md).
 
+**Shared contract:** [OpenAPI YAML](../../docs/api/openapi.yaml) · [contract decisions and SwaggerHub publication](../../docs/api/README.md). The YAML is the machine-readable source of truth; this README is the companion guide. These are target endpoints: only menu listing and health are currently implemented.
+
 ## Quick navigation
 
 - [Request requirements](#request-requirements)
@@ -40,19 +42,19 @@ Errors use a consistent JSON object:
 
 Common status codes:
 
-| Status | Meaning |
-| --- | --- |
-| `200` | Request completed successfully |
-| `201` | Account, menu item or uploaded image created |
-| `400` | Missing or invalid input, malformed ID, or invalid/expired/used action token |
-| `401` | Missing, invalid or expired login JWT, or incorrect login credentials |
-| `403` | Email verification required or user lacks admin access |
-| `404` | Menu item or route not found |
-| `409` | Email address already registered |
-| `413` | Uploaded image exceeds the size limit |
-| `415` | Unsupported upload file type |
-| `500` | Unexpected server or database error |
-| `503` | Health check reports a disconnected database |
+| Status | Meaning                                                                      |
+| ------ | ---------------------------------------------------------------------------- |
+| `200`  | Request completed successfully                                               |
+| `201`  | Account, menu item or uploaded image created                                 |
+| `400`  | Missing or invalid input, malformed ID, or invalid/expired/used action token |
+| `401`  | Missing, invalid or expired login JWT, or incorrect login credentials        |
+| `403`  | Email verification required or user lacks admin access                       |
+| `404`  | Menu item or route not found                                                 |
+| `409`  | Email address already registered                                             |
+| `413`  | Uploaded image exceeds the size limit                                        |
+| `415`  | Unsupported upload file type                                                 |
+| `500`  | Unexpected server or database error                                          |
+| `503`  | Health check reports a disconnected database                                 |
 
 ## Authentication
 
@@ -64,7 +66,7 @@ Authorization: Bearer <token>
 
 Unverified users cannot log in. A customer JWT does not grant admin access. The client's admin account is provisioned separately; registering with `"role": "admin"` never grants that role.
 
-Logout clears the JWT and authenticated state on the client. There is no logout endpoint in this API; clearing a token does not revoke another copy before it expires. Flutter stores its JWT in secure storage.
+Logout clears the JWT and authenticated state on the client. There is no logout endpoint in this API; clearing a token does not revoke another copy before it expires. The website keeps its JWT in memory (reload requires login); Flutter stores its JWT in secure storage. Both clear authenticated state on a protected request’s `401`. Exact token lifetimes are server configuration; clients must not hardcode them.
 
 Verification and password-reset tokens are expiring, single-use action tokens, separate from login JWTs. Email links open the website's verification or reset page, which calls the corresponding API endpoint. Mobile users complete that browser flow and then return to the app to log in.
 
@@ -78,6 +80,8 @@ Creates a customer account and sends a verification email. No authentication req
 
 ```json
 {
+  "firstName": "Jane",
+  "lastName": "Doe",
   "email": "jane@example.com",
   "password": "example-password"
 }
@@ -91,7 +95,7 @@ Returns HTTP `201`:
 }
 ```
 
-Passwords are hashed before storage. A duplicate email returns `409`; invalid input returns `400`.
+First and last names are required and cannot be blank. Email is trimmed and lowercased. New passwords require at least 8 characters and at most 72 UTF-8 bytes; passwords are never trimmed. JSON bodies reject unknown fields, null and incorrect types. Passwords are hashed before storage. A duplicate email returns `409`; invalid input returns `400`.
 
 ### 2. GET /api/auth/verify?token=<verification-token>
 
@@ -249,7 +253,7 @@ Returns HTTP `201` with `{ "item": {...} }`, containing the saved item in the sh
 
 ### 11. PUT /api/menu/:id
 
-Updates an existing item. Requires an admin JWT. Send the editable fields to change; omitted fields retain their existing values. `_id` and timestamps cannot be set by the client.
+Updates an existing item. Requires an admin JWT. Send the editable fields to change; omitted fields retain their existing values. Send at least one editable field. `_id` and timestamps cannot be set by the client. Unknown fields, null and incorrect types return `400`.
 
 ```json
 {
@@ -348,4 +352,4 @@ Web and Flutter share these endpoints. Favorites, checkout, order queues and loy
 2. Controller function: `src/controllers/auth.controller.ts`
 3. Route: `src/routes/auth.routes.ts`, then add `router.use('/auth', authRoutes)` in `src/routes/index.ts`
 4. Test: `test/auth.test.ts`
-5. Update the SwaggerHub spec so web and mobile know the request/response shape.
+5. Update [the OpenAPI contract](../../docs/api/openapi.yaml) and this guide, then synchronize SwaggerHub using the [contract workflow](../../docs/api/README.md).

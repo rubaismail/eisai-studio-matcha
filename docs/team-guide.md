@@ -30,7 +30,7 @@ docs/               Course deliverables (diagrams, API spec, test results)
 ```
 
 Each app has a README with a step-by-step "adding a page / endpoint / screen" example:
-[web](../apps/web/README.md) · [api](../apps/api/README.md) · [mobile](../apps/mobile/README.md).
+[web](../apps/web/README.md) · [api](../apps/api/apiREADME.md) · [mobile](../apps/mobile/mobileREADME.md).
 
 **Course deliverables** go in `docs/`, one folder each, created when you have the first file:
 `docs/diagrams/` (PlantUML `.puml` plus exported `.png`), `docs/api/` (SwaggerHub export), `docs/test-results/`, `docs/prototypes/` (Figma links and exports).
@@ -40,7 +40,7 @@ Each app has a README with a step-by-step "adding a page / endpoint / screen" ex
 Example: **admin adds a menu item**.
 
 1. **UI/UX** links the Figma frame in the issue.
-2. **API Dev** writes the endpoint shape in SwaggerHub first (URL, request body, response), so web and mobile can start right away.
+2. **API Dev** updates [the shared OpenAPI contract](api/openapi.yaml) first (URL, request body, response) and synchronizes SwaggerHub through the [contract workflow](api/README.md), so web and mobile can start right away.
 3. **Database** updates `apps/api/src/models/MenuItem.ts` if new fields are needed.
 4. **API Dev** adds the controller + route and a test.
 5. **Front-End** builds the page in `apps/web/src/pages/` and the API call in `apps/web/src/api/`; mobile does the same in `lib/screens/` and `lib/services/`.
@@ -66,5 +66,5 @@ The website and mobile app **only talk to the API**. Never connect them straight
 
 - Never commit `.env` files or passwords. If you add a new setting, add it (without the real value) to `.env.example`.
 - Never use the client's production database for development. Use `eisai_dev`.
-- If you change an API response, update SwaggerHub and tell the web and mobile people in the team chat.
+- If you change an API response, update the OpenAPI YAML and API README, synchronize SwaggerHub, and tell the web and mobile people in the team chat.
 - Stuck for more than an hour? Post in the team chat with what you tried.
