@@ -5,6 +5,11 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { requireJwtSecret } from '../config/env.js';
 
+// Precomputed bcrypt hash with cost factor 10.
+// Used when no matching account exists.
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+
 // POST /api/auth/login
 export async function login(req: Request, res: Response) {
   const body: unknown = req.body;
@@ -22,6 +27,7 @@ export async function login(req: Request, res: Response) {
   const data = body as Record<string, unknown>;
 
   const keys = Object.keys(data);
+
   if (
     keys.some((key) => !['email', 'password'].includes(key)) ||
     keys.length !== 2
@@ -48,9 +54,11 @@ export async function login(req: Request, res: Response) {
     email: normalizedEmail,
   }).select('+passwordHash');
 
-  const validPassword = user
-    ? await bcrypt.compare(password, user.passwordHash)
-    : false;
+  // Always perform a bcrypt comparison, even for unknown emails.
+  const validPassword = await bcrypt.compare(
+    password,
+    user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+  );
 
   if (!user || !validPassword) {
     res.status(401).json({ error: 'Invalid email or password' });

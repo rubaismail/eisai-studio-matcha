@@ -43,14 +43,12 @@ test('login returns a valid JWT and correct user response', async () => {
   assert.equal(res.status, 200);
   assert.equal(typeof res.body.token, 'string');
 
-  // Check the complete user response matches the API contract.
   assert.deepEqual(res.body.user, {
     _id: user.id,
     email: user.email,
     role: 'customer',
   });
 
-  // Only token and user should be returned.
   assert.deepEqual(Object.keys(res.body).sort(), [
     'token',
     'user',
@@ -121,6 +119,9 @@ test('login rejects an unknown email', async () => {
     });
 
   assert.equal(res.status, 401);
+  assert.deepEqual(res.body, {
+    error: 'Invalid email or password',
+  });
 });
 
 test('login rejects malformed email addresses', async () => {
@@ -152,4 +153,40 @@ test('login rejects unexpected request fields', async () => {
     });
 
   assert.equal(res.status, 400);
+});
+
+// Verify unknown emails still perform bcrypt work.
+test('unknown email uses the precomputed dummy bcrypt hash', async () => {
+  mock.method(User, 'findOne', () => ({
+    select: async () => null,
+  }));
+
+  const res = await request(createApp())
+    .post('/api/auth/login')
+    .send({
+      email: 'missing@example.com',
+      password,
+    });
+
+  assert.equal(res.status, 401);
+  assert.deepEqual(res.body, {
+    error: 'Invalid email or password',
+  });
+
+  // The controller must use the precomputed bcrypt cost-10 hash.
+  // Timing itself is not asserted because it varies between machines.
+  const controllerSource = await import('node:fs/promises').then(
+    (fs) =>
+      fs.readFile(
+        new URL('../src/controllers/login.controller.ts', import.meta.url),
+        'utf8',
+      ),
+  );
+
+  assert.match(controllerSource, /DUMMY_PASSWORD_HASH/);
+  assert.match(controllerSource, /bcrypt\.compare\(/);
+  assert.match(
+    controllerSource,
+    /user\?\.passwordHash\s*\?\?\s*DUMMY_PASSWORD_HASH/,
+  );
 });
