@@ -7,20 +7,45 @@ import { requireJwtSecret } from '../config/env.js';
 
 // POST /api/auth/login
 export async function login(req: Request, res: Response) {
-  const { email, password } = req.body ?? {};
+  const body: unknown = req.body;
+
+  // Only email and password are allowed.
+  if (
+    body === null ||
+    typeof body !== 'object' ||
+    Array.isArray(body)
+  ) {
+    res.status(400).json({ error: 'Invalid login request' });
+    return;
+  }
+
+  const data = body as Record<string, unknown>;
+
+  const keys = Object.keys(data);
+  if (
+    keys.some((key) => !['email', 'password'].includes(key)) ||
+    keys.length !== 2
+  ) {
+    res.status(400).json({ error: 'Invalid login request' });
+    return;
+  }
+
+  const { email, password } = data;
 
   if (
     typeof email !== 'string' ||
     typeof password !== 'string' ||
-    !email.trim() ||
-    !password
+    !password ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   ) {
-    res.status(400).json({ error: 'Email and password are required' });
+    res.status(400).json({ error: 'Invalid email or password format' });
     return;
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   const user = await User.findOne({
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
   }).select('+passwordHash');
 
   const validPassword = user
@@ -46,9 +71,7 @@ export async function login(req: Request, res: Response) {
   res.json({
     token,
     user: {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      _id: user.id,
       email: user.email,
       role: user.role,
     },

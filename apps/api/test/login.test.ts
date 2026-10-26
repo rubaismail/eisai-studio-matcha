@@ -33,7 +33,7 @@ async function mockUser(overrides: Record<string, unknown> = {}) {
   return user;
 }
 
-test('login returns a valid JWT for verified users', async () => {
+test('login returns a valid JWT and correct user response', async () => {
   const user = await mockUser();
 
   const res = await request(createApp())
@@ -42,9 +42,19 @@ test('login returns a valid JWT for verified users', async () => {
 
   assert.equal(res.status, 200);
   assert.equal(typeof res.body.token, 'string');
-  assert.equal(res.body.user.email, user.email);
-  assert.equal(res.body.user.role, 'customer');
-  assert.equal(res.body.user.passwordHash, undefined);
+
+  // Check the complete user response matches the API contract.
+  assert.deepEqual(res.body.user, {
+    _id: user.id,
+    email: user.email,
+    role: 'customer',
+  });
+
+  // Only token and user should be returned.
+  assert.deepEqual(Object.keys(res.body).sort(), [
+    'token',
+    'user',
+  ]);
 
   const decoded = jwt.verify(res.body.token, requireJwtSecret(), {
     algorithms: ['HS256'],
@@ -111,4 +121,35 @@ test('login rejects an unknown email', async () => {
     });
 
   assert.equal(res.status, 401);
+});
+
+test('login rejects malformed email addresses', async () => {
+  const invalidEmails = [
+    'not-an-email',
+    'missing-at.com',
+    'test@',
+    '@example.com',
+    'test@example',
+    'test @example.com',
+  ];
+
+  for (const email of invalidEmails) {
+    const res = await request(createApp())
+      .post('/api/auth/login')
+      .send({ email, password });
+
+    assert.equal(res.status, 400, `Expected 400 for ${email}`);
+  }
+});
+
+test('login rejects unexpected request fields', async () => {
+  const res = await request(createApp())
+    .post('/api/auth/login')
+    .send({
+      email: 'test@example.com',
+      password,
+      role: 'admin',
+    });
+
+  assert.equal(res.status, 400);
 });
