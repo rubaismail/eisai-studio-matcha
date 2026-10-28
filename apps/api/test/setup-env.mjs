@@ -3,3 +3,6 @@
 // This value is only used for automated tests.
 process.env.JWT_SECRET =
   'eisai-studio-test-only-jwt-secret-not-for-production';
+
+// Tests explicitly opt into proxy trust when needed.
+process.env.TRUST_PROXY = '';

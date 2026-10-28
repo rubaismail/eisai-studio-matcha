@@ -155,6 +155,8 @@ Returns HTTP `200`:
 
 Incorrect credentials return `401`; an unverified account returns `403`. Password hashes and action tokens are never included in the user response.
 
+Login is limited to 20 attempts per client IP and 5 per normalized email per 15 minutes. All attempts count. Exceeding either limit returns `429` with an error message and a `Retry-After` header in seconds. Clients should wait before retrying. Configure trusted proxies for deployment as described in [API deployment configuration](../../docs/api/deployment.md).
+
 ### 5. POST /api/auth/forgot-password
 
 Requests a password-reset email. No authentication required.

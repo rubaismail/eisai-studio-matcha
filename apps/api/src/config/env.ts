@@ -1,6 +1,7 @@
 
  // Loads apps/api/.env and gives the rest of the API one typed place to read settings from.
 import dotenv from 'dotenv';
+import { parseTrustProxy } from './trustProxy.js';
 import { fileURLToPath } from 'node:url';
 
 dotenv.config({
@@ -10,6 +11,7 @@ dotenv.config({
 
 export const env = {
   port: Number(process.env.PORT ?? 4000),
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
   mongodbUri: process.env.MONGODB_URI ?? '',
   isProduction: process.env.NODE_ENV === 'production',
