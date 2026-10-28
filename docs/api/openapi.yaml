@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: >-
     Shared target contract for React TypeScript and Flutter clients calling the Express/Node API
-    with MongoDB Atlas. Based on apps/api/apiREADME.md. Only GET /menu and GET /health are
+    with MongoDB Atlas. Based on apps/api/apiREADME.md. GET /menu, GET /health and POST /auth/login are
     implemented at this revision; other operations are planned. See docs/api/README.md for
     validation decisions, client token handling and publication status. JSON request bodies reject
     unknown fields and null; clients must tolerate additional response fields except the explicit
@@ -160,10 +160,12 @@ paths:
       description: >-
         Check credentials before disclosing verification status. Incorrect credentials return 401;
         valid credentials for an unverified user return 403. Return only the documented user fields.
+        All attempts count toward limits of 20 per client IP and 5 per normalized email per
+        15 minutes. Exceeding either limit returns 429; wait for Retry-After before retrying.
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Log in a verified user
@@ -183,6 +185,20 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          description: Too many login attempts from this client IP or for this normalized email.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Too many login attempts. Try again later.
         '500':
           $ref: '#/components/responses/ServerError'
       requestBody:

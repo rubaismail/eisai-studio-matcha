@@ -2,7 +2,7 @@
 
 [openapi.yaml](openapi.yaml) is the reviewable source of truth for endpoint paths, request and response schemas, validation, status codes and access rules. [apiREADME](../../apps/api/apiREADME.md) explains the same API with walkthroughs. This formalizes that existing outline so API, React and Flutter developers can build together and import the contract into SwaggerHub or client/mock tools.
 
-This is the **target contract**, not a claim that all routes exist. At this revision only `GET /api/menu` and `GET /api/health` are implemented. Each operation has an `x-implementation-status` marker; update it as routes land. Schema validation of this file does not prove server conformance.
+This is the **target contract**, not a claim that all routes exist. At this revision `GET /api/menu`, `GET /api/health` and `POST /api/auth/login` are implemented. Each operation has an `x-implementation-status` marker; update it as routes land. Schema validation of this file does not prove server conformance.
 
 ## Architecture and boundaries
 
@@ -31,6 +31,8 @@ The website keeps its token in memory for this baseline (reload requires login);
 Verification/reset tokens are separate, expiring and single-use. Website pages extract the email-link token and call the appropriate endpoint. Mobile users finish that browser flow then return to login. Successful reset consumes the token and requires a fresh login. Resend and forgot-password return neutral success messages for valid requests regardless of account eligibility/existence. Never log passwords, JWTs or action tokens.
 
 Exact JWT and action-token lifetimes, email provider and deployed URLs remain server configuration decisions for auth/deployment work. Clients must not hardcode lifetimes or decode tokens to decide permissions. All tokens must expire, and the API is the authority on validity.
+
+Login throttling returns `429` with a `Retry-After` header in seconds. Clients should wait before retrying. See [API deployment configuration](deployment.md) for current limits, proxy trust, Nginx settings and the single-process rate-limit storage assumption.
 
 ## SwaggerHub and maintaining the contract
 
