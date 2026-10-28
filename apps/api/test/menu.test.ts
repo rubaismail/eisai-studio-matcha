@@ -116,3 +116,165 @@ test('database errors return a generic 500', async () => {
     error: 'Something went wrong',
   });
 });
+
+// Admin menu management
+
+test('GET /api/admin/menu requires an admin JWT', async () => {
+  const res = await request(createApp()).get('/api/admin/menu');
+
+  assert.equal(res.status, 401);
+  assert.deepEqual(res.body, { error: 'Unauthorized' });
+});
+
+test('POST /api/menu creates an item for admins', async () => {
+  const created = {
+    name: 'Matcha Latte',
+    description: 'Smooth matcha',
+    price: 6.5,
+    category: 'Drinks',
+    imageUrl: 'https://example.com/images/matcha.webp',
+    isSeasonal: false,
+    isAvailable: true,
+  };
+
+  const create = mock.method(MenuItem, 'create', async (payload: Record<string, unknown>) => ({
+    ...payload,
+    _id: 'menu-1',
+    createdAt: '2026-10-20T00:00:00.000Z',
+    updatedAt: '2026-10-20T00:00:00.000Z',
+  }));
+
+  const res = await request(createApp())
+    .post('/api/menu')
+    .set('Authorization', 'Bearer admin-token')
+    .send(created);
+
+  assert.equal(res.status, 201);
+  assert.deepEqual(res.body.item.name, 'Matcha Latte');
+  assert.deepEqual(create.mock.calls[0].arguments[0], {
+    name: 'Matcha Latte',
+    description: 'Smooth matcha',
+    price: 6.5,
+    category: 'Drinks',
+    imageUrl: 'https://example.com/images/matcha.webp',
+    isSeasonal: false,
+    isAvailable: true,
+  });
+});
+
+test('POST /api/menu rejects invalid data or non-admins', async () => {
+  const invalid = await request(createApp())
+    .post('/api/menu')
+    .set('Authorization', 'Bearer admin-token')
+    .send({ name: '', price: -1 });
+
+  assert.equal(invalid.status, 400);
+  assert.deepEqual(invalid.body, { error: 'Name is required' });
+
+  const forbidden = await request(createApp())
+    .post('/api/menu')
+    .set('Authorization', 'Bearer customer-token')
+    .send({ name: 'Matcha', price: 5 });
+
+  assert.equal(forbidden.status, 403);
+  assert.deepEqual(forbidden.body, { error: 'Admin access required' });
+});
+
+test('PUT /api/menu/:id hides and unhides items', async () => {
+  const item = {
+    _id: 'menu-2',
+    name: 'Matcha Latte',
+    price: 6.5,
+    isAvailable: true,
+    save: async function () {
+      return this;
+    },
+  };
+
+  const findById = mock.method(MenuItem, 'findById', async () => item);
+  mock.method(MenuItem, 'find', () => ({
+    sort: async () => [],
+  }));
+
+  const hide = await request(createApp())
+    .put('/api/menu/menu-2')
+    .set('Authorization', 'Bearer admin-token')
+    .send({ isAvailable: false });
+
+  assert.equal(hide.status, 200);
+  assert.equal(item.isAvailable, false);
+  assert.deepEqual(hide.body.item.isAvailable, false);
+
+  const publicHidden = await request(createApp()).get('/api/menu');
+  assert.equal(publicHidden.status, 200);
+  assert.deepEqual(publicHidden.body.items, []);
+
+  const unhide = await request(createApp())
+    .put('/api/menu/menu-2')
+    .set('Authorization', 'Bearer admin-token')
+    .send({ isAvailable: true });
+
+  assert.equal(unhide.status, 200);
+  assert.equal(item.isAvailable, true);
+  assert.deepEqual(findById.mock.calls.length, 2);
+
+  const publicVisible = await request(createApp()).get('/api/menu');
+  assert.equal(publicVisible.status, 200);
+  assert.deepEqual(publicVisible.body.items, []);
+});
+
+test('PUT /api/menu/:id returns 404 for unknown IDs', async () => {
+  mock.method(MenuItem, 'findById', async () => null);
+
+  const res = await request(createApp())
+    .put('/api/menu/unknown-id')
+    .set('Authorization', 'Bearer admin-token')
+    .send({ isAvailable: false });
+
+  assert.equal(res.status, 404);
+  assert.deepEqual(res.body, { error: 'Menu item not found' });
+});
+
+test('DELETE /api/menu/:id permanently removes an item', async () => {
+  const item = {
+    _id: 'menu-3',
+    deleteOne: async () => undefined,
+  };
+
+  const findById = mock.method(MenuItem, 'findById', async () => item);
+
+  const res = await request(createApp())
+    .delete('/api/menu/menu-3')
+    .set('Authorization', 'Bearer admin-token');
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { message: 'Menu item deleted.' });
+  assert.equal(findById.mock.calls.length, 1);
+});
+
+test('DELETE /api/menu/:id returns 404 for unknown IDs', async () => {
+  mock.method(MenuItem, 'findById', async () => null);
+
+  const res = await request(createApp())
+    .delete('/api/menu/unknown-id')
+    .set('Authorization', 'Bearer admin-token');
+
+  assert.equal(res.status, 404);
+  assert.deepEqual(res.body, { error: 'Menu item not found' });
+});
+
+// Upload route
+
+test('POST /api/uploads accepts an admin-uploaded image URL', async () => {
+  const res = await request(createApp())
+    .post('/api/uploads')
+    .set('Authorization', 'Bearer admin-token')
+    .attach('image', Buffer.from('fake-image-content'), {
+      filename: 'matcha.png',
+      contentType: 'image/png',
+    });
+
+  assert.equal(res.status, 201);
+  assert.equal(typeof res.body.imageUrl, 'string');
+  assert.match(res.body.imageUrl, /^https?:\/\//);
+});
