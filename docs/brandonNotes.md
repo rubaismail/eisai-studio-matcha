@@ -1,4 +1,4 @@
-# Brandon Notes - Admin Menu, Upload, and Review Fixes
+﻿# Brandon Notes - Admin Menu, Upload, and Review Fixes
 
 ## Overview
 This work was focused on finishing the admin menu management feature, hardening the upload flow, and closing the review issues that were blocking merge. The goal was to make the API behave like a real production-safe admin tool instead of a placeholder implementation.
