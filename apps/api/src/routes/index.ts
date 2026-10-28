@@ -4,6 +4,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import menuRoutes from './menu.routes.js';
 import loginRoutes from './login.routes.js';
+import uploadRoutes from './upload.routes.js';
 import adminMenuRoutes from './adminMenu.routes.js';
 
 const router = Router();
@@ -17,12 +18,11 @@ router.get('/health', (_req, res) => {
     .json({ status: connected ? 'ok' : 'database disconnected' });
 });
 
-// Menu endpoints
 router.use('/menu', menuRoutes);
+router.use('/uploads', uploadRoutes);
+router.use('/admin', adminMenuRoutes);
 
 // Authentication endpoints
 router.use('/auth', loginRoutes);
-
-router.use('/admin', adminMenuRoutes);
 
 export default router;
