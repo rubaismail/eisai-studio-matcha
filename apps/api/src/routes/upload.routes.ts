@@ -24,20 +24,35 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/', requireAdmin, upload.single('image'), async (req, res, next) => {
-  try {
-    const file = req.file as UploadFile | undefined;
-    if (!file) {
-      const error = new Error('Image file required') as Error & { status?: number };
-      error.status = 400;
-      throw error;
-    }
+router.post('/', requireAdmin, (req, res, next) => {
+  upload.single('image')(req, res, async (err) => {
+    try {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+          const error = new Error(
+            err.code === 'LIMIT_FILE_SIZE' ? 'Image exceeds the 5 MB limit' : 'Unexpected file upload',
+          ) as Error & { status?: number };
+          error.status = status;
+          throw error;
+        }
 
-    const imageUrl = await uploadMenuImage(file);
-    res.status(201).json({ imageUrl });
-  } catch (error) {
-    next(error);
-  }
+        throw err;
+      }
+
+      const file = req.file as UploadFile | undefined;
+      if (!file) {
+        const error = new Error('Image file required') as Error & { status?: number };
+        error.status = 400;
+        throw error;
+      }
+
+      const imageUrl = await uploadMenuImage(file);
+      res.status(201).json({ imageUrl });
+    } catch (error) {
+      next(error);
+    }
+  });
 });
 
 export default router;

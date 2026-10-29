@@ -216,7 +216,7 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
   }));
 
   const hide = await request(createApp())
-    .put('/api/menu/menu-2')
+    .put('/api/menu/507f1f77bcf86cd799439022')
     .set('Authorization', createAuthHeader('admin'))
     .send({ isAvailable: false });
 
@@ -229,7 +229,7 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
   assert.deepEqual(publicHidden.body.items, []);
 
   const unhide = await request(createApp())
-    .put('/api/menu/menu-2')
+    .put('/api/menu/507f1f77bcf86cd799439022')
     .set('Authorization', createAuthHeader('admin'))
     .send({ isAvailable: true });
 
@@ -246,7 +246,7 @@ test('PUT /api/menu/:id returns 404 for unknown IDs', async () => {
   mock.method(MenuItem, 'findById', async () => null);
 
   const res = await request(createApp())
-    .put('/api/menu/unknown-id')
+    .put('/api/menu/507f1f77bcf86cd799439099')
     .set('Authorization', createAuthHeader('admin'))
     .send({ isAvailable: false });
 
@@ -263,7 +263,7 @@ test('DELETE /api/menu/:id permanently removes an item', async () => {
   const findById = mock.method(MenuItem, 'findById', async () => item);
 
   const res = await request(createApp())
-    .delete('/api/menu/menu-3')
+    .delete('/api/menu/507f1f77bcf86cd799439033')
     .set('Authorization', createAuthHeader('admin'));
 
   assert.equal(res.status, 200);
@@ -275,7 +275,7 @@ test('DELETE /api/menu/:id returns 404 for unknown IDs', async () => {
   mock.method(MenuItem, 'findById', async () => null);
 
   const res = await request(createApp())
-    .delete('/api/menu/unknown-id')
+    .delete('/api/menu/507f1f77bcf86cd799439099')
     .set('Authorization', createAuthHeader('admin'));
 
   assert.equal(res.status, 404);

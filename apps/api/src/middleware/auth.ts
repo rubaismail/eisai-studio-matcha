@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+﻿import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { requireJwtSecret } from '../config/env.js';
