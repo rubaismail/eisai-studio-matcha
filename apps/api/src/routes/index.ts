@@ -4,6 +4,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import menuRoutes from './menu.routes.js';
 import loginRoutes from './login.routes.js';
+import authRoutes from "./auth.routes.js";
 
 const router = Router();
 
@@ -21,5 +22,8 @@ router.use('/menu', menuRoutes);
 
 // Authentication endpoints
 router.use('/auth', loginRoutes);
+
+// Registration endpoints
+router.use("/auth", authRoutes);
 
 export default router;
