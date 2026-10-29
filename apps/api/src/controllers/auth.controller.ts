@@ -1,87 +1,55 @@
 import type { Request, Response } from "express";
-import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
+//import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
 import { User } from "../models/User.js";
-
-const SCRYPT_N = 131072;
-const SCRYPT_R = 8;
-const SCRYPT_P = 1;
-const KEY_LENGTH = 64;
-const MAXMEM = 256 * 1024 * 1024;
+import bcrypt from "bcrypt";
+import { sendVerificationEmail } from "../services/email.js";
+import {randomBytes, createHash} from "node:crypto";
+import { stripTypeScriptTypes } from "node:module";
 
 const REGISTER_FIELDS = ["firstName", "lastName", "email", "password"] as const;
-const LOGIN_FIELDS = ["email", "password"] as const;
+const RESEND_FIELDS = ["email"] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Exact contract messages.
-const MSG_CREATED =
-  "Account created. Check your email to verify your account.";
-const MSG_BAD_INPUT =
-  "Missing or invalid input, malformed ID, or invalid, expired or used action token.";
+const MSG_CREATED = "Account created. Check your email to verify your account.";
+const MSG_BAD_INPUT = "Missing or invalid input, malformed ID, or invalid, expired or used action token.";
 const MSG_DUPLICATE = "Email address already registered.";
-const MSG_INTERNAL =
-  "Unexpected server, database, email or storage error. Do not expose internal details.";
+const MSG_INTERNAL = "Unexpected server, database, email or storage error. Do not expose internal details.";
 
-function scryptAsync(
-  password: string,
-  salt: Buffer,
-  keylen: number,
-  opts: { N: number; r: number; p: number; maxmem: number },
-): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    scrypt(password, salt, keylen, opts, (err, dk) =>
-      err ? reject(err) : resolve(dk),
-    );
-  });
-}
+//Time limit for token expiration
+const VERIFICATION_TTL_MS = 15 * 60 * 1000 //15 minutes
 
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await scryptAsync(password, salt, KEY_LENGTH, {
-    N: SCRYPT_N,
-    r: SCRYPT_R,
-    p: SCRYPT_P,
-    maxmem: MAXMEM,
-  });
-  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt.toString(
-    "base64",
-  )}$${key.toString("base64")}`;
+async function hashPassword(password: string){
+  const hash = await bcrypt.hash(password, 12);
+  return hash;
 }
 
 async function verifyPassword(stored: string, password: string): Promise<boolean> {
-  const parts = stored.split("$");
-  if (parts.length !== 6 || parts[0] !== "scrypt") return false;
-  const N = Number(parts[1]);
-  const r = Number(parts[2]);
-  const p = Number(parts[3]);
-  const salt = Buffer.from(parts[4], "base64");
-  const expected = Buffer.from(parts[5], "base64");
-
-  const derived = await scryptAsync(password, salt, expected.length, {
-    N,
-    r,
-    p,
-    maxmem: Math.max(MAXMEM, 128 * N * r * 2),
-  });
-  return derived.length === expected.length && timingSafeEqual(derived, expected);
+  const isMatch = await bcrypt.compare(password, stored);
+  return isMatch;
 }
 
 function validateBodyShape(
   body: unknown,
   allowed: readonly string[],
 ): string | null {
+  //Is it a json object?
   if (body === null || typeof body !== "object" || Array.isArray(body)) {
     return "body must be a JSON object";
   }
   const obj = body as Record<string, unknown>;
+  //Rejecting unknown fields
   for (const key of Object.keys(obj)) {
     if (!allowed.includes(key)) return `unknown field: ${key}`;
   }
+  //Checks required fields
   for (const key of allowed) {
     const v = obj[key];
     if (v === undefined) return `${key} is required`;
     if (v === null) return `${key} must not be null`;
     if (typeof v !== "string") return `${key} must be a string`;
   }
+  //success
   return null;
 }
 
@@ -92,6 +60,18 @@ function validateNewPassword(password: string): string | null {
     return "password must be at most 72 bytes (UTF-8)";
   }
   return null;
+}
+
+function generateVerificationToken(): {raw: string; hash: string; expires: Date}{
+  const raw = randomBytes(32).toString("base64url"); // URL-safe
+  const hash = createHash("sha256").update(raw).digest("hex");
+  const expires = new Date(Date.now() + VERIFICATION_TTL_MS); //expires in
+  return {raw, hash, expires};
+}
+
+function hashVerificationToken(raw:string) : string{
+
+  return createHash("sha256").update(raw).digest("hex");
 }
 
 export async function register(req: Request, res: Response) {
@@ -123,6 +103,7 @@ export async function register(req: Request, res: Response) {
     if (existing) return res.status(409).json({ error: MSG_DUPLICATE });
 
     const passwordHash = await hashPassword(password);
+    const {raw, hash, expires} = generateVerificationToken();
 
     try {
       await User.create({
@@ -132,6 +113,8 @@ export async function register(req: Request, res: Response) {
         passwordHash,
         role: "customer",
         isVerified: false,
+        verificationToken: hash,
+        verificationTokenExpires: expires,
       });
     } catch (err: unknown) {
       if (
@@ -145,6 +128,9 @@ export async function register(req: Request, res: Response) {
       throw err;
     }
 
+    await sendVerificationEmail(email, raw);
+    
+
     return res.status(201).json({ message: MSG_CREATED });
   } catch {
     // Never leak internal details.
@@ -152,34 +138,64 @@ export async function register(req: Request, res: Response) {
   }
 }
 
-export async function login(req: Request, res: Response) {
+export async function verify(req: Request, res: Response) {
   try {
-    const shapeError = validateBodyShape(req.body, LOGIN_FIELDS);
+    const raw = req.query.token;
+    if(typeof raw != "string" || raw.length === 0){
+      return res.status(400).json({error: MSG_BAD_INPUT});
+    }
+
+    const hash = hashVerificationToken(raw);
+
+    const user = await User.findOne({
+      verificationToken: hash,
+      verificationTokenExpires: { $gt: new Date()},
+    }).select("+verificationToken");
+
+    if(!user) return res.status(400).json({error: MSG_BAD_INPUT});
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({message: "Email verified. You can now login."});
+  } catch (err){
+    return res.status(500).json({error: MSG_INTERNAL});
+  }
+}
+export async function resendVerification(req: Request, res: Response) {
+
+  try {
+    const shapeError = validateBodyShape(req.body, RESEND_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
 
-    const { email: emailRaw, password } = req.body as {
-      email: string;
-      password: string;
-    };
-
-    // Login accepts any nonempty password; no trimming, no new-password policy.
-    if (password.length === 0) {
+    const email = (req.body as { email: string }).email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
       return res.status(400).json({ error: MSG_BAD_INPUT });
     }
+    const {raw, hash, expires} = generateVerificationToken();
+    const user = await User.findOne({ email });
 
-    const email = emailRaw.trim().toLowerCase();
-    const user = await User.findOne({ email }).select("+passwordHash");
-    if (!user) return res.status(401).json({ error: MSG_BAD_INPUT });
-
-    const ok = await verifyPassword(user.passwordHash, password);
-    if (!ok) return res.status(401).json({ error: MSG_BAD_INPUT });
-
-    if (!user.isVerified) {
-      return res.status(403).json({ error: MSG_BAD_INPUT });
+    if(!user || user.isVerified){
+      return res.status(200).json("If this account needs verification, an email was sent.");
     }
 
-    return res.status(200).json({ message: "Logged in." });
-  } catch {
+    if (
+      user.verificationTokenExpires &&
+      user.verificationTokenExpires.getTime() - VERIFICATION_TTL_MS > Date.now() - 60_000
+    ) {
+      return res.status(200).json("If this account needs verification, an email was sent.");
+    }
+
+    user.verificationToken = hash;
+    user.verificationTokenExpires = expires;
+    await user.save();
+
+    await sendVerificationEmail(email, raw);
+
+    return res.status(200).json("If this account needs verification, an email was sent.");
+  }catch {
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
