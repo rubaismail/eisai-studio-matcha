@@ -132,8 +132,9 @@ export async function register(req: Request, res: Response) {
     
 
     return res.status(201).json({ message: MSG_CREATED });
-  } catch {
+  } catch (err) {
     // Never leak internal details.
+    console.error("register failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }

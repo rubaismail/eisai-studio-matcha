@@ -20,6 +20,7 @@ export const env = {
   mailtrapToken: process.env.MAILTRAP_TOKEN ?? '',
   emailFrom: process.env.EMAIL_FROM ?? '',
   appUrl: process.env.APP_URL ?? '',
+  mailtrapInboxId: process.env.MAILTRAP_INBOX_ID ?? '',
 };
 
 export function requireDatabaseUri(): string {
