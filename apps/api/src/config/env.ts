@@ -16,6 +16,12 @@ export const env = {
   mongodbUri: process.env.MONGODB_URI ?? '',
   isProduction: process.env.NODE_ENV === 'production',
   jwtSecret: process.env.JWT_SECRET ?? '',
+  awsS3Bucket: process.env.AWS_S3_BUCKET ?? 'eisai-menu-images',
+  awsRegion: process.env.AWS_REGION ?? 'us-east-1',
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+  awsSessionToken: process.env.AWS_SESSION_TOKEN ?? '',
+  awsS3PublicUrl: process.env.AWS_S3_PUBLIC_URL ?? '',
 };
 
 export function requireDatabaseUri(): string {

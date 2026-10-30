@@ -1,0 +1,39 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity User {
+  * id : ObjectId
+  --
+  * firstName : string
+  * lastName : string
+  * email : string <<unique>>
+  * passwordHash : string
+  * role : enum<'customer','admin'>
+  * isVerified : boolean
+  --
+  verificationToken : string
+  verificationTokenExpires : datetime
+  resetPasswordToken : string
+  resetPasswordExpires : datetime
+  favorites : MenuItem[]
+  createdAt : datetime
+  updatedAt : datetime
+}
+
+entity MenuItem {
+  * id : ObjectId
+  --
+  * name : string
+  * price : number
+  * category : string
+  description : string
+  imageUrl : string
+  isSeasonal : boolean
+  isAvailable : boolean
+  createdAt : datetime
+  updatedAt : datetime
+}
+
+User }o--o{ MenuItem : favorites
+@enduml
