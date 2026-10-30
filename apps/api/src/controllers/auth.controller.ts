@@ -4,7 +4,6 @@ import { User } from "../models/User.js";
 import bcrypt from "bcrypt";
 import { sendVerificationEmail } from "../services/email.js";
 import {randomBytes, createHash} from "node:crypto";
-import { stripTypeScriptTypes } from "node:module";
 
 const REGISTER_FIELDS = ["firstName", "lastName", "email", "password"] as const;
 const RESEND_FIELDS = ["email"] as const;
@@ -22,11 +21,6 @@ const VERIFICATION_TTL_MS = 15 * 60 * 1000 //15 minutes
 async function hashPassword(password: string){
   const hash = await bcrypt.hash(password, 12);
   return hash;
-}
-
-async function verifyPassword(stored: string, password: string): Promise<boolean> {
-  const isMatch = await bcrypt.compare(password, stored);
-  return isMatch;
 }
 
 function validateBodyShape(
@@ -161,7 +155,7 @@ export async function verify(req: Request, res: Response) {
     await user.save();
 
     return res.status(200).json({message: "Email verified. You can now login."});
-  } catch (err){
+  } catch{
     return res.status(500).json({error: MSG_INTERNAL});
   }
 }
