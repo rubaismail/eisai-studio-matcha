@@ -18,3 +18,11 @@ export async function listSeasonalMenu(_req: Request, res: Response) {
 
   res.json({ items });
 }
+
+
+ // GET /api/admin/menu - All menu items, including hidden ones
+export async function listAdminMenu(_req: Request, res: Response) {
+  const items = await MenuItem.find({}).sort({ name: 1 });
+
+  res.json({ items });
+}
