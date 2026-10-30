@@ -1,6 +1,5 @@
 
  // Loads apps/api/.env and gives the rest of the API one typed place to read settings from.
- // 9d2821778a7ac9755a410d86fab69b36
 import dotenv from 'dotenv';
 import { parseTrustProxy } from './trustProxy.js';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +20,7 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM ?? '',
   appUrl: process.env.APP_URL ?? '',
   mailtrapInboxId: process.env.MAILTRAP_INBOX_ID ?? '',
+  mailtrapUseSandbox: process.env.MAILTRAP_USE_SANDBOX === "true",
 };
 
 export function requireDatabaseUri(): string {

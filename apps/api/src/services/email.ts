@@ -1,14 +1,14 @@
 import { MailtrapClient } from "mailtrap";
-import { env } from "../config/env.js";
+import { env, requireAppUrl } from "../config/env.js";
 
 const mailtrap = new MailtrapClient({
   token: env.mailtrapToken,
-  sandbox: true,
+  sandbox: env.mailtrapUseSandbox,
   testInboxId: Number(env.mailtrapInboxId), // required for sandbox
 });
 
 export async function sendVerificationEmail(recipient: string, rawToken: string) {
-  const base = env.appUrl;
+  const base = requireAppUrl();
   const link = `${base}/api/auth/verify?token=${encodeURIComponent(rawToken)}`;
 
   await mailtrap.send({

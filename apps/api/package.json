@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --import ./test/setup-env.mjs --import tsx --test test/*.test.ts",
+    "test": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks test/*.test.ts",
     "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {

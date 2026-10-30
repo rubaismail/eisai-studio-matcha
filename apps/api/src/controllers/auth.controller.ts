@@ -19,7 +19,7 @@ const MSG_INTERNAL = "Unexpected server, database, email or storage error. Do no
 const VERIFICATION_TTL_MS = 15 * 60 * 1000 //15 minutes
 
 async function hashPassword(password: string){
-  const hash = await bcrypt.hash(password, 12);
+  const hash = await bcrypt.hash(password, 10);
   return hash;
 }
 
@@ -142,19 +142,18 @@ export async function verify(req: Request, res: Response) {
 
     const hash = hashVerificationToken(raw);
 
-    const user = await User.findOne({
+    const user = await User.findOneAndUpdate({
       verificationToken: hash,
       verificationTokenExpires: { $gt: new Date()},
-    }).select("+verificationToken");
-
-    if(!user) return res.status(400).json({error: MSG_BAD_INPUT});
-
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
-    await user.save();
-
-    return res.status(200).json({message: "Email verified. You can now login."});
+    }, {
+      $set: { isVerified: true},
+      $unset: { verificationToken: "", verificationTokenExpires: ""},
+    });
+    if(!user){
+      return res.status(400).json({error: MSG_BAD_INPUT});
+    } else {
+      return res.status(200).json({message: "Email verified. You can now login."});
+    }
   } catch{
     return res.status(500).json({error: MSG_INTERNAL});
   }
@@ -173,14 +172,14 @@ export async function resendVerification(req: Request, res: Response) {
     const user = await User.findOne({ email });
 
     if(!user || user.isVerified){
-      return res.status(200).json("If this account needs verification, an email was sent.");
+      return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
     }
 
     if (
       user.verificationTokenExpires &&
       user.verificationTokenExpires.getTime() - VERIFICATION_TTL_MS > Date.now() - 60_000
     ) {
-      return res.status(200).json("If this account needs verification, an email was sent.");
+      return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
     }
 
     user.verificationToken = hash;
@@ -189,7 +188,7 @@ export async function resendVerification(req: Request, res: Response) {
 
     await sendVerificationEmail(email, raw);
 
-    return res.status(200).json("If this account needs verification, an email was sent.");
+    return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
   }catch {
     return res.status(500).json({ error: MSG_INTERNAL });
   }
