@@ -1,5 +1,6 @@
-﻿import { test, mock, afterEach } from 'node:test';
+import { test, mock, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { S3Client } from '@aws-sdk/client-s3';
@@ -9,10 +10,7 @@ import { MenuItem } from '../src/models/MenuItem.js';
 import { User } from '../src/models/User.js';
 
 const adminUserId = '507f1f77bcf86cd799439011';
-const validPngBuffer = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACxk31TAAAADElEQVR4nGNgYGAAAAAEAAHHfhg1AAAAAElFTkQAAAAA',
-  'base64',
-);
+const validPngBuffer = readFileSync(new URL('./fixtures/images/valid.png', import.meta.url));
 
 function createAuthHeader(role: 'admin' | 'customer' = 'admin') {
   mock.method(User, 'findById', async () => ({
@@ -197,7 +195,8 @@ test('POST /api/menu rejects invalid data or non-admins', async () => {
   const infinitePrice = await request(createApp())
     .post('/api/menu')
     .set('Authorization', createAuthHeader('admin'))
-    .send({ name: 'Matcha', price: Number.POSITIVE_INFINITY });
+    .set('Content-Type', 'application/json')
+    .send('{"name":"Matcha","price":1e400}');
 
   assert.equal(infinitePrice.status, 400);
   assert.deepEqual(infinitePrice.body, { error: 'Price must be a nonnegative finite number' });
@@ -283,7 +282,8 @@ test('PUT /api/menu/:id rejects nonfinite prices', async () => {
   const res = await request(createApp())
     .put('/api/menu/507f1f77bcf86cd799439022')
     .set('Authorization', createAuthHeader('admin'))
-    .send({ price: Number.POSITIVE_INFINITY });
+    .set('Content-Type', 'application/json')
+    .send('{"price":1e400}');
 
   assert.equal(res.status, 400);
   assert.deepEqual(res.body, { error: 'Price must be a nonnegative finite number' });

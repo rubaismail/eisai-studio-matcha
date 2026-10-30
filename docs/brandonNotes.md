@@ -1,4 +1,4 @@
-﻿# Brandon Notes - Admin Menu, Upload, and Review Fixes
+# Brandon Notes - Admin Menu, Upload, and Review Fixes
 
 ## Overview
 This work was focused on finishing the admin menu management feature, hardening the upload flow, and closing the review issues that were blocking merge. The goal was to make the API behave like a real production-safe admin tool instead of a placeholder implementation.
@@ -45,7 +45,7 @@ Implemented admin-only image upload support using multipart upload handling and 
 The upload flow now:
 - accepts only supported image types: `jpg`, `png`, `webp`
 - enforces the ~5 MB limit
-- validates actual file signatures instead of trusting the browser MIME type
+- fully decodes image content instead of trusting the browser MIME type or header alone
 - uploads to S3 using AWS credentials or role-based environment config
 - returns a public URL after the object is successfully written
 
@@ -132,3 +132,11 @@ If this feature regresses later, the fastest way to debug is to check the follow
 
 ## Final takeaway
 The final fix set pushed the app from a placeholder admin mock to an actually reviewable, production-minded implementation: authenticated admin routes, real image uploads to permanent storage, strict validation, and regression tests that exercise real behavior.
+
+## Image validation follow-up
+
+Uploads now use Sharp 0.35.5 with strict decoder errors and its default input-size safeguards. Validation reads pixel data for every frame, verifies the detected format against the supplied MIME type, and requires PNG's closing IEND chunk. Valid JPEGs without optional APP metadata, progressive JPEGs, transparent PNGs, and lossy/lossless/animated WebP are covered by fixed, independently generated fixtures. Validated original bytes are sent to S3; the API does not resize or re-encode photos.
+
+Regression tests in `apps/api/test/upload.test.ts` cover accepted formats, incomplete/corrupted data, MIME mismatches, authorization, multipart limits, S3 errors, and temporary session credentials. Rejected requests must not call S3. Use `npm ci` with optional dependencies enabled on Node 24 so Sharp's platform-specific binary is installed. GitHub CI checks the Linux build; local tests also check macOS. Real bucket permissions and public image delivery still require the deployment smoke test.
+
+The upload dependency audit also identified advisories in the previously pinned Multer and S3 SDK dependencies. These are updated to Multer 2.5.0 and `@aws-sdk/client-s3` 3.1160.0, with exact versions recorded in the lockfile.
