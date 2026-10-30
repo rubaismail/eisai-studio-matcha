@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer, { type FileFilterCallback } from 'multer';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 import { uploadMenuImage, type UploadFile } from '../services/upload.js';
 
 const upload = multer({
@@ -24,15 +25,20 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/', requireAdmin, (req, res, next) => {
+router.post('/', requireAuth, requireAdmin, (req, res, next) => {
   upload.single('image')(req, res, async (err) => {
     try {
       if (err) {
         if (err instanceof multer.MulterError) {
-          const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-          const error = new Error(
-            err.code === 'LIMIT_FILE_SIZE' ? 'Image exceeds the 5 MB limit' : 'Unexpected file upload',
-          ) as Error & { status?: number };
+          let status = 400;
+          let message = 'Unexpected file upload';
+
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            status = 413;
+            message = 'Image exceeds the 5 MB limit';
+          }
+
+          const error = new Error(message) as Error & { status?: number };
           error.status = status;
           throw error;
         }

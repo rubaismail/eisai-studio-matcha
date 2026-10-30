@@ -9,6 +9,10 @@ import { MenuItem } from '../src/models/MenuItem.js';
 import { User } from '../src/models/User.js';
 
 const adminUserId = '507f1f77bcf86cd799439011';
+const validPngBuffer = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACxk31TAAAADElEQVR4nGNgYGAAAAAEAAHHfhg1AAAAAElFTkQAAAAA',
+  'base64',
+);
 
 function createAuthHeader(role: 'admin' | 'customer' = 'admin') {
   mock.method(User, 'findById', async () => ({
@@ -142,7 +146,7 @@ test('GET /api/admin/menu requires an admin JWT', async () => {
   const res = await request(createApp()).get('/api/admin/menu');
 
   assert.equal(res.status, 401);
-  assert.deepEqual(res.body, { error: 'Unauthorized' });
+  assert.deepEqual(res.body, { error: 'Authentication required' });
 });
 
 test('POST /api/menu creates an item for admins', async () => {
@@ -190,6 +194,14 @@ test('POST /api/menu rejects invalid data or non-admins', async () => {
   assert.equal(invalid.status, 400);
   assert.deepEqual(invalid.body, { error: 'Name is required' });
 
+  const infinitePrice = await request(createApp())
+    .post('/api/menu')
+    .set('Authorization', createAuthHeader('admin'))
+    .send({ name: 'Matcha', price: Number.POSITIVE_INFINITY });
+
+  assert.equal(infinitePrice.status, 400);
+  assert.deepEqual(infinitePrice.body, { error: 'Price must be a nonnegative finite number' });
+
   const forbidden = await request(createApp())
     .post('/api/menu')
     .set('Authorization', createAuthHeader('customer'))
@@ -211,8 +223,14 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
   };
 
   const findById = mock.method(MenuItem, 'findById', async () => item);
-  mock.method(MenuItem, 'find', () => ({
-    sort: async () => [],
+  mock.method(MenuItem, 'find', (query: Record<string, unknown>) => ({
+    sort: async () => {
+      if (query.isAvailable === true) {
+        return item.isAvailable ? [item] : [];
+      }
+
+      return [item];
+    },
   }));
 
   const hide = await request(createApp())
@@ -228,6 +246,11 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
   assert.equal(publicHidden.status, 200);
   assert.deepEqual(publicHidden.body.items, []);
 
+  const adminVisible = await request(createApp()).get('/api/admin/menu').set('Authorization', createAuthHeader('admin'));
+  assert.equal(adminVisible.status, 200);
+  assert.deepEqual(adminVisible.body.items.length, 1);
+  assert.equal(adminVisible.body.items[0].name, 'Matcha Latte');
+
   const unhide = await request(createApp())
     .put('/api/menu/507f1f77bcf86cd799439022')
     .set('Authorization', createAuthHeader('admin'))
@@ -239,7 +262,31 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
 
   const publicVisible = await request(createApp()).get('/api/menu');
   assert.equal(publicVisible.status, 200);
-  assert.deepEqual(publicVisible.body.items, []);
+  assert.equal(publicVisible.body.items.length, 1);
+  assert.equal(publicVisible.body.items[0].name, 'Matcha Latte');
+  assert.equal(publicVisible.body.items[0].isAvailable, true);
+});
+
+test('PUT /api/menu/:id rejects nonfinite prices', async () => {
+  const item = {
+    _id: 'menu-2',
+    name: 'Matcha Latte',
+    price: 6.5,
+    isAvailable: true,
+    save: async function () {
+      return this;
+    },
+  };
+
+  mock.method(MenuItem, 'findById', async () => item);
+
+  const res = await request(createApp())
+    .put('/api/menu/507f1f77bcf86cd799439022')
+    .set('Authorization', createAuthHeader('admin'))
+    .send({ price: Number.POSITIVE_INFINITY });
+
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body, { error: 'Price must be a nonnegative finite number' });
 });
 
 test('PUT /api/menu/:id returns 404 for unknown IDs', async () => {
@@ -285,18 +332,12 @@ test('DELETE /api/menu/:id returns 404 for unknown IDs', async () => {
 // Upload route
 
 test('POST /api/uploads accepts an admin-uploaded image URL', async () => {
-  const pngBytes = Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x0d,
-    0x49, 0x48, 0x44, 0x52,
-  ]);
-
-  mock.method(S3Client.prototype, 'send', async () => ({ ok: true }));
+  const send = mock.method(S3Client.prototype, 'send', async () => ({ ok: true }));
 
   const res = await request(createApp())
     .post('/api/uploads')
     .set('Authorization', createAuthHeader('admin'))
-    .attach('image', pngBytes, {
+    .attach('image', validPngBuffer, {
       filename: 'matcha.png',
       contentType: 'image/png',
     });
@@ -304,4 +345,22 @@ test('POST /api/uploads accepts an admin-uploaded image URL', async () => {
   assert.equal(res.status, 201);
   assert.equal(typeof res.body.imageUrl, 'string');
   assert.match(res.body.imageUrl, /^https?:\/\//);
+  assert.equal(send.mock.callCount(), 1);
+});
+
+test('POST /api/uploads rejects malformed PNG content before S3 upload', async () => {
+  const send = mock.method(S3Client.prototype, 'send', async () => ({ ok: true }));
+  const invalidPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00]);
+
+  const res = await request(createApp())
+    .post('/api/uploads')
+    .set('Authorization', createAuthHeader('admin'))
+    .attach('image', invalidPng, {
+      filename: 'bad.png',
+      contentType: 'image/png',
+    });
+
+  assert.equal(res.status, 415);
+  assert.equal(res.body.error, 'Unsupported image type');
+  assert.equal(send.mock.callCount(), 0);
 });

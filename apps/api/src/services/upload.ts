@@ -11,17 +11,73 @@ export type UploadFile = {
 
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+function isValidPng(buffer: Buffer): boolean {
+  if (buffer.length < 33) {
+    return false;
+  }
+
+  if (
+    buffer[0] !== 0x89 ||
+    buffer[1] !== 0x50 ||
+    buffer[2] !== 0x4e ||
+    buffer[3] !== 0x47 ||
+    buffer[4] !== 0x0d ||
+    buffer[5] !== 0x0a ||
+    buffer[6] !== 0x1a ||
+    buffer[7] !== 0x0a
+  ) {
+    return false;
+  }
+
+  if (buffer.readUInt32BE(8) !== 13 || buffer.slice(12, 16).toString('ascii') !== 'IHDR') {
+    return false;
+  }
+
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  return width > 0 && height > 0;
+}
+
+function isValidJpeg(buffer: Buffer): boolean {
+  return buffer.length >= 4 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff &&
+    (buffer[3] >= 0xe0 && buffer[3] <= 0xef);
+}
+
+function isValidWebp(buffer: Buffer): boolean {
+  if (buffer.length < 12) {
+    return false;
+  }
+
+  if (
+    buffer[0] !== 0x52 ||
+    buffer[1] !== 0x49 ||
+    buffer[2] !== 0x46 ||
+    buffer[3] !== 0x46 ||
+    buffer[8] !== 0x57 ||
+    buffer[9] !== 0x45 ||
+    buffer[10] !== 0x42 ||
+    buffer[11] !== 0x50
+  ) {
+    return false;
+  }
+
+  const riffSize = buffer.readUInt32LE(4);
+  return riffSize > 0 && buffer.length >= 12 + riffSize;
+}
+
 function detectActualMimeType(buffer: Buffer): string | null {
-  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+  if (isValidPng(buffer)) {
     return 'image/png';
   }
 
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+  if (isValidJpeg(buffer)) {
     return 'image/jpeg';
   }
 
-  if (buffer.length >= 12 && buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+  if (isValidWebp(buffer)) {
     return 'image/webp';
   }
 
@@ -83,6 +139,7 @@ export async function uploadMenuImage(file: UploadFile): Promise<string> {
           credentials: {
             accessKeyId: env.awsAccessKeyId,
             secretAccessKey: env.awsSecretAccessKey,
+            ...(env.awsSessionToken ? { sessionToken: env.awsSessionToken } : {}),
           },
         }
       : {}),
