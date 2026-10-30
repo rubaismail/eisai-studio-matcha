@@ -1,19 +1,30 @@
-import { MailtrapClient } from "mailtrap";
-import { env, requireAppUrl } from "../config/env.js";
+import nodemailer from "nodemailer";
+import { MailtrapTransport } from "mailtrap";
+import { requireAppUrl, requireMailConfig } from "../config/env.js";
 
-const mailtrap = new MailtrapClient({
-  token: env.mailtrapToken,
-  sandbox: env.mailtrapUseSandbox,
-  testInboxId: Number(env.mailtrapInboxId), // required for sandbox
-});
+const mail = requireMailConfig();
 
-export async function sendVerificationEmail(recipient: string, rawToken: string) {
-  const base = requireAppUrl();
-  const link = `${base}/api/auth/verify?token=${encodeURIComponent(rawToken)}`;
+const transport = nodemailer.createTransport(
+  MailtrapTransport({
+    token: mail.token,
+    sandbox: mail.sandbox,
+    ...(mail.sandbox ? { testInboxId: mail.inboxId } : {}),
+  })
+);
 
-  await mailtrap.send({
-    from: { name: "Your App", email: env.emailFrom },
-    to: [{ email: recipient }],
+// Pure: builds the absolute verify URL from a base and raw token.
+export function buildVerificationLink(baseUrl: string, rawToken: string): string {
+  const link = new URL("/api/auth/verify", baseUrl);
+  link.searchParams.set("token", rawToken);
+  return link.toString();
+}
+
+export async function sendVerificationEmail(recipient: string, rawToken: string): Promise<void> {
+  const link = buildVerificationLink(requireAppUrl(), rawToken);
+
+  await transport.sendMail({
+    from: mail.from,
+    to: recipient,
     subject: "Verification Email",
     text: `Verify your email address
 
@@ -27,5 +38,5 @@ If you didn't create an account, you can ignore this email.`,
 <p><a href="${link}">${link}</a></p>
 <p>This link expires in 15 minutes and can only be used once.<br>
 If you didn't create an account, you can ignore this email.</p>`,
-});
+  });
 }

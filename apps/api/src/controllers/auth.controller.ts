@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-//import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
 import { User } from "../models/User.js";
-import bcrypt from "bcrypt";
+import { hashPassword } from "../config/password.js";
+import { requireMailConfig } from "../config/env.js";
 import { sendVerificationEmail } from "../services/email.js";
 import {randomBytes, createHash} from "node:crypto";
 
@@ -17,11 +17,6 @@ const MSG_INTERNAL = "Unexpected server, database, email or storage error. Do no
 
 //Time limit for token expiration
 const VERIFICATION_TTL_MS = 15 * 60 * 1000 //15 minutes
-
-async function hashPassword(password: string){
-  const hash = await bcrypt.hash(password, 10);
-  return hash;
-}
 
 function validateBodyShape(
   body: unknown,
@@ -70,6 +65,9 @@ function hashVerificationToken(raw:string) : string{
 
 export async function register(req: Request, res: Response) {
   try {
+
+    requireMailConfig();
+
     const shapeError = validateBodyShape(req.body, REGISTER_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
 
@@ -122,9 +120,7 @@ export async function register(req: Request, res: Response) {
       throw err;
     }
 
-    await sendVerificationEmail(email, raw);
-    
-
+    await sendVerificationEmail(email, raw);   
     return res.status(201).json({ message: MSG_CREATED });
   } catch (err) {
     // Never leak internal details.
@@ -169,26 +165,30 @@ export async function resendVerification(req: Request, res: Response) {
       return res.status(400).json({ error: MSG_BAD_INPUT });
     }
     const {raw, hash, expires} = generateVerificationToken();
-    const user = await User.findOne({ email });
+    const cooldownThreshold = new Date(Date.now() + VERIFICATION_TTL_MS - 60_000);
 
-    if(!user || user.isVerified){
-      return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
-    }
+  const result = await User.updateOne(
+  {
+    email,
+    isVerified: false,
+    $or: [
+      { verificationTokenExpires: { $exists: false } },
+      { verificationTokenExpires: { $lt: cooldownThreshold } },
+    ],
+  },
+  {
+    $set: {
+      verificationToken: hash,
+      verificationTokenExpires: expires,
+    },
+  }
+  );
 
-    if (
-      user.verificationTokenExpires &&
-      user.verificationTokenExpires.getTime() - VERIFICATION_TTL_MS > Date.now() - 60_000
-    ) {
-      return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
-    }
-
-    user.verificationToken = hash;
-    user.verificationTokenExpires = expires;
-    await user.save();
-
+  if (result.modifiedCount > 0) {
     await sendVerificationEmail(email, raw);
+  }
 
-    return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
+  return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
   }catch {
     return res.status(500).json({ error: MSG_INTERNAL });
   }
