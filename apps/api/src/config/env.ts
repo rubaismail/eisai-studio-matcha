@@ -21,6 +21,12 @@ export const env = {
   appUrl: process.env.APP_URL ?? '',
   mailtrapInboxId: process.env.MAILTRAP_INBOX_ID ?? '',
   mailtrapUseSandbox: process.env.MAILTRAP_USE_SANDBOX === "true",
+  awsS3Bucket: process.env.AWS_S3_BUCKET ?? 'eisai-menu-images',
+  awsRegion: process.env.AWS_REGION ?? 'us-east-1',
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+  awsSessionToken: process.env.AWS_SESSION_TOKEN ?? '',
+  awsS3PublicUrl: process.env.AWS_S3_PUBLIC_URL ?? '',
 };
 
 export function requireDatabaseUri(): string {
