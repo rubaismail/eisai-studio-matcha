@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: >-
     Shared target contract for React TypeScript and Flutter clients calling the Express/Node API
-    with MongoDB Atlas. Based on apps/api/apiREADME.md. GET /menu, GET /health and POST /auth/login are
+    with MongoDB Atlas. Based on apps/api/apiREADME.md. Only GET /menu and GET /health are
     implemented at this revision; other operations are planned. See docs/api/README.md for
     validation decisions, client token handling and publication status. JSON request bodies reject
     unknown fields and null; clients must tolerate additional response fields except the explicit
@@ -19,6 +19,36 @@ tags:
   - name: Uploads
   - name: Health
 security: []
+x-email-configuration:
+  description: >-
+    Outgoing verification email is sent via Mailtrap. Sandbox mode captures mail in the Mailtrap
+    inbox; live mode delivers to real recipients and requires a verified sender/domain.
+  modes:
+    sandbox:
+      env-flag: MAILTRAP_USE_SANDBOX=true
+      description: Development/testing only. No mail reaches real inboxes.
+    live:
+      env-flag: MAILTRAP_USE_SANDBOX=false
+      description: Production. Requires verified sender credentials and a verified domain.
+  required-env-vars:
+    - name: MAILTRAP_TOKEN
+      description: Mailtrap API token for the selected mode.
+    - name: EMAIL_FROM
+      description: Sender address shown in the verification email; must be verified.
+    - name: APP_URL
+      description: >-
+        Public base URL used to build absolute verification links. Required in production; a blank
+        value yields relative links that do not work from an email client.
+  verification-link:
+    pattern: '${APP_URL}/api/auth/verify?token=<raw-token>'
+  verification-token:
+    ttl-minutes: 15
+    single-use: true
+    resend-cooldown-seconds: 60
+    storage: Only a SHA-256 hash of the token is stored; the raw token exists only in the email.
+  notes:
+    - Never commit real tokens or sender credentials to this contract.
+    - Resend responses are intentionally identical for unknown, verified, and eligible accounts.
 paths:
   /auth/register:
     post:
@@ -30,7 +60,7 @@ paths:
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '201':
           description: Create a customer account
@@ -67,7 +97,7 @@ paths:
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Verify an email address
@@ -76,7 +106,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Message'
               example:
-                message: Email verified. You can now log in.
+                message: Email verified. You can now login.
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -99,7 +129,7 @@ paths:
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Request a verification email
