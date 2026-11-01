@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { parseTrustProxy } from './trustProxy.js';
 import { fileURLToPath } from 'node:url';
 
+const EMAIL_FROM_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 dotenv.config({
   path: fileURLToPath(new URL('../../.env', import.meta.url)),
   quiet: true,
@@ -48,14 +50,33 @@ export function requireJwtSecret(): string {
   return env.jwtSecret;
 }
 
-export function requireMailConfig(): {
+export function requireEmailConfig(): {
+  token: string;
+  from: string;
+  sandbox: boolean;
+  inboxId?: number;
+  appUrl: string;
+} {
+  const mail = requireMailConfig();
+  const appUrl = requireAppUrl();
+  return { ...mail, appUrl };
+}
+
+function requireMailConfig(): {
   token: string;
   from: string;
   sandbox: boolean;
   inboxId?: number;
 } {
-  if (!env.mailtrapToken) throw new Error("MAILTRAP_TOKEN is required.");
-  if (!env.emailFrom) throw new Error("EMAIL_FROM is required.");
+
+  const token = env.mailtrapToken.trim();
+  const from = env.emailFrom.trim();
+
+  if (!token) throw new Error("MAILTRAP_TOKEN is required.");
+  if (!from) throw new Error("EMAIL_FROM is required.");
+  if (!EMAIL_FROM_RE.test(from)) {
+    throw new Error("EMAIL_FROM must be a valid email address.");
+  }
 
   if (env.mailtrapUseSandbox !== 'true' && env.mailtrapUseSandbox !== 'false') {
     throw new Error('MAILTRAP_USE_SANDBOX must be exactly "true" or "false".');
@@ -77,7 +98,7 @@ export function requireMailConfig(): {
 }
 
 // Base URL used to build links in emails. Explicit in production; localhost fallback in dev.
-export function requireAppUrl(): string {
+function requireAppUrl(): string {
   const raw = env.appUrl.trim();
 
   if (!raw) {

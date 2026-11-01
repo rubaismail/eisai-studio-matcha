@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 import { MailtrapTransport } from "mailtrap";
-import { requireAppUrl, requireMailConfig } from "../config/env.js";
+import { requireEmailConfig } from "../config/env.js";
 
-const mail = requireMailConfig();
+const mail = requireEmailConfig();
 
 const transport = nodemailer.createTransport(
   MailtrapTransport({
@@ -20,7 +20,7 @@ export function buildVerificationLink(baseUrl: string, rawToken: string): string
 }
 
 export async function sendVerificationEmail(recipient: string, rawToken: string): Promise<void> {
-  const link = buildVerificationLink(requireAppUrl(), rawToken);
+  const link = buildVerificationLink(mail.appUrl, rawToken);
 
   await transport.sendMail({
     from: mail.from,

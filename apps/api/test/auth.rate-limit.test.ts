@@ -104,7 +104,7 @@ test('register limits normalized emails across casing', async () => {
 
 test('register recovers after the window expires', async () => {
   mockRegisterDeps();
-  const app = createTestApp({ ipLimit: 1, emailLimit: 100, windowMs: 100 }, 'register');
+  const app = createTestApp({ ipLimit: 1, emailLimit: 100, windowMs: 1000}, 'register');
 
   assert.equal((await request(app).post('/register').send(validBody)).status, 201);
   assert.equal(
@@ -112,7 +112,7 @@ test('register recovers after the window expires', async () => {
     429,
   );
 
-  await sleep(200);
+  await sleep(1200);
 
   assert.equal(
     (await request(app).post('/register').send({ ...validBody, email: 'y@example.com' })).status,

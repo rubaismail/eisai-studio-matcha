@@ -6,6 +6,7 @@ import { User } from '../src/models/User.js';
 import { BCRYPT_COST } from '../src/config/password.js';
 import { buildVerificationLink } from '../src/services/email.js';
 import { createHash } from 'node:crypto';
+import { env } from '../src/config/env.js';
 
 // ---- Email module mock ------------------------------------------------------
 type EmailCall = { to: string; rawToken: string };
@@ -447,4 +448,141 @@ test('registration hash verifies with the shared login comparison', async () => 
   assert.match(hash, new RegExp(`^\\$2[aby]\\$${BCRYPT_COST}\\$`));
   assert.equal(await bcrypt.compare(validBody.password, hash), true);
   assert.equal(await bcrypt.compare('WrongPassword123', hash), false);
+});
+// ---- Invalid email/link configuration ---------------------------------------
+
+test('production with blank APP_URL returns 500 before creating an account', async () => {
+  const create = mockCreateSuccess();
+  mockRegisterFindOneNone();
+
+  const originalProd = env.isProduction;
+  const originalUrl = env.appUrl;
+  env.isProduction = true;
+  env.appUrl = '';
+  try {
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.isProduction = originalProd;
+    env.appUrl = originalUrl;
+  }
+});
+
+test('production with a valid example APP_URL allows registration', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+
+  const originalProd = env.isProduction;
+  const originalUrl = env.appUrl;
+  env.isProduction = true;
+  env.appUrl = 'https://api.example.com';
+  try {
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(res.status, 201);
+    assert.equal(create.mock.callCount(), 1);
+    assert.equal(emailCalls.length, 1);
+  } finally {
+    env.isProduction = originalProd;
+    env.appUrl = originalUrl;
+  }
+});
+
+test('whitespace-only MAILTRAP_TOKEN returns 500 without creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+
+  const original = env.mailtrapToken;
+  env.mailtrapToken = '   ';
+  try {
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.mailtrapToken = original;
+  }
+});
+
+test('whitespace-only EMAIL_FROM returns 500 without creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+
+  const original = env.emailFrom;
+  env.emailFrom = '   ';
+  try {
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.emailFrom = original;
+  }
+});
+
+test('malformed EMAIL_FROM returns 500 without creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+
+  const original = env.emailFrom;
+  env.emailFrom = 'not-an-email';
+  try {
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.emailFrom = original;
+  }
+});
+
+test('resend with invalid config replaces no token and sends no email', async () => {
+  const update = mockUpdateOne(1);
+
+  const original = env.emailFrom;
+  env.emailFrom = 'not-an-email';
+  try {
+    const res = await request(createApp())
+      .post('/api/auth/resend-verification')
+      .send({ email: 'jane@example.com' });
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.emailFrom = original;
+  }
+});
+
+test('resend with blank APP_URL in production replaces no token and sends no email', async () => {
+  const update = mockUpdateOne(1);
+
+  const originalProd = env.isProduction;
+  const originalUrl = env.appUrl;
+  env.isProduction = true;
+  env.appUrl = '';
+  try {
+    const res = await request(createApp())
+      .post('/api/auth/resend-verification')
+      .send({ email: 'jane@example.com' });
+
+    assert.equal(res.status, 500);
+    assert.deepEqual(res.body, { error: MSG_INTERNAL });
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.isProduction = originalProd;
+    env.appUrl = originalUrl;
+  }
 });

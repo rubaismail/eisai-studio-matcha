@@ -183,10 +183,7 @@ test('unknown email uses the precomputed dummy bcrypt hash', async () => {
       ),
   );
 
+  assert.match(controllerSource, /verifyPassword\(/);
   assert.match(controllerSource, /DUMMY_PASSWORD_HASH/);
-  assert.match(controllerSource, /bcrypt\.compare\(/);
-  assert.match(
-    controllerSource,
-    /user\?\.passwordHash\s*\?\?\s*DUMMY_PASSWORD_HASH/,
-  );
+  assert.match(controllerSource, /await\s+verifyPassword/);
 });
