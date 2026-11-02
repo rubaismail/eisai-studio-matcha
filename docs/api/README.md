@@ -50,3 +50,28 @@ npx --yes --package=@apidevtools/swagger-cli@4.0.4 swagger-cli validate docs/api
 ```
 
 Schema validation checks OpenAPI structure and references. Review endpoint examples, access rules and actual server behavior separately; an accepted schema is not a substitute for integration tests.
+
+
+### Registration email configuration
+
+For local development, set `MAILTRAP_USE_SANDBOX=true`, a sandbox API token in
+`MAILTRAP_TOKEN`, a positive `MAILTRAP_INBOX_ID`, and a valid `EMAIL_FROM` address.
+Sandbox messages appear in Mailtrap; they are not delivered to customer inboxes.
+`APP_URL` may be blank locally: the API uses `http://localhost:${PORT}` (default 4000).
+
+For production, use `MAILTRAP_USE_SANDBOX=false`, sending credentials and a verified
+sender/domain. Set `APP_URL` to the public API origin, such as `https://api.example.com`.
+The final domain is not needed during development. Links target `/api/auth/verify`
+on that origin, with an encoded token. Missing/invalid configuration is rejected before
+registration creates an account or resend replaces a token. Configuration is loaded at
+startup; restart the API after changing it. Never commit real credentials.
+
+Registration defaults to 20 requests per IP and 3 per normalized email per 15 minutes;
+resend defaults to 10 per IP and 2 per email. Their counters are separate from login.
+Configure `AUTH_RATE_WINDOW_MS`, `REGISTER_IP_LIMIT`, `REGISTER_EMAIL_LIMIT`,
+`RESEND_IP_LIMIT`, and `RESEND_EMAIL_LIMIT` using positive integer values. Excess requests
+return 429 with `Retry-After`; clients should wait before retrying. Resend also enforces
+an atomic 60-second account cooldown and returns a neutral message for ineligible accounts.
+
+Automated tests use isolated database/delivery mocks. Real inbox delivery and the deployed
+registration → verification → login flow remain deployment smoke tests.

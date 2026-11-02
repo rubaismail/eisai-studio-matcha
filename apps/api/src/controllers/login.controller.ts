@@ -1,16 +1,14 @@
 
 import type { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
+import { DUMMY_PASSWORD_HASH, verifyPassword } from "../config/password.js";
 import { requireJwtSecret } from '../config/env.js';
 
 // Precomputed bcrypt hash with cost factor 10.
 // Used when no matching account exists.
-const DUMMY_PASSWORD_HASH =
-  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
-
 // POST /api/auth/login
+
 export async function login(req: Request, res: Response) {
   const body: unknown = req.body;
 
@@ -55,10 +53,7 @@ export async function login(req: Request, res: Response) {
   }).select('+passwordHash');
 
   // Always perform a bcrypt comparison, even for unknown emails.
-  const validPassword = await bcrypt.compare(
-    password,
-    user?.passwordHash ?? DUMMY_PASSWORD_HASH,
-  );
+  const validPassword = await verifyPassword(user?.passwordHash ?? DUMMY_PASSWORD_HASH, password);
 
   if (!user || !validPassword) {
     res.status(401).json({ error: 'Invalid email or password' });
