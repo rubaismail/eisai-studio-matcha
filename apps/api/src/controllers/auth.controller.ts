@@ -44,7 +44,7 @@ function validateBodyShape(
 
 function validateNewPassword(password: string): string | null {
   // Do NOT trim passwords.
-  if (password.length < 8) return "password must be at least 8 characters";
+  if ([...password].length < 8) return "password must be at least 8 characters";
   if (Buffer.byteLength(password, "utf8") > 72) {
     return "password must be at most 72 bytes (UTF-8)";
   }

@@ -213,6 +213,31 @@ test('registration rejects passwords under 8 characters', async () => {
   assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
 });
 
+test('registration rejects fewer than eight Unicode characters before creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+  const app = createApp();
+  for (const password of ['😀'.repeat(4), '😀'.repeat(7), 'abc😀def']) {
+    assert.ok([...password].length < 8);
+    assert.ok(password.length >= 8);
+    const res = await request(app).post('/api/auth/register').send({ ...validBody, password });
+    assert.equal(res.status, 400);
+    assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  }
+  assert.equal(create.mock.callCount(), 0);
+  assert.equal(emailCalls.length, 0);
+});
+
+test('registration accepts eight Unicode characters and preserves the password', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+  const password = '😀'.repeat(8);
+  const res = await request(createApp()).post('/api/auth/register').send({ ...validBody, password });
+  assert.equal(res.status, 201);
+  const doc = create.mock.calls[0].arguments[0] as Record<string, unknown>;
+  assert.equal(await bcrypt.compare(password, doc.passwordHash as string), true);
+});
+
 test('registration rejects passwords over 72 UTF-8 bytes', async () => {
   const password = '😀'.repeat(24);
   assert.ok(password.length <= 72);
