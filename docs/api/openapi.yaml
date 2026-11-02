@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: >-
     Shared target contract for React TypeScript and Flutter clients calling the Express/Node API
-    with MongoDB Atlas. Based on apps/api/apiREADME.md. Only GET /menu and GET /health are
-    implemented at this revision; other operations are planned. See docs/api/README.md for
+    with MongoDB. Based on apps/api/apiREADME.md. Each operation declares its implementation
+    status; registration, email verification, login, menu management and image uploads are implemented. See docs/api/README.md for
     validation decisions, client token handling and publication status. JSON request bodies reject
     unknown fields and null; clients must tolerate additional response fields except the explicit
     safe login user projection. No checkout, favorites, refresh-token or logout endpoints.
@@ -38,9 +38,9 @@ x-email-configuration:
     - name: APP_URL
       description: >-
         Public base URL used to build absolute verification links. Required in production; a blank
-        value yields relative links that do not work from an email client.
+        value is rejected. Development defaults to http://localhost:4000 (or the configured PORT).
   verification-link:
-    pattern: '${APP_URL}/api/auth/verify?token=<raw-token>'
+    pattern: '<APP_URL origin>/api/auth/verify?token=<raw-token>'
   verification-token:
     ttl-minutes: 15
     single-use: true
@@ -57,6 +57,8 @@ paths:
       description: >-
         Create an unverified customer and send a verification email. Reject unknown fields including
         role. Hash passwords before storage; never return hashes or action tokens.
+        Default limits: 20 requests per client IP and 3 per normalized email per 15 minutes.
+        Exceeding either limit returns 429; wait for Retry-After before retrying.
       tags:
         - Auth
       security: []
@@ -74,6 +76,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
       requestBody:
@@ -126,6 +130,8 @@ paths:
       description: >-
         For valid input, return the same success status and message regardless of account existence
         or eligibility. Tokens expire and can be used once.
+        Default limits: 10 requests per client IP and 2 per normalized email per 15 minutes.
+        Exceeding either limit returns 429; wait for Retry-After before retrying.
       tags:
         - Auth
       security: []
@@ -141,6 +147,8 @@ paths:
                 message: If this account needs verification, a verification email has been sent.
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
       requestBody:
@@ -894,6 +902,21 @@ components:
         item:
           $ref: '#/components/schemas/MenuItem'
   responses:
+    AuthRateLimited:
+      description: Too many requests from this client IP or for this normalized email.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Too many login attempts. Try again later.
+
     BadRequest:
       description: Missing or invalid input, malformed ID, or invalid, expired or used action token.
       content:

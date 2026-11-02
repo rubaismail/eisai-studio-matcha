@@ -94,7 +94,7 @@ function requireMailConfig(): {
     }
   }
 
-  return { token: env.mailtrapToken, from: env.emailFrom, sandbox, inboxId };
+  return { token, from, sandbox, inboxId };
 }
 
 // Base URL used to build links in emails. Explicit in production; localhost fallback in dev.

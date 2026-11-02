@@ -6,7 +6,7 @@ import { User } from '../src/models/User.js';
 import { BCRYPT_COST } from '../src/config/password.js';
 import { buildVerificationLink } from '../src/services/email.js';
 import { createHash } from 'node:crypto';
-import { env } from '../src/config/env.js';
+import { env, requireEmailConfig } from '../src/config/env.js';
 
 // ---- Email module mock ------------------------------------------------------
 type EmailCall = { to: string; rawToken: string };
@@ -585,4 +585,100 @@ test('resend with blank APP_URL in production replaces no token and sends no ema
     env.isProduction = originalProd;
     env.appUrl = originalUrl;
   }
+});
+
+test('email configuration returns the trimmed credentials it validates', () => {
+  const originalToken = env.mailtrapToken;
+  const originalFrom = env.emailFrom;
+  try {
+    env.mailtrapToken = '  test-token  ';
+    env.emailFrom = '  test@example.com  ';
+    const config = requireEmailConfig();
+    assert.equal(config.token, 'test-token');
+    assert.equal(config.from, 'test@example.com');
+  } finally {
+    env.mailtrapToken = originalToken;
+    env.emailFrom = originalFrom;
+  }
+});
+
+test('concurrent resends send one email whose token matches the atomic update', async () => {
+  const stored = {
+    email: 'jane@example.com',
+    isVerified: false,
+    verificationToken: 'old',
+    verificationTokenExpires: new Date(0),
+  };
+  mock.method(User, 'updateOne', async (query: unknown, change: unknown) => {
+    const filter = query as {
+      email: string;
+      isVerified: boolean;
+      $or: [{ verificationTokenExpires: { $exists: boolean } },
+        { verificationTokenExpires: { $lt: Date } }];
+    };
+    assert.equal(filter.$or[0].verificationTokenExpires.$exists, false);
+    const threshold = filter.$or[1].verificationTokenExpires.$lt;
+    assert.ok(Math.abs(threshold.getTime() - (Date.now() + 14 * 60_000)) < 5000);
+    if (stored.email !== filter.email || stored.isVerified !== filter.isVerified ||
+        stored.verificationTokenExpires >= threshold) {
+      return { modifiedCount: 0 };
+    }
+    const update = change as { $set: { verificationToken: string; verificationTokenExpires: Date } };
+    // A stateful stand-in for MongoDB's atomic conditional update: subsequent
+    // callers evaluate the filter against the newly stored expiry.
+    Object.assign(stored, update.$set);
+    return { modifiedCount: 1 };
+  });
+  const app = createApp();
+  const responses = await Promise.all([1, 2].map(() =>
+    request(app).post('/api/auth/resend-verification').send({ email: ' Jane@Example.COM ' }),
+  ));
+  for (const response of responses) {
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, { message: MSG_RESEND });
+  }
+  assert.equal(emailCalls.length, 1);
+  assert.equal(emailCalls[0].to, stored.email);
+  assert.equal(stored.verificationToken,
+    createHash('sha256').update(emailCalls[0].rawToken).digest('hex'));
+});
+
+test('registered customer can log in only after consuming the emailed token', async () => {
+  let stored: Record<string, unknown> | undefined;
+  mock.method(User, 'findOne', () => ({
+    lean: async () => stored ?? null,
+    select: async () => stored ?? null,
+  }));
+  mock.method(User, 'create', async (doc: Record<string, unknown>) => {
+    stored = { ...doc, id: '507f1f77bcf86cd799439011' };
+    return stored;
+  });
+  mock.method(User, 'findOneAndUpdate', async (query: unknown, change: unknown) => {
+    const filter = query as { verificationToken: string; verificationTokenExpires: { $gt: Date } };
+    if (!stored || stored.verificationToken !== filter.verificationToken ||
+        (stored.verificationTokenExpires as Date) <= filter.verificationTokenExpires.$gt) return null;
+    const previous = { ...stored };
+    const update = change as { $set: Record<string, unknown>; $unset: Record<string, unknown> };
+    Object.assign(stored, update.$set);
+    for (const key of Object.keys(update.$unset)) delete stored[key];
+    return previous;
+  });
+  const app = createApp();
+  assert.equal((await request(app).post('/api/auth/register').send(validBody)).status, 201);
+  const credentials = { email: validBody.email, password: validBody.password };
+  assert.equal((await request(app).post('/api/auth/login').send(credentials)).status, 403);
+  const token = emailCalls[0].rawToken;
+  assert.equal((await request(app).get('/api/auth/verify').query({ token: 'wrong' })).status, 400);
+  assert.ok(stored);
+  stored.verificationTokenExpires = new Date(0);
+  assert.equal((await request(app).get('/api/auth/verify').query({ token })).status, 400);
+  stored.verificationTokenExpires = new Date(Date.now() + 60_000);
+  assert.equal((await request(app).get('/api/auth/verify').query({ token })).status, 200);
+  assert.equal((await request(app).get('/api/auth/verify').query({ token })).status, 400);
+  const login = await request(app).post('/api/auth/login').send(credentials);
+  assert.equal(login.status, 200);
+  assert.equal(typeof login.body.token, 'string');
+  assert.deepEqual(login.body.user, {
+    _id: '507f1f77bcf86cd799439011', email: validBody.email, role: 'customer',
+  });
 });
