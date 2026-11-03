@@ -6,7 +6,9 @@ The Express API accepts JSON requests and returns JSON responses. It connects to
 
 Start the API and website from the repository root with `npm run dev`. Set `MONGODB_URI` in `apps/api/.env` to the Atlas development connection string. Docker is not required. See the [project setup guide](../../README.md).
 
-**Shared contract:** [OpenAPI YAML](../../docs/api/openapi.yaml) · [contract decisions and SwaggerHub publication](../../docs/api/README.md). The YAML is the machine-readable source of truth; this README is the companion guide. These are target endpoints: only menu listing and health are currently implemented.
+**Shared contract:** [OpenAPI YAML](../../docs/api/openapi.yaml) · [contract decisions and SwaggerHub publication](../../docs/api/README.md). The YAML is the machine-readable source of truth; this README is the companion guide.
+This guide documents the target API contract alongside implemented behavior. The menu listing, seasonal listing, admin menu management, authentication flows (except password reset), image uploads, and health endpoints are implemented. Forgot-password and reset-password operations remain planned. See `x-implementation-status` in the OpenAPI contract for endpoint-level status.
+
 
 ## Quick navigation
 
@@ -212,6 +214,9 @@ Returns HTTP `200`:
       "price": 6.5,
       "category": "Drinks",
       "imageUrl": "https://example.com/images/matcha-latte.webp",
+      "teaBases": ["matcha"],
+      "isRecommended": true,
+      "isFeatured": true,
       "isSeasonal": false,
       "isAvailable": true,
       "createdAt": "2026-10-20T12:00:00.000Z",
@@ -225,7 +230,12 @@ Prices are numbers in dollars. Image URLs in these examples are illustrative.
 
 ### 8. GET /api/menu/seasonal
 
-Lists available seasonal items for the home-page highlight. No authentication or request body required. Returns HTTP `200` with the same `{ "items": [...] }` shape as the public menu, filtered to `isSeasonal: true` and `isAvailable: true`.
+
+Lists available seasonal menu items. No authentication or request body required.
+
+Returns HTTP `200` with the same `{ "items": [...] }` shape as the public menu, filtered to `isSeasonal: true` and `isAvailable: true`.
+
+Seasonal classification is independent of homepage carousel selection. The homepage carousel uses available items with `isFeatured: true`, which clients identify from `GET /api/menu`.
 
 ### 9. GET /api/admin/menu
 
@@ -244,12 +254,20 @@ Creates a menu item. Requires an admin JWT.
   "price": 6.5,
   "category": "Drinks",
   "imageUrl": "https://example.com/images/matcha-latte.webp",
+  "teaBases": ["matcha"],
+  "isRecommended": true,
+  "isFeatured": true,
   "isSeasonal": false,
   "isAvailable": true
 }
 ```
 
-`name` and `price` are required; the name must not be blank and price must be nonnegative. Optional defaults are an empty description and image URL, category `Drinks`, `isSeasonal: false`, and `isAvailable: true`.
+
+`name` and `price` are required; the name must not be blank and the price must be a nonnegative finite number.
+
+Optional defaults are an empty description and image URL, category `Drinks`, `teaBases: []`, `isRecommended: false`, `isFeatured: false`, `isSeasonal: false`, and `isAvailable: true`.
+
+`teaBases` accepts an array containing `matcha`, `hojicha`, or both. Duplicate values and unsupported values are rejected. The `isRecommended`, `isFeatured`, `isSeasonal`, and `isAvailable` fields must be booleans. Invalid types, explicit nulls, and unknown fields return HTTP `400`.
 
 Returns HTTP `201` with `{ "item": {...} }`, containing the saved item in the shape shown above, including its `_id` and timestamps.
 
@@ -261,7 +279,10 @@ Updates an existing item. Requires an admin JWT. Send the editable fields to cha
 {
   "name": "Seasonal Matcha Latte",
   "price": 7,
-  "isSeasonal": true
+  "teaBases": ["matcha", "hojicha"],
+  "isRecommended": true,
+  "isFeatured": true,
+  "isSeasonal": false
 }
 ```
 
@@ -277,7 +298,30 @@ Hide an item without deleting it:
 
 Unhide it by sending `"isAvailable": true`. Hiding removes it from public and seasonal reads but keeps it in the admin list. Hide and unhide use this endpoint; they are not additional endpoints.
 
-### 12. DELETE /api/menu/:id
+
+### 12. Menu filtering and display behavior
+
+Menu metadata supports dynamic filtering and homepage display across the React website and Flutter mobile app.
+
+- `teaBases`: Identifies Matcha and/or Hojicha. Items with both values appear in both corresponding filters.
+- `isRecommended`: Identifies items for the Recommended menu filter and badge.
+- `isFeatured`: Identifies items for the homepage spinning drink carousel.
+- `isSeasonal`: Identifies seasonal menu offerings independently of Featured status.
+- `isAvailable`: Controls whether an item appears in the public menu.
+
+Administrators can mark regular drinks as Featured even when no seasonal drinks are available.
+
+The public `GET /api/menu` response contains only available items. Clients select featured drinks from this response using `isFeatured: true`. If no available items are featured, the carousel should be hidden.
+
+The admin menu endpoint includes available and hidden items, allowing administrators to edit or unhide them.
+
+Filter counts should be calculated dynamically from available menu items, not hardcoded.
+
+These metadata fields are implemented in the API. Corresponding web admin controls and Flutter interface behavior are separate frontend implementation tasks.
+
+
+
+### 13. DELETE /api/menu/:id
 
 Permanently deletes a menu item. Requires an admin JWT. No request body required. The client asks for confirmation before sending this request.
 
@@ -291,7 +335,7 @@ Returns HTTP `200`:
 
 A valid but nonexistent ID returns `404`. Use the update endpoint's availability flag when an item should only be hidden.
 
-### 13. POST /api/uploads
+### 14. POST /api/uploads
 
 Uploads one menu photo to AWS S3 and returns its URL. Requires an admin JWT. Use multipart field `image`; accepted formats are JPEG, PNG and WebP, with a maximum size of 5 MiB (5,242,880 bytes).
 
@@ -311,7 +355,7 @@ Returns HTTP `201`:
 
 The admin form sends this URL as `imageUrl` when creating or updating the menu item. Uploading an image does not itself create or update a menu record. Images are stored in S3, not on the API server's disk.
 
-### 14. GET /api/health
+### 15. GET /api/health
 
 Reports API/database readiness. No authentication or request body required.
 
