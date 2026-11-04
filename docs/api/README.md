@@ -2,7 +2,10 @@
 
 [openapi.yaml](openapi.yaml) is the reviewable source of truth for endpoint paths, request and response schemas, validation, status codes and access rules. [apiREADME](../../apps/api/apiREADME.md) explains the same API with walkthroughs. This formalizes that existing outline so API, React and Flutter developers can build together and import the contract into SwaggerHub or client/mock tools.
 
-This is the **target contract**, not a claim that all routes exist. At this revision `GET /api/menu`, `GET /api/health` and `POST /api/auth/login` are implemented. Each operation has an `x-implementation-status` marker; update it as routes land. Schema validation of this file does not prove server conformance.
+
+This is the **target contract**, not a claim that all routes exist. At this revision, registration, email verification, login, public menu reads, seasonal menu reads, admin menu management, image uploads, and health checks are implemented. Password-reset endpoints remain planned.
+
+Each operation has an `x-implementation-status` marker indicating its implementation status. Update these markers as routes are implemented or changed. Schema validation alone does not prove server conformance.
 
 ## Architecture and boundaries
 
@@ -21,6 +24,64 @@ These rules complete the README's outline and are implementation requirements fo
 - IDs are 24 hexadecimal characters. Malformed ID → `400`; valid missing menu item → `404`. Lists return `{ "items": [] }` when empty. All menu lists sort by name ascending; public reads exclude hidden items.
 - Upload exactly one multipart `image` of type JPEG, PNG or WebP, at most 5,242,880 bytes. The server validates file contents and size; the schema's `x-max-file-size` documents the byte limit but does not enforce it. No file/multiple files → `400`, oversize → `413`, unsupported image → `415`.
 - Errors use `{ "error": "..." }`; clients branch on HTTP status, not exact prose. Health's disconnected `503` uses `{ "status": "database disconnected" }` instead. Login returns only `_id`, `email` and `role` in its user projection; database models are not response DTOs. Other response objects allow extra fields so clients ignore incidental metadata such as Mongoose `__v`.
+
+
+## Menu metadata and homepage display
+
+The menu API supports additional metadata for drink filtering and homepage display across the React website and Flutter mobile application.
+
+| Field | Type | Purpose | Default |
+| --- | --- | --- | --- |
+| `teaBases` | `string[]` | Identifies whether a drink supports Matcha, Hojicha, or both | `[]` |
+| `isRecommended` | `boolean` | Controls inclusion in the Recommended filter and badge | `false` |
+| `isFeatured` | `boolean` | Controls inclusion in the homepage spinning carousel | `false` |
+| `isSeasonal` | `boolean` | Identifies seasonal menu offerings | `false` |
+| `isAvailable` | `boolean` | Controls public menu visibility | `true` |
+
+### Tea base filtering
+
+The `teaBases` array accepts `matcha`, `hojicha`, or both. Duplicate values and unsupported tea bases are rejected.
+
+A drink containing both values appears in both Matcha and Hojicha filters. The existing `category` field remains available for compatibility and is not used to determine tea-base filtering.
+
+### Featured and seasonal drinks
+
+`isFeatured` and `isSeasonal` are independent admin-controlled fields.
+
+- `isFeatured: true` identifies a drink for the homepage spinning carousel.
+- `isSeasonal: true` identifies a seasonal menu offering.
+- A drink may be featured, seasonal, both, or neither.
+- Only available items are eligible for public display.
+
+This allows the business to feature regular menu drinks even when no seasonal drinks are available.
+
+If no available drinks have `isFeatured: true`, the frontend should hide the homepage carousel and collapse the unused space.
+
+The existing `GET /api/menu/seasonal` endpoint continues to return available seasonal items independently of the featured carousel.
+
+### Dynamic menu behavior
+
+The website and Flutter app should generate menu cards, filtering results, and counts dynamically from API responses rather than hardcoding example drinks.
+
+Recommended items are identified by `isRecommended: true`. Public clients exclude unavailable items.
+
+### API creation and updates
+
+The menu create and update operations accept the new metadata fields.
+
+When omitted during creation, the defaults are:
+
+- `teaBases: []`
+- `isRecommended: false`
+- `isFeatured: false`
+
+Partial updates preserve omitted fields.
+
+The backend rejects unsupported tea bases, duplicate values, incorrect boolean types, unknown properties, and explicit null values.
+
+Existing database records may require metadata updates to populate their tea bases and display settings.
+
+These fields are supported by the backend API; corresponding web admin controls and Flutter integration are separate implementation tasks.
 
 ## Tokens and client behavior
 

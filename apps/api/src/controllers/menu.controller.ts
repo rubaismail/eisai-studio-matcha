@@ -11,6 +11,9 @@ const editableFields = new Set([
   'imageUrl',
   'isSeasonal',
   'isAvailable',
+  'teaBases',
+  'isRecommended',
+  'isFeatured',
 ]);
 
 function validateObjectId(id: string) {
@@ -34,6 +37,16 @@ function ensureAllowedMenuFields(body: Record<string, unknown>) {
 
 function validateMenuPayload(payload: Record<string, unknown>, { allowCreate }: { allowCreate: boolean }) {
   ensureAllowedMenuFields(payload);
+
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === null) {
+      const error = new Error(`${key} cannot be null`) as Error & { status?: number };
+      error.status = 400;
+      throw error;
+    }
+  }
+
 
   if (allowCreate && (!payload.name || typeof payload.name !== 'string' || payload.name.trim() === '')) {
     const error = new Error('Name is required') as Error & { status?: number };
@@ -94,6 +107,28 @@ function validateMenuPayload(payload: Record<string, unknown>, { allowCreate }: 
     error.status = 400;
     throw error;
   }
+
+  if (payload.teaBases !== undefined) {
+
+    if (!Array.isArray(payload.teaBases) || !payload.teaBases.every ((base) => base === 'matcha' || base === 'hojicha') || new Set(payload.teaBases).size !== payload.teaBases.length) {
+      const error = new Error('teaBases must be an array containing unique matcha/hojicha values') as Error & { status?: number };
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  if (payload.isRecommended !== undefined && typeof payload.isRecommended !== 'boolean') {
+    const error = new Error('isRecommended must be a boolean') as Error & { status?: number };
+    error.status = 400;
+    throw error;
+  }
+
+  if (payload.isFeatured !== undefined && typeof payload.isFeatured !== 'boolean') {
+    const error = new Error('isFeatured must be a boolean') as Error & { status?: number };
+    error.status = 400;
+    throw error;
+  }
+
 }
 
 export async function listMenu(_req: Request, res: Response) {
@@ -126,6 +161,9 @@ export async function createMenuItem(req: Request, res: Response) {
     price: Number(payload.price),
     category: typeof payload.category === 'string' && payload.category.trim() ? payload.category : 'Drinks',
     imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : '',
+    teaBases: Array.isArray(payload.teaBases) ? payload.teaBases : [],
+    isRecommended: payload.isRecommended ?? false,
+    isFeatured: payload.isFeatured ?? false,
     isSeasonal: Boolean(payload.isSeasonal ?? false),
     isAvailable: Boolean(payload.isAvailable ?? true),
   });
@@ -158,6 +196,9 @@ export async function updateMenuItem(req: Request, res: Response) {
     ...(payload.price !== undefined ? { price: Number(payload.price) } : {}),
     ...(payload.category !== undefined ? { category: String(payload.category).trim() } : {}),
     ...(payload.imageUrl !== undefined ? { imageUrl: String(payload.imageUrl) } : {}),
+    ...(payload.teaBases !== undefined ? { teaBases: payload.teaBases as string[] } : {}),
+    ...(payload.isRecommended !== undefined ? { isRecommended: payload.isRecommended as boolean } : {}),
+    ...(payload.isFeatured !== undefined ? { isFeatured: payload.isFeatured as boolean } : {}),
     ...(payload.isSeasonal !== undefined ? { isSeasonal: Boolean(payload.isSeasonal) } : {}),
     ...(payload.isAvailable !== undefined ? { isAvailable: Boolean(payload.isAvailable) } : {}),
   };

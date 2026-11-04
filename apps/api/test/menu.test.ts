@@ -178,6 +178,9 @@ test('POST /api/menu creates an item for admins', async () => {
     price: 6.5,
     category: 'Drinks',
     imageUrl: 'https://example.com/images/matcha.webp',
+    teaBases: [],
+    isRecommended: false,
+    isFeatured: false,
     isSeasonal: false,
     isAvailable: true,
   });
@@ -327,6 +330,124 @@ test('DELETE /api/menu/:id returns 404 for unknown IDs', async () => {
 
   assert.equal(res.status, 404);
   assert.deepEqual(res.body, { error: 'Menu item not found' });
+});
+
+// New menu metadata: tea bases, recommendations, featured status
+
+test('POST /api/menu stores tea bases and independent display flags', async () => {
+  const create = mock.method(MenuItem, 'create', async (payload: Record<string, unknown>) => ({
+    ...payload,
+    _id: '507f1f77bcf86cd799439055',
+  }));
+  const authorization = createAuthHeader('admin');
+
+  const res = await request(createApp())
+    .post('/api/menu')
+    .set('Authorization', authorization)
+    .send({
+      name: 'Golden Hour',
+      price: 7.5,
+      teaBases: ['matcha', 'hojicha'],
+      isRecommended: true,
+      isFeatured: true,
+      isSeasonal: false,
+    });
+
+  assert.equal(res.status, 201);
+  assert.deepEqual(res.body.item.teaBases, ['matcha', 'hojicha']);
+  assert.equal(res.body.item.isRecommended, true);
+  assert.equal(res.body.item.isFeatured, true);
+  assert.equal(res.body.item.isSeasonal, false);
+  assert.deepEqual(create.mock.calls[0].arguments[0], {
+    name: 'Golden Hour',
+    description: '',
+    price: 7.5,
+    category: 'Drinks',
+    imageUrl: '',
+    teaBases: ['matcha', 'hojicha'],
+    isRecommended: true,
+    isFeatured: true,
+    isSeasonal: false,
+    isAvailable: true,
+  });
+});
+
+test('POST /api/menu rejects invalid menu metadata', async () => {
+  const create = mock.method(MenuItem, 'create', async () => {
+    throw new Error('Invalid requests must not create menu items');
+  });
+  const authorization = createAuthHeader('admin');
+  const invalidMetadata = [
+    { teaBases: ['coffee'] },
+    { teaBases: ['matcha', 'matcha'] },
+    { teaBases: 'matcha' },
+    { teaBases: [1] },
+    { teaBases: null },
+    { isRecommended: 'true' },
+    { isFeatured: 1 },
+    { isFeatured: null },
+  ];
+
+  for (const metadata of invalidMetadata) {
+    const res = await request(createApp())
+      .post('/api/menu')
+      .set('Authorization', authorization)
+      .send({ name: 'Test Drink', price: 6, ...metadata });
+
+    assert.equal(res.status, 400, `Should reject ${JSON.stringify(metadata)}`);
+  }
+  assert.equal(create.mock.callCount(), 0);
+});
+
+test('PUT /api/menu/:id updates featured, seasonal and recommended independently', async () => {
+  const item = {
+    name: 'Tokyo Rose',
+    price: 7,
+    teaBases: ['matcha'],
+    isRecommended: false,
+    isFeatured: false,
+    isSeasonal: true,
+    isAvailable: true,
+    save: async function () {
+      return this;
+    },
+  };
+  mock.method(MenuItem, 'findById', async () => item);
+  const authorization = createAuthHeader('admin');
+  const url = '/api/menu/507f1f77bcf86cd799439022';
+
+  const feature = await request(createApp())
+    .put(url)
+    .set('Authorization', authorization)
+    .send({ isFeatured: true });
+  assert.equal(feature.status, 200);
+  assert.equal(item.isFeatured, true);
+  assert.equal(item.isSeasonal, true); // Unchanged by featuring.
+  assert.equal(item.isRecommended, false);
+
+  const update = await request(createApp())
+    .put(url)
+    .set('Authorization', authorization)
+    .send({ teaBases: ['matcha', 'hojicha'], isRecommended: true, isSeasonal: false });
+  assert.equal(update.status, 200);
+  assert.deepEqual(item.teaBases, ['matcha', 'hojicha']);
+  assert.equal(item.isRecommended, true);
+  assert.equal(item.isSeasonal, false);
+  assert.equal(item.isFeatured, true); // Unchanged by seasonal update.
+});
+
+test('GET /api/menu excludes unavailable featured items', async () => {
+  const find = mock.method(MenuItem, 'find', (query: Record<string, unknown>) => ({
+    sort: async () => query.isAvailable === true
+      ? [{ name: 'Available Drink', isAvailable: true, isFeatured: true }]
+      : [],
+  }));
+
+  const res = await request(createApp()).get('/api/menu');
+  assert.equal(res.status, 200);
+  assert.deepEqual(find.mock.calls[0].arguments[0], { isAvailable: true });
+  assert.equal(res.body.items.length, 1);
+  assert.equal(res.body.items[0].name, 'Available Drink');
 });
 
 // Upload route

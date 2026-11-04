@@ -307,6 +307,9 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    teaBases: [matcha]
+                    isRecommended: false
+                    isFeatured: false
                     isSeasonal: false
                     isAvailable: true
                     createdAt: '2026-10-20T12:00:00.000Z'
@@ -323,7 +326,7 @@ paths:
         - Admin menu
       security:
         - bearerAuth: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '201':
           description: Create a menu item
@@ -339,6 +342,9 @@ paths:
                   price: 6.5
                   category: Drinks
                   imageUrl: https://example.com/images/matcha-latte.webp
+                  teaBases: [matcha]
+                  isRecommended: false
+                  isFeatured: false
                   isSeasonal: false
                   isAvailable: true
                   createdAt: '2026-10-20T12:00:00.000Z'
@@ -364,6 +370,9 @@ paths:
               price: 6.5
               category: Drinks
               imageUrl: https://example.com/images/matcha-latte.webp
+              teaBases: [matcha]
+              isRecommended: false
+              isFeatured: false
               isSeasonal: false
               isAvailable: true
   /menu/seasonal:
@@ -392,6 +401,9 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    teaBases: [matcha]
+                    isRecommended: false
+                    isFeatured: false
                     isSeasonal: true
                     isAvailable: true
                     createdAt: '2026-10-20T12:00:00.000Z'
@@ -409,7 +421,7 @@ paths:
         - Admin menu
       security:
         - bearerAuth: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: List all menu items including hidden items
@@ -425,6 +437,91 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    teaBases: [matcha]
+                    isRecommended: false
+                    isFeatured: false
+                    isSeasonal: false
+                    isAvailable: false
+                    createdAt: '2026-10-20T12:00:00.000Z'
+                    updatedAt: '2026-10-20T12:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+  /menu/admin/menu:
+    get:
+      operationId: listAdminMenuViaMenu
+      summary: List all menu items (menu-router alias)
+      description: >-
+        Admin only. Return all menu items sorted by name ascending, including hidden items. Empty
+        result uses items: [].
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: List all menu items including hidden items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+              example:
+                items:
+                  - _id: 507f1f77bcf86cd799439012
+                    name: Matcha Latte
+                    description: Matcha with your choice of milk.
+                    price: 6.5
+                    category: Drinks
+                    imageUrl: https://example.com/images/matcha-latte.webp
+                    teaBases: [matcha]
+                    isRecommended: false
+                    isFeatured: false
+                    isSeasonal: false
+                    isAvailable: false
+                    createdAt: '2026-10-20T12:00:00.000Z'
+                    updatedAt: '2026-10-20T12:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-required-role: admin
+  /menu/admin-menu:
+    get:
+      operationId: listAdminMenuViaShortAlias
+      summary: List all menu items (menu-router alias)
+      description: >-
+        Admin only. Return all menu items sorted by name ascending, including hidden items. Empty
+        result uses items: [].
+      tags:
+        - Admin menu
+      security:
+        - bearerAuth: []
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: List all menu items including hidden items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuList'
+              example:
+                items:
+                  - _id: 507f1f77bcf86cd799439012
+                    name: Matcha Latte
+                    description: Matcha with your choice of milk.
+                    price: 6.5
+                    category: Drinks
+                    imageUrl: https://example.com/images/matcha-latte.webp
+                    teaBases: [matcha]
+                    isRecommended: false
+                    isFeatured: false
                     isSeasonal: false
                     isAvailable: false
                     createdAt: '2026-10-20T12:00:00.000Z'
@@ -448,7 +545,7 @@ paths:
         - Admin menu
       security:
         - bearerAuth: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Update, hide or unhide a menu item
@@ -464,6 +561,9 @@ paths:
                   price: 6.5
                   category: Drinks
                   imageUrl: https://example.com/images/matcha-latte.webp
+                  teaBases: [matcha]
+                  isRecommended: false
+                  isFeatured: false
                   isSeasonal: false
                   isAvailable: false
                   createdAt: '2026-10-20T12:00:00.000Z'
@@ -490,6 +590,9 @@ paths:
                 value:
                   name: Seasonal Matcha Latte
                   price: 7
+                  teaBases: [matcha]
+                  isRecommended: false
+                  isFeatured: false
                   isSeasonal: true
               hide:
                 value:
@@ -507,7 +610,7 @@ paths:
         - Admin menu
       security:
         - bearerAuth: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Delete a menu item permanently
@@ -548,7 +651,7 @@ paths:
         - Uploads
       security:
         - bearerAuth: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '201':
           description: Upload one menu image to S3
@@ -810,6 +913,26 @@ components:
           type: string
           default: ''
           description: Uploaded image URL, or an empty string when no image is set.
+        teaBases:
+          type: array
+          description: >-
+            Tea bases supported by this item. Empty means unclassified or not applicable.
+            A drink may support matcha, hojicha, or both.
+          items:
+            type: string
+            enum:
+              - matcha
+              - hojicha
+          uniqueItems: true
+          default: []
+        isRecommended:
+          type: boolean
+          description: Display this drink in the Recommended filter and with its badge.
+          default: false
+        isFeatured:
+          type: boolean
+          description: Include this available item in the homepage featured carousel.
+          default: false
         isSeasonal:
           type: boolean
           default: false
@@ -838,6 +961,23 @@ components:
         imageUrl:
           type: string
           description: Uploaded image URL, or an empty string when no image is set.
+        teaBases:
+          type: array
+          description: >-
+            Tea bases supported by this item. Empty means unclassified or not applicable.
+            A drink may support matcha, hojicha, or both.
+          items:
+            type: string
+            enum:
+              - matcha
+              - hojicha
+          uniqueItems: true
+        isRecommended:
+          type: boolean
+          description: Display this drink in the Recommended filter and with its badge.
+        isFeatured:
+          type: boolean
+          description: Include this available item in the homepage featured carousel.
         isSeasonal:
           type: boolean
         isAvailable:
@@ -875,6 +1015,23 @@ components:
         imageUrl:
           type: string
           description: Uploaded image URL, or an empty string when no image is set.
+        teaBases:
+          type: array
+          description: >-
+            Tea bases supported by this item. Empty means unclassified or not applicable.
+            A drink may support matcha, hojicha, or both.
+          items:
+            type: string
+            enum:
+              - matcha
+              - hojicha
+          uniqueItems: true
+        isRecommended:
+          type: boolean
+          description: Display this drink in the Recommended filter and with its badge.
+        isFeatured:
+          type: boolean
+          description: Include this available item in the homepage featured carousel.
         isSeasonal:
           type: boolean
         isAvailable:
