@@ -47,6 +47,23 @@ The PNGs in `screens/` are exports of the main Figma frames: desktop at 1440px w
 | Delete confirmation | `Staff • Delete confirmation _ Desktop.png` | |
 | Signed in without staff access | `Staff • Staff only _ Desktop.png` | |
 
+## Staff form fields: API support
+The staff editor design includes two fields the menu API does not store yet. They stay in the design but are **pending backend support in [#68](https://github.com/rubaismail/eisai-studio-matcha/issues/68)**. Until #68 is merged, the API rejects them, so the form should not send them.
+
+| Staff form field | API field | Status |
+| --- | --- | --- |
+| Drink name | `name` | ✅ Supported now |
+| Base (Matcha / Hojicha) | `teaBases` | ✅ Supported now ([#66](https://github.com/rubaismail/eisai-studio-matcha/pull/66)) |
+| Price | `price` | ✅ Supported now (not shown on the public site) |
+| What’s in it | `description` | ✅ Supported now |
+| Photo | `imageUrl` (via upload) | ✅ Supported now |
+| On the menu (hide / unhide) | `isAvailable` | ✅ Supported now |
+| Recommended badge | `isRecommended` | ✅ Supported now ([#66](https://github.com/rubaismail/eisai-studio-matcha/pull/66)) |
+| Feature on home | `isFeatured` | ✅ Supported now ([#66](https://github.com/rubaismail/eisai-studio-matcha/pull/66)) |
+| Seasonal | `isSeasonal` | ✅ Supported now |
+| **Inspired by** | `inspiredBy` | ⏳ **Pending backend support ([#68](https://github.com/rubaismail/eisai-studio-matcha/issues/68))** |
+| **Describe the photo** (alt text) | `imageAlt` | ⏳ **Pending backend support ([#68](https://github.com/rubaismail/eisai-studio-matcha/issues/68))** |
+
 ## Flows covered
 1. Visitor browses the menu (filter, search, no matches, load error).
 2. Sign up → check inbox → verify email → log in.
@@ -60,5 +77,7 @@ The PNGs in `screens/` are exports of the main Figma frames: desktop at 1440px w
 - **Products** shows “Coming soon” until Eisai is ready.
 - **Create account** asks for first and last name separately (API requirement).
 - **Reset link sent** uses neutral wording so it never reveals whether an email has an account.
+- **My account** shows the email address only; the login response has no name and there is no profile endpoint yet.
+- **Delete confirmation** says the drink is removed from the menu; the API deletes the menu record but does not delete the uploaded photo from storage.
 - Errors use `#b42318` text/borders on `#fff5f0`; every tap target is at least 44px; every image has alt text.
 - Footer locations and hours come from Eisai’s Instagram schedule.
