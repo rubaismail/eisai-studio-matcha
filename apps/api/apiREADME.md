@@ -214,6 +214,8 @@ Returns HTTP `200`:
       "price": 6.5,
       "category": "Drinks",
       "imageUrl": "https://example.com/images/matcha-latte.webp",
+      "inspiredBy": "Japanese tea traditions",
+      "imageAlt": "Green matcha latte in a clear glass",
       "teaBases": ["matcha"],
       "isRecommended": true,
       "isFeatured": true,
@@ -254,6 +256,8 @@ Creates a menu item. Requires an admin JWT.
   "price": 6.5,
   "category": "Drinks",
   "imageUrl": "https://example.com/images/matcha-latte.webp",
+  "inspiredBy": "Japanese tea traditions",
+  "imageAlt": "Green matcha latte in a clear glass",
   "teaBases": ["matcha"],
   "isRecommended": true,
   "isFeatured": true,
@@ -265,7 +269,7 @@ Creates a menu item. Requires an admin JWT.
 
 `name` and `price` are required; the name must not be blank and the price must be a nonnegative finite number.
 
-Optional defaults are an empty description and image URL, category `Drinks`, `teaBases: []`, `isRecommended: false`, `isFeatured: false`, `isSeasonal: false`, and `isAvailable: true`.
+Optional defaults are empty `description`, `imageUrl`, `inspiredBy` and `imageAlt` strings, category `Drinks`, `teaBases: []`, `isRecommended: false`, `isFeatured: false`, `isSeasonal: false`, and `isAvailable: true`.
 
 `teaBases` accepts an array containing `matcha`, `hojicha`, or both. Duplicate values and unsupported values are rejected. The `isRecommended`, `isFeatured`, `isSeasonal`, and `isAvailable` fields must be booleans. Invalid types, explicit nulls, and unknown fields return HTTP `400`.
 
@@ -372,6 +376,38 @@ Returns HTTP `503` when disconnected:
 ```json
 {
   "status": "database disconnected"
+}
+```
+
+## Inspiration and accessible photo descriptions
+
+The existing menu create/update endpoints accept `inspiredBy` and `imageAlt`; all menu responses (including seasonal and admin aliases) return both strings. Both default to `""` on new items and on reads of legacy records without the fields. No data migration is required.
+
+| UI label | API field |
+| --- | --- |
+| Inspired by | `inspiredBy` |
+| Describe the photo | `imageAlt` |
+| What’s in it | `description` |
+| Recommended | `isRecommended` |
+| Feature on home | `isFeatured` |
+
+`inspiredBy` and `imageAlt` must be strings: null, numbers, booleans, arrays and objects return HTTP 400 without saving other supplied changes. Leading/trailing whitespace is trimmed; internal whitespace and text are preserved. Omitted fields remain unchanged on PUT; `""` (or whitespace-only text) explicitly clears a value. Unknown fields still return 400. All writes remain admin-only.
+
+Handoff for [#51](https://github.com/rubaismail/eisai-studio-matcha/issues/51) and [#27](https://github.com/rubaismail/eisai-studio-matcha/issues/27):
+
+- The staff form should collect meaningful photo alt text when a photo is supplied. These fields remain optional at the API boundary for existing clients and legacy items.
+- Public web/mobile clients should use nonempty `imageAlt` as the image’s accessible description, falling back to the item’s `name` for legacy items. If there is no image, do not expose stale alt text as a photo description. Hide an empty inspiration label.
+- Treat both strings as plain text, never HTML. Use normal escaped text rendering and an `alt` attribute or the platform’s accessibility label; never inject them as markup.
+- Replacing a photo: submit the new `imageUrl` and reviewed `imageAlt` together. Removing a photo: send `{ "imageUrl": "", "imageAlt": "" }`. The API deliberately preserves omitted alt text even when the URL changes; it does not infer whether a replacement depicts the same drink. Changing a photo never changes `inspiredBy`.
+- Uploading a file only returns its URL; save its description in the subsequent menu create/update. This change implements the API contract, not the frontend controls.
+
+Example partial update:
+
+```json
+{
+  "inspiredBy": "Banana bread",
+  "imageUrl": "https://example.com/images/golden-hour.webp",
+  "imageAlt": "Green matcha layered over banana milk in a clear cup"
 }
 ```
 
