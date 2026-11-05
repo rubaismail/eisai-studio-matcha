@@ -29,8 +29,14 @@ entity MenuItem {
   * category : string
   description : string
   imageUrl : string
+  inspiredBy : string
+  imageAlt : string
+  teaBases : enum<'matcha','hojicha'>[]
+  isRecommended : boolean
+  isFeatured : boolean
   isSeasonal : boolean
-  isAvailable : boolean
+  * isAvailable : boolean
+  --
   createdAt : datetime
   updatedAt : datetime
 }
