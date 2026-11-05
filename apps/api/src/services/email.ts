@@ -40,3 +40,25 @@ If you didn't create an account, you can ignore this email.`,
 If you didn't create an account, you can ignore this email.</p>`,
   });
 }
+
+export async function sendResetPasswordEmail(recipient: string, rawToken: string): Promise<void> {
+  const link = buildVerificationLink(mail.appUrl, rawToken);
+
+  await transport.sendMail({
+    from: mail.from,
+    to: recipient,
+    subject: "Reset Password Email",
+    text: `Reset your password
+
+Click the link below to reset the password on your account:
+
+${link}
+
+This link expires in 15 minutes and can only be used once.
+If you didn't create an account, you can ignore this email.`,
+    html: `<p>Click the link below to reset the password on your account::</p>
+<p><a href="${link}">${link}</a></p>
+<p>This link expires in 15 minutes and can only be used once.<br>
+If you didn't create an account, you can ignore this email.</p>`,
+  });
+}
