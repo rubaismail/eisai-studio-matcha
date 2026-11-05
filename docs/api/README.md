@@ -26,6 +26,38 @@ These rules complete the README's outline and are implementation requirements fo
 - Errors use `{ "error": "..." }`; clients branch on HTTP status, not exact prose. Health's disconnected `503` uses `{ "status": "database disconnected" }` instead. Login returns only `_id`, `email` and `role` in its user projection; database models are not response DTOs. Other response objects allow extra fields so clients ignore incidental metadata such as Mongoose `__v`.
 
 
+## Inspiration and accessible photo descriptions
+
+The existing menu create/update endpoints accept `inspiredBy` and `imageAlt`; all menu responses (including seasonal and admin aliases) return both strings. Both default to `""` on new items and on reads of legacy records without the fields. No data migration is required.
+
+| UI label | API field |
+| --- | --- |
+| Inspired by | `inspiredBy` |
+| Describe the photo | `imageAlt` |
+| What’s in it | `description` |
+| Recommended | `isRecommended` |
+| Feature on home | `isFeatured` |
+
+`inspiredBy` and `imageAlt` must be strings: null, numbers, booleans, arrays and objects return HTTP 400 without saving other supplied changes. Leading/trailing whitespace is trimmed; internal whitespace and text are preserved. Omitted fields remain unchanged on PUT; `""` (or whitespace-only text) explicitly clears a value. Unknown fields still return 400. All writes remain admin-only.
+
+Handoff for [#51](https://github.com/rubaismail/eisai-studio-matcha/issues/51) and [#27](https://github.com/rubaismail/eisai-studio-matcha/issues/27):
+
+- The staff form should collect meaningful photo alt text when a photo is supplied. These fields remain optional at the API boundary for existing clients and legacy items.
+- Public web/mobile clients should use nonempty `imageAlt` as the image’s accessible description, falling back to the item’s `name` for legacy items. If there is no image, do not expose stale alt text as a photo description. Hide an empty inspiration label.
+- Treat both strings as plain text, never HTML. Use normal escaped text rendering and an `alt` attribute or the platform’s accessibility label; never inject them as markup.
+- Replacing a photo: submit the new `imageUrl` and reviewed `imageAlt` together. Removing a photo: send `{ "imageUrl": "", "imageAlt": "" }`. The API deliberately preserves omitted alt text even when the URL changes; it does not infer whether a replacement depicts the same drink. Changing a photo never changes `inspiredBy`.
+- Uploading a file only returns its URL; save its description in the subsequent menu create/update. This change implements the API contract, not the frontend controls.
+
+Example partial update:
+
+```json
+{
+  "inspiredBy": "Banana bread",
+  "imageUrl": "https://example.com/images/golden-hour.webp",
+  "imageAlt": "Green matcha layered over banana milk in a clear cup"
+}
+```
+
 ## Menu metadata and homepage display
 
 The menu API supports additional metadata for drink filtering and homepage display across the React website and Flutter mobile application.

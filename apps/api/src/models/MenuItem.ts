@@ -8,6 +8,8 @@ const menuItemSchema = new Schema(
     price: { type: Number, required: true, min: 0 },
     category: { type: String, default: 'Drinks', trim: true },
     imageUrl: { type: String, default: '' },
+    inspiredBy: { type: String, default: '', trim: true },
+    imageAlt: { type: String, default: '', trim: true },
     teaBases: {
       type: [{ type: String, enum: ['matcha', 'hojicha'] }],
       default: [],

@@ -307,6 +307,8 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    inspiredBy: Japanese tea traditions
+                    imageAlt: Green matcha latte in a clear glass
                     teaBases: [matcha]
                     isRecommended: false
                     isFeatured: false
@@ -342,6 +344,8 @@ paths:
                   price: 6.5
                   category: Drinks
                   imageUrl: https://example.com/images/matcha-latte.webp
+                  inspiredBy: Japanese tea traditions
+                  imageAlt: Green matcha latte in a clear glass
                   teaBases: [matcha]
                   isRecommended: false
                   isFeatured: false
@@ -370,6 +374,8 @@ paths:
               price: 6.5
               category: Drinks
               imageUrl: https://example.com/images/matcha-latte.webp
+              inspiredBy: Japanese tea traditions
+              imageAlt: Green matcha latte in a clear glass
               teaBases: [matcha]
               isRecommended: false
               isFeatured: false
@@ -401,6 +407,8 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    inspiredBy: Japanese tea traditions
+                    imageAlt: Green matcha latte in a clear glass
                     teaBases: [matcha]
                     isRecommended: false
                     isFeatured: false
@@ -437,6 +445,8 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    inspiredBy: Japanese tea traditions
+                    imageAlt: Green matcha latte in a clear glass
                     teaBases: [matcha]
                     isRecommended: false
                     isFeatured: false
@@ -478,6 +488,8 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    inspiredBy: Japanese tea traditions
+                    imageAlt: Green matcha latte in a clear glass
                     teaBases: [matcha]
                     isRecommended: false
                     isFeatured: false
@@ -519,6 +531,8 @@ paths:
                     price: 6.5
                     category: Drinks
                     imageUrl: https://example.com/images/matcha-latte.webp
+                    inspiredBy: Japanese tea traditions
+                    imageAlt: Green matcha latte in a clear glass
                     teaBases: [matcha]
                     isRecommended: false
                     isFeatured: false
@@ -561,6 +575,8 @@ paths:
                   price: 6.5
                   category: Drinks
                   imageUrl: https://example.com/images/matcha-latte.webp
+                  inspiredBy: Japanese tea traditions
+                  imageAlt: Green matcha latte in a clear glass
                   teaBases: [matcha]
                   isRecommended: false
                   isFeatured: false
@@ -913,6 +929,20 @@ components:
           type: string
           default: ''
           description: Uploaded image URL, or an empty string when no image is set.
+        inspiredBy:
+          type: string
+          default: ''
+          description: >-
+            Plain-text inspiration shown as “Inspired by”. Trim surrounding whitespace;
+            empty string clears it. Null and non-string inputs are rejected.
+        imageAlt:
+          type: string
+          default: ''
+          description: >-
+            Plain-text photo description. Trim surrounding whitespace; empty string clears it.
+            Clients should use the item name when this is empty on a legacy item.
+            Replacing/removing imageUrl does not implicitly change omitted imageAlt;
+            submit appropriate new alt text with a replacement, or imageAlt='' on removal.
         teaBases:
           type: array
           description: >-
@@ -961,6 +991,18 @@ components:
         imageUrl:
           type: string
           description: Uploaded image URL, or an empty string when no image is set.
+        inspiredBy:
+          type: string
+          description: >-
+            Plain-text inspiration shown as “Inspired by”. Trim surrounding whitespace;
+            empty string clears it. Null and non-string inputs are rejected.
+        imageAlt:
+          type: string
+          description: >-
+            Plain-text photo description. Trim surrounding whitespace; empty string clears it.
+            Clients should use the item name when this is empty on a legacy item.
+            Replacing/removing imageUrl does not implicitly change omitted imageAlt;
+            submit appropriate new alt text with a replacement, or imageAlt='' on removal.
         teaBases:
           type: array
           description: >-
@@ -992,6 +1034,8 @@ components:
         - price
         - category
         - imageUrl
+        - inspiredBy
+        - imageAlt
         - isSeasonal
         - isAvailable
         - createdAt
@@ -1015,6 +1059,20 @@ components:
         imageUrl:
           type: string
           description: Uploaded image URL, or an empty string when no image is set.
+        inspiredBy:
+          type: string
+          default: ''
+          description: >-
+            Plain-text inspiration shown as “Inspired by”. Trim surrounding whitespace;
+            empty string clears it. Null and non-string inputs are rejected.
+        imageAlt:
+          type: string
+          default: ''
+          description: >-
+            Plain-text photo description. Trim surrounding whitespace; empty string clears it.
+            Clients should use the item name when this is empty on a legacy item.
+            Replacing/removing imageUrl does not implicitly change omitted imageAlt;
+            submit appropriate new alt text with a replacement, or imageAlt='' on removal.
         teaBases:
           type: array
           description: >-
