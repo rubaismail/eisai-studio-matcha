@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../widgets/eisai_navigation_overlay.dart';
 
-
 class DrinkDetailsScreen extends StatefulWidget {
   const DrinkDetailsScreen({
     super.key,
@@ -35,7 +34,6 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
   static const _lavender = Color(0xFFEEF0FF);
   bool _menuOpen = false;
 
-  // Exact approved Figma copy for the six separate detail frames.
   static const _figmaText = <String, (String, String)>{
     'golden hour': (
       'Banana bread matcha',
@@ -63,58 +61,48 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
     ),
   };
 
-  TextStyle _q(double size, {Color color = _ink}) => TextStyle(
-        fontFamily: 'Questrial',
-        fontSize: size,
-        color: color,
-      );
+  TextStyle _q(double size, {Color color = _ink}) =>
+      TextStyle(fontFamily: 'Questrial', fontSize: size, color: color);
 
-  TextStyle _a(double size, {Color color = _ink}) => TextStyle(
-        fontFamily: 'Anonymous Pro',
-        fontSize: size,
-        color: color,
-      );
+  TextStyle _a(double size, {Color color = _ink}) =>
+      TextStyle(fontFamily: 'Anonymous Pro', fontSize: size, color: color);
 
   Widget _header(double s) => SizedBox(
-        height: 122 * s,
-        child: Stack(
-          children: [
-            Positioned(
-              left: 22 * s,
-              top: 73 * s,
-              child: Image.asset(
-                'assets/images/eisai_logo.png',
-                width: 112 * s,
-                height: 29 * s,
-                fit: BoxFit.contain,
-              ),
-            ),
-            Positioned(
-              right: 16 * s,
-              top: 67 * s,
-              child: IconButton(
-                tooltip: _menuOpen ? 'Close navigation' : 'Open navigation',
-                onPressed: () => setState(() => _menuOpen = !_menuOpen),
-                icon: Icon(
-                  _menuOpen ? Icons.close : Icons.menu,
-                  size: 24 * s,
-                  color: _ink,
-                ),
-              ),
-            ),
-            const Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0xFFEEEEEE),
-              ),
-            ),
-          ],
+    height: 122 * s,
+    child: Stack(
+      children: [
+        Positioned(
+          left: 22 * s,
+          top: 73 * s,
+          child: Image.asset(
+            'assets/images/eisai_logo.png',
+            width: 112 * s,
+            height: 29 * s,
+            fit: BoxFit.contain,
+          ),
         ),
-      );
+        Positioned(
+          right: 16 * s,
+          top: 67 * s,
+          child: IconButton(
+            tooltip: _menuOpen ? 'Close navigation' : 'Open navigation',
+            onPressed: () => setState(() => _menuOpen = !_menuOpen),
+            icon: Icon(
+              _menuOpen ? Icons.close : Icons.menu,
+              size: 24 * s,
+              color: _ink,
+            ),
+          ),
+        ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+        ),
+      ],
+    ),
+  );
 
   Widget _drinkImage() {
     final local = widget.asset.isNotEmpty
@@ -136,12 +124,8 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
   }
 
   Widget _missingImage() => const Center(
-        child: Icon(
-          Icons.local_cafe_outlined,
-          size: 72,
-          color: Color(0xFF9792CC),
-        ),
-      );
+    child: Icon(Icons.local_cafe_outlined, size: 72, color: Color(0xFF9792CC)),
+  );
 
   void _goBackToDrinks() {
     Navigator.of(context).pop();
@@ -158,16 +142,14 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
     final key = widget.name.trim().toLowerCase();
     final figma = _figmaText[key];
     final subtitle = figma?.$1 ?? '';
-    final description = figma?.$2 ?? widget.description;
+    final description = widget.description;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final s = (constraints.maxWidth / 390)
-                .clamp(.75, 1.45)
-                .toDouble();
+            final s = (constraints.maxWidth / 390).clamp(.75, 1.45).toDouble();
 
             return Stack(
               children: [
@@ -180,12 +162,9 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                         children: [
                           _header(s),
                           Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 24 * s,
-                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 24 * s),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 SizedBox(height: 48 * s),
                                 Text(
@@ -193,10 +172,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                                   style: _a(12 * s, color: _muted),
                                 ),
                                 SizedBox(height: 24 * s),
-                                Text(
-                                  '${widget.name}.',
-                                  style: _q(39 * s),
-                                ),
+                                Text('${widget.name}.', style: _q(39 * s)),
                                 SizedBox(height: 20 * s),
                                 Text(
                                   subtitle,
@@ -210,9 +186,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                                     alignment: Alignment.center,
                                     children: [
                                       Positioned.fill(
-                                        child: Container(
-                                          color: _lavender,
-                                        ),
+                                        child: Container(color: _lavender),
                                       ),
                                       // Figma image fills much of its
                                       // photo tile, with no clipped edges.
@@ -230,10 +204,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                                   style: _a(12 * s, color: _muted),
                                 ),
                                 SizedBox(height: 22 * s),
-                                Text(
-                                  description,
-                                  style: _q(16 * s),
-                                ),
+                                Text(description, style: _q(16 * s)),
                                 SizedBox(height: 86 * s),
                                 SizedBox(
                                   width: double.infinity,
@@ -243,16 +214,12 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                                     style: FilledButton.styleFrom(
                                       backgroundColor: _ink,
                                       foregroundColor: Colors.white,
-                                      shape:
-                                          const RoundedRectangleBorder(),
+                                      shape: const RoundedRectangleBorder(),
                                       padding: EdgeInsets.zero,
                                     ),
                                     child: Text(
                                       '← BACK TO OUR DRINKS',
-                                      style: _a(
-                                        13 * s,
-                                        color: Colors.white,
-                                      ),
+                                      style: _a(13 * s, color: Colors.white),
                                     ),
                                   ),
                                 ),
@@ -269,14 +236,11 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                   Positioned.fill(
                     top: 122 * s,
                     child: EisaiNavigationOverlay(
-                      onClose: () => setState(
-                        () => _menuOpen = false,
-                      ),
+                      onClose: () => setState(() => _menuOpen = false),
                       onHome: () => _leaveFor(widget.onGoHome),
                       onDrinks: _goBackToDrinks,
                       onStory: () => _leaveFor(widget.onGoStory),
-                      onLocation: () =>
-                          _leaveFor(widget.onGoLocation),
+                      onLocation: () => _leaveFor(widget.onGoLocation),
                       onAccount: widget.onGoAccount == null
                           ? null
                           : () => _leaveFor(widget.onGoAccount),

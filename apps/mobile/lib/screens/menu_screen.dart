@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../models/menu_item.dart';
+import '../services/menu_service.dart' as menu_service;
 import '../widgets/eisai_navigation_overlay.dart';
+import '../widgets/eisai_footer.dart';
 import 'drink_details_screen.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -83,30 +83,6 @@ class _Drink {
     }
   }
 
-  factory _Drink.fromMap(Map<String, dynamic> map) {
-    final name = (map['name'] ?? '').toString();
-
-    final bases = (map['teaBases'] as List<dynamic>? ?? [])
-        .map((base) => base.toString().toLowerCase().trim())
-        .toSet();
-
-    return _Drink(
-      name: name,
-      description: (map['description'] ?? '').toString(),
-      imageUrl: (map['imageUrl'] ?? '').toString(),
-      asset: _assetFor(name),
-      price: (map['price'] as num?)?.toDouble(),
-      category: (map['category'] ?? 'Drinks').toString(),
-      teaBases: bases.toList(),
-      isSeasonal: map['isSeasonal'] == true,
-      isRecommended: map['isRecommended'] == true,
-      isFeatured: map['isFeatured'] == true,
-      isAvailable: map['isAvailable'] != false,
-      matcha: bases.contains('matcha'),
-      hojicha: bases.contains('hojicha'),
-    );
-  }
-
   factory _Drink.fromModel(MenuItem item) {
     final bases = item.teaBases
         .map((base) => base.toLowerCase().trim())
@@ -120,6 +96,7 @@ class _Drink {
       price: item.price,
       category: item.category,
       teaBases: bases.toList(),
+      isSeasonal: item.isSeasonal,
       isRecommended: item.isRecommended,
       isFeatured: item.isFeatured,
       isAvailable: item.isAvailable,
@@ -133,16 +110,14 @@ class _MenuScreenState extends State<MenuScreen> {
   static const _ink = Color(0xFF202020);
   static const _muted = Color(0xFF5F5F5F);
   static const _lavender = Color(0xFFEEF0FF);
-  static const _lime = Color(0xFFE3FF23);
   static const _dark = Color(0xFF191919);
 
   static const bool _preview = bool.fromEnvironment(
     'MENU_PREVIEW',
     defaultValue: false,
   );
-  static const String _configuredUrl = String.fromEnvironment('MENU_API_URL');
 
-  // This is preview data notthe live menu.
+  // This is preview data not the live menu.
   static const _sampleDrinks = <_Drink>[
     _Drink(
       name: 'Golden Hour',
@@ -227,28 +202,10 @@ class _MenuScreenState extends State<MenuScreen> {
 
     if (_preview) return _sampleDrinks;
 
-    final uri = Uri.tryParse(_configuredUrl);
-    if (uri == null ||
-        (uri.scheme != 'http' && uri.scheme != 'https') ||
-        uri.host.isEmpty) {
-      throw StateError(
-        'MENU_API_URL must be set to the full GET /api/menu URL.',
-      );
-    }
-
-    final response = await http.get(uri).timeout(const Duration(seconds: 8));
-    if (response.statusCode != 200) {
-      throw Exception('Menu API returned HTTP ${response.statusCode}');
-    }
-    final decoded = jsonDecode(response.body);
-    final raw = decoded is List ? decoded : decoded['items'];
-    if (raw is! List) {
-      throw const FormatException('Expected menu response with items');
-    }
-    return raw
-        .whereType<Map<String, dynamic>>()
-        .map(_Drink.fromMap)
-        .where((e) => e.isAvailable)
+    final items = await menu_service.fetchMenu();
+    return items
+        .where((item) => item.isAvailable)
+        .map(_Drink.fromModel)
         .toList();
   }
 
@@ -645,94 +602,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _footer(double s) => Container(
-    color: _dark,
-    padding: EdgeInsets.fromLTRB(24 * s, 38 * s, 24 * s, 30 * s),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _asset('eisai_logo_white.png', width: 112 * s, height: 29 * s),
-        SizedBox(height: 23 * s),
-        Text(
-          'A little Zen. A little\nunexpected. Seriously\ngood matcha.',
-          style: _q(25 * s, color: Colors.white),
-        ),
-        SizedBox(height: 45 * s),
-        const Divider(color: Color(0xFF484848)),
-        SizedBox(height: 28 * s),
-        Text('WHISKING SCHEDULE', style: _a(12 * s, color: _lime)),
-        SizedBox(height: 25 * s),
-        _footerStop('UCF STUDENT UNION', 'Wednesdays · 9AM – 5PM', s),
-        SizedBox(height: 20 * s),
-        _footerStop('SANFORD FARMERS MARKET', 'Saturdays · 10AM – 3PM', s),
-        SizedBox(height: 20 * s),
-        _footerStop('MOUNT DORA', 'Sundays · 9AM – 2PM', s),
-        SizedBox(height: 48 * s),
-        const Divider(color: Color(0xFF484848)),
-        SizedBox(height: 24 * s),
-        SizedBox(
-          height: 170 * s,
-          width: double.infinity,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('FOLLOW ALONG', style: _a(12 * s, color: _lime)),
-                    SizedBox(height: 22 * s),
-                    Text(
-                      '@eisaistudio',
-                      style: _a(13 * s, color: Colors.white),
-                    ),
-                    SizedBox(height: 30 * s),
-                    Text('CONTACT', style: _a(12 * s, color: _lime)),
-                    SizedBox(height: 22 * s),
-                    Text(
-                      '[EMAIL ADDRESS]',
-                      style: _a(12 * s, color: const Color(0xFFD7D7D7)),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: _asset(
-                  'monk_white.png',
-                  width: 118 * s,
-                  height: 142 * s,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(color: Color(0xFF484848)),
-        SizedBox(height: 22 * s),
-        Text(
-          'COPYRIGHT © EISAI STUDIO LLC',
-          style: _a(10 * s, color: Colors.white60),
-        ),
-        SizedBox(height: 26 * s),
-        Text(
-          'EISAI STUDIO LLC · ORLANDO, FLORIDA',
-          style: _a(10 * s, color: Colors.white60),
-        ),
-      ],
-    ),
-  );
-
-  Widget _footerStop(String title, String schedule, double s) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(title, style: _a(13 * s, color: Colors.white)),
-      SizedBox(height: 7 * s),
-      Text(schedule, style: _q(14 * s, color: Colors.white70)),
-    ],
-  );
-
   Widget _noMatchesState(double s) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -951,7 +820,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                 children: [
                                   _classic(s),
                                   _gridSection(drinks, s),
-                                  _footer(s),
+                                  EisaiFooter(scale: s),
                                 ],
                               );
                             },

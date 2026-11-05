@@ -1,15 +1,26 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../widgets/eisai_footer.dart';
 import '../widgets/eisai_navigation_overlay.dart';
+import '../models/menu_item.dart';
+import '../services/menu_service.dart' as menu_service;
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onViewMenu});
+  const HomeScreen({
+    super.key,
+    required this.onViewMenu,
+    this.onGoStory,
+    this.onGoLocation,
+    this.fetchMenu,
+  });
 
   final VoidCallback onViewMenu;
+  final VoidCallback? onGoStory;
+  final VoidCallback? onGoLocation;
+  // test loader
+  final Future<List<MenuItem>> Function()? fetchMenu;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
 class _FeaturedDrink {
@@ -40,19 +51,17 @@ class _FeaturedDrink {
     }
   }
 
-  factory _FeaturedDrink.fromJson(Map<String, dynamic> item) {
-    final name = (item['name'] ?? '').toString();
+  factory _FeaturedDrink.fromModel(MenuItem item) {
     return _FeaturedDrink(
-      name: name,
-      subtitle: (item['subtitle'] ?? item['tastingProfile'] ?? '').toString(),
-      description: (item['description'] ?? '').toString(),
-      imageUrl: (item['imageUrl'] ?? '').toString(),
-      assetName: imageFor(name),
+      name: item.name,
+      description: item.description,
+      imageUrl: item.imageUrl,
+      assetName: imageFor(item.name),
     );
   }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   static const ink = Color(0xFF1A1A1A);
   static const gray = Color(0xFF4A4A4A);
   static const lavender = Color(0xFFEEF0FF);
@@ -82,8 +91,27 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  late final Future<List<_FeaturedDrink>> _drinks = _loadFeatured();
+  late Future<List<_FeaturedDrink>> _drinks = _loadFeatured();
   final GlobalKey _footerKey = GlobalKey();
+
+  void scrollToStory() {
+    final target = _storyKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void scrollToLocation() => _scrollToFooter();
+
+  void _retryFeatured() {
+    setState(() {
+      _drinks = _loadFeatured();
+    });
+  }
 
   Future<List<_FeaturedDrink>> _loadFeatured() async {
     const preview = bool.fromEnvironment(
@@ -92,33 +120,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (preview) return previewDrinks;
 
-    const endpoint = String.fromEnvironment('MENU_API_URL');
-    if (endpoint.trim().isEmpty) {
-      throw StateError(
-        'MENU_API_URL is not configured. '
-        'Use --dart-define=MENU_API_URL=https://your-host/api/menu '
-        'or --dart-define=USE_PREVIEW_MENU=true for design review.',
-      );
-    }
-
-    final response = await http
-        .get(Uri.parse(endpoint))
-        .timeout(const Duration(seconds: 8));
-    if (response.statusCode != 200) {
-      throw Exception('Menu request failed: ${response.statusCode}');
-    }
-    final payload = jsonDecode(response.body);
-    final dynamic rows = payload is List ? payload : payload['items'];
-    if (rows is! List) throw const FormatException('Expected menu items');
-    return rows
-        .whereType<Map<String, dynamic>>()
+    final items = await (widget.fetchMenu ?? menu_service.fetchMenu)();
+    return items
         .where((item) {
-          final category = (item['category'] ?? '').toString().toLowerCase();
-          return item['isFeatured'] == true &&
-              item['isAvailable'] != false &&
-              category != 'treats';
+          return item.isFeatured &&
+              item.isAvailable &&
+              item.category.trim().toLowerCase() != 'treats';
         })
-        .map(_FeaturedDrink.fromJson)
+        .map(_FeaturedDrink.fromModel)
         .toList();
   }
 
@@ -243,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 49 * s,
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: _scrollToFooter,
+                  onPressed: widget.onGoLocation ?? _scrollToFooter,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.zero,
@@ -309,41 +318,41 @@ class _HomeScreenState extends State<HomeScreen> {
           top: 430 * s,
           left: 24 * s,
           right: 24 * s,
-          child: Text(
-            'READ OUR STORY →',
-            textAlign: TextAlign.center,
-            style: _a(12 * s),
+          child: InkWell(
+            onTap: widget.onGoStory ?? scrollToStory,
+            child: Text(
+              'READ OUR STORY →',
+              textAlign: TextAlign.center,
+              style: _a(12 * s),
+            ),
           ),
         ),
       ],
     ),
   );
 
-  Widget _flavors(double s) => SizedBox(
-    height: 435 * s,
-    child: Padding(
-      padding: EdgeInsets.only(top: 0, left: 16 * s, right: 16 * s),
-      child: Column(
-        children: [
-          Text(
-            'Matcha has more than one flavor.',
-            textAlign: TextAlign.center,
-            style: _q(30 * s, height: 35 / 30),
-          ),
-          SizedBox(height: 16 * s),
-          Text(
-            'In Asia matcha is chosen by cultivar, region, and flavor profile. In the U.S., most cafés offer just one option. We believe customers are ready for more.',
-            textAlign: TextAlign.center,
-            style: _q(16 * s, color: gray, height: 25 / 16),
-          ),
-          SizedBox(height: 25 * s),
-          _flavor('Nutty', 'Roasted, warm notes', s),
-          SizedBox(height: 18 * s),
-          _flavor('Floral', 'Light, aromatic', s),
-          SizedBox(height: 18 * s),
-          _flavor('Umami', 'Savory, deep', s),
-        ],
-      ),
+  Widget _flavors(double s) => Padding(
+    padding: EdgeInsets.fromLTRB(16 * s, 0, 16 * s, 48 * s),
+    child: Column(
+      children: [
+        Text(
+          'Matcha has more than one flavor.',
+          textAlign: TextAlign.center,
+          style: _q(30 * s, height: 35 / 30),
+        ),
+        SizedBox(height: 16 * s),
+        Text(
+          'In Asia matcha is chosen by cultivar, region, and flavor profile. In the U.S., most cafés offer just one option. We believe customers are ready for more.',
+          textAlign: TextAlign.center,
+          style: _q(16 * s, color: gray, height: 25 / 16),
+        ),
+        SizedBox(height: 25 * s),
+        _flavor('Nutty', 'Roasted, warm notes', s),
+        SizedBox(height: 18 * s),
+        _flavor('Floral', 'Light, aromatic', s),
+        SizedBox(height: 18 * s),
+        _flavor('Umami', 'Savory, deep', s),
+      ],
     ),
   );
 
@@ -455,9 +464,18 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
             if (snapshot.hasError) {
-              return Text(
-                'Featured drinks could not be loaded.',
-                style: _q(14 * s, color: gray),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Featured drinks could not be loaded.',
+                    style: _q(14 * s, color: gray),
+                  ),
+                  TextButton(
+                    onPressed: _retryFeatured,
+                    child: const Text('TRY AGAIN'),
+                  ),
+                ],
               );
             }
             final drinks = snapshot.data ?? [];
@@ -567,101 +585,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _footer(double s) => Container(
-    key: _footerKey,
-    color: ink,
-    child: Padding(
-      padding: EdgeInsets.fromLTRB(24 * s, 38 * s, 24 * s, 31 * s),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _image('eisai_logo_white.png', width: 112 * s, height: 29 * s),
-          SizedBox(height: 23 * s),
-          Text(
-            'A little Zen. A little\nunexpected. Seriously\ngood matcha.',
-            style: _q(25 * s, color: Colors.white, height: 1.04),
-          ),
-          SizedBox(height: 47 * s),
-          const Divider(color: Color(0xFF484848), height: 1),
-          SizedBox(height: 29 * s),
-          Text('WHISKING SCHEDULE', style: _a(12 * s, color: lime)),
-          SizedBox(height: 24 * s),
-          _schedule('UCF STUDENT UNION', 'Wednesdays · 9AM – 5PM', s),
-          SizedBox(height: 21 * s),
-          _schedule('SANFORD FARMERS MARKET', 'Saturdays · 10AM – 3PM', s),
-          SizedBox(height: 21 * s),
-          _schedule('MOUNT DORA', 'Sundays · 9AM – 2PM', s),
-          SizedBox(height: 53 * s),
-          const Divider(color: Color(0xFF484848), height: 1),
-          SizedBox(height: 24 * s),
-
-          SizedBox(
-            width: double.infinity,
-            height: 165 * s,
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('FOLLOW ALONG', style: _a(12 * s, color: lime)),
-                      SizedBox(height: 29 * s),
-                      Text(
-                        '@eisaistudio',
-                        style: _a(13 * s, color: Colors.white),
-                      ),
-                      SizedBox(height: 40 * s),
-                      Text('CONTACT', style: _a(12 * s, color: lime)),
-                      SizedBox(height: 29 * s),
-                      Text(
-                        '[EMAIL ADDRESS]',
-                        style: _a(12 * s, color: const Color(0xFFD7D7D7)),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: _image(
-                    'monk_white.png',
-                    width: 118 * s,
-                    height: 142 * s,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 45 * s),
-          const Divider(color: Color(0xFF484848), height: 1),
-          SizedBox(height: 24 * s),
-          Text(
-            'COPYRIGHT © EISAI STUDIO LLC',
-            style: _a(10 * s, color: const Color(0xFFAFAFAF)),
-          ),
-          SizedBox(height: 20 * s),
-          Text(
-            'EISAI STUDIO LLC · ORLANDO, FLORIDA',
-            style: _a(10 * s, color: const Color(0xFFAFAFAF)),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  Widget _schedule(String title, String time, double s) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(title, style: _a(13 * s, color: Colors.white)),
-      SizedBox(height: 7 * s),
-      Text(time, style: _q(14 * s, color: const Color(0xFFD7D7D7))),
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -690,7 +613,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           _specials(s),
                           SizedBox(height: 24 * s),
                           _popup(s),
-                          _footer(s),
+                          KeyedSubtree(
+                            key: _footerKey,
+                            child: EisaiFooter(scale: s),
+                          ),
                         ],
                       ),
                     ),
@@ -713,6 +639,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onStory: () {
                         setState(() => _menuOpen = false);
+                        if (widget.onGoStory != null) {
+                          widget.onGoStory!();
+                          return;
+                        }
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           final target = _storyKey.currentContext;
                           if (target != null) {
@@ -726,6 +656,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onLocation: () {
                         setState(() => _menuOpen = false);
+                        if (widget.onGoLocation != null) {
+                          widget.onGoLocation!();
+                          return;
+                        }
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _scrollToFooter();
                         });

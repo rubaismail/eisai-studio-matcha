@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
+import 'screens/our_story_screen.dart';
+import 'screens/our_location_screen.dart';
 
 void main() {
   runApp(const EisaiApp());
@@ -62,8 +64,26 @@ class _MainNavigationState extends State<MainNavigation> {
     return IndexedStack(
       index: _selectedIndex,
       children: [
-        HomeScreen(onViewMenu: () => _selectTab(1)),
-        MenuScreen(onGoHome: () => _selectTab(0)),
+        HomeScreen(
+          onViewMenu: () => _selectTab(1),
+          onGoStory: () => _selectTab(2),
+          onGoLocation: () => _selectTab(3),
+        ),
+        MenuScreen(
+          onGoHome: () => _selectTab(0),
+          onGoStory: () => _selectTab(2),
+          onGoLocation: () => _selectTab(3),
+        ),
+        OurStoryScreen(
+          onGoHome: () => _selectTab(0),
+          onGoDrinks: () => _selectTab(1),
+          onGoLocation: () => _selectTab(3),
+        ),
+        OurLocationScreen(
+          onGoHome: () => _selectTab(0),
+          onGoDrinks: () => _selectTab(1),
+          onGoStory: () => _selectTab(2),
+        ),
       ],
     );
   }
