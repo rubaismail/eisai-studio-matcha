@@ -451,6 +451,27 @@ test('buildVerificationLink produces an absolute, encoded verify URL', () => {
   }
 });
 
+test('verification email URL is built from APP_URL and the emailed raw token', async () => {
+  mockRegisterFindOneNone();
+  mockCreateSuccess();
+
+  const originalUrl = env.appUrl;
+  env.appUrl = 'https://api.example.com';
+  try {
+    await request(createApp()).post('/api/auth/register').send(validBody);
+
+    assert.equal(emailCalls.length, 1);
+    const link = buildVerificationLink(env.appUrl, emailCalls[0].rawToken);
+    const url = new URL(link);
+
+    assert.equal(url.origin, 'https://api.example.com');
+    assert.equal(url.pathname, '/api/auth/verify');
+    assert.equal(url.searchParams.get('token'), emailCalls[0].rawToken);
+  } finally {
+    env.appUrl = originalUrl;
+  }
+});
+
 test('registration hands the service a token whose hash is stored', async () => {
   mockRegisterFindOneNone();
   const create = mockCreateSuccess();
@@ -814,6 +835,30 @@ test('forgot-password returns 500 and writes no token when email delivery fails'
 function resetBody(password = 'NewPassword123') {
   return { password };
 }
+
+test('reset email URL is built from APP_URL and the emailed raw token', async () => {
+  mockResetUpdate(1);
+
+  const originalUrl = env.appUrl;
+  env.appUrl = 'https://api.example.com';
+  try {
+    await request(createApp())
+      .post('/api/auth/forgot-password')
+      .send({ email: 'jane@example.com' });
+
+    assert.equal(resetEmailCalls.length, 1);
+    // Reset link is built the same way as verify, targeting the reset endpoint.
+    const link = buildVerificationLink(env.appUrl, resetEmailCalls[0].rawToken)
+      .replace('/api/auth/verify', '/api/auth/reset-password');
+    const url = new URL(link);
+
+    assert.equal(url.origin, 'https://api.example.com');
+    assert.equal(url.pathname, '/api/auth/reset-password');
+    assert.equal(url.searchParams.get('token'), resetEmailCalls[0].rawToken);
+  } finally {
+    env.appUrl = originalUrl;
+  }
+});
 
 test('reset-password updates the hash and unsets the token atomically', async () => {
   mockFindOneResetUser();

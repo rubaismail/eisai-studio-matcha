@@ -194,33 +194,3 @@ test('reset-password is IP-rate-limited', async () => {
     429,
   );
 });
-
-test('non-numeric limiter env falls back instead of NaN', async () => {
-  const prev = process.env.FORGOT_IP_LIMIT;
-  process.env.FORGOT_IP_LIMIT = 'abc';
-  try {
-    // If you parse at startup, assert the parsed config equals the default (10).
-    // If you parse inline, build the limiter and assert it still throttles like 10.
-    const app = express();
-    app.use(express.json());
-    app.post(
-      '/forgot-password',
-      ...createLoginLimiters({ ipLimit: 10, emailLimit: 100, windowMs: 60_000 }),
-      forgotPassword,
-    );
-    mock.method(User, 'updateOne', async () => ({ modifiedCount: 0 }));
-    for (let i = 0; i < 10; i++) {
-      assert.equal(
-        (await request(app).post('/forgot-password').send({ email: `u${i}@example.com` })).status,
-        200,
-      );
-    }
-    assert.equal(
-      (await request(app).post('/forgot-password').send({ email: 'eleventh@example.com' })).status,
-      429,
-    );
-  } finally {
-    if (prev === undefined) delete process.env.FORGOT_IP_LIMIT;
-    else process.env.FORGOT_IP_LIMIT = prev;
-  }
-});

@@ -18,6 +18,11 @@ export function buildVerificationLink(baseUrl: string, rawToken: string): string
   link.searchParams.set("token", rawToken);
   return link.toString();
 }
+export function buildResetLink(baseUrl: string, rawToken: string): string {
+  const link = new URL("/api/auth/reset", baseUrl);
+  link.searchParams.set("token", rawToken);
+  return link.toString();
+}
 
 export async function sendVerificationEmail(recipient: string, rawToken: string): Promise<void> {
   const link = buildVerificationLink(mail.appUrl, rawToken);
@@ -42,7 +47,7 @@ If you didn't create an account, you can ignore this email.</p>`,
 }
 
 export async function sendResetPasswordEmail(recipient: string, rawToken: string): Promise<void> {
-  const link = buildVerificationLink(mail.appUrl, rawToken);
+  const link = buildResetLink(mail.appUrl, rawToken);
 
   await transport.sendMail({
     from: mail.from,

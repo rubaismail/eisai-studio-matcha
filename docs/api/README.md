@@ -3,7 +3,7 @@
 [openapi.yaml](openapi.yaml) is the reviewable source of truth for endpoint paths, request and response schemas, validation, status codes and access rules. [apiREADME](../../apps/api/apiREADME.md) explains the same API with walkthroughs. This formalizes that existing outline so API, React and Flutter developers can build together and import the contract into SwaggerHub or client/mock tools.
 
 
-This is the **target contract**, not a claim that all routes exist. At this revision, registration, email verification, login, public menu reads, seasonal menu reads, admin menu management, image uploads, and health checks are implemented. Password-reset endpoints remain planned.
+This is the **target contract**, not a claim that all routes exist. At this revision, registration, email verification, password reset, login, public menu reads, seasonal menu reads, admin menu management, image uploads, and health checks are implemented.
 
 Each operation has an `x-implementation-status` marker indicating its implementation status. Update these markers as routes are implemented or changed. Schema validation alone does not prove server conformance.
 
@@ -121,7 +121,7 @@ Register → verify in browser → log in. Login issues an expiring JWT; protect
 
 The website keeps its token in memory for this baseline (reload requires login); Flutter uses secure storage. Both clear token/user state on logout or a protected request's `401` and prompt for login. A `403` does not mean token expiration: show verification-required or access-denied guidance. No refresh or logout API exists; clearing a token does not revoke other copies, and password reset does not promise revocation of existing JWTs.
 
-Verification/reset tokens are separate, expiring and single-use. Website pages extract the email-link token and call the appropriate endpoint. Mobile users finish that browser flow then return to login. Successful reset consumes the token and requires a fresh login. Resend and forgot-password return neutral success messages for valid requests regardless of account eligibility/existence. Never log passwords, JWTs or action tokens.
+Verification/reset tokens are separate, expiring and single-use. Website pages extract the email-link token and call the appropriate endpoint. The verification token is sent as the `token` query parameter to `GET /api/auth/verify`. The reset token is also sent as the `token` query parameter to `POST /api/auth/reset-password` — not in the JSON body; the body contains only `password`. Mobile users finish that browser flow then return to login. Successful reset consumes the token and requires a fresh login.
 
 Exact JWT and action-token lifetimes, email provider and deployed URLs remain server configuration decisions for auth/deployment work. Clients must not hardcode lifetimes or decode tokens to decide permissions. All tokens must expire, and the API is the authority on validity.
 
