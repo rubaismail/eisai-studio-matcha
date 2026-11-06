@@ -2,16 +2,21 @@ import nodemailer from "nodemailer";
 import { MailtrapTransport } from "mailtrap";
 import { requireEmailConfig } from "../config/env.js";
 
-const mail = requireEmailConfig();
+let cached: { transport: ReturnType<typeof nodemailer.createTransport>; mail: ReturnType<typeof requireEmailConfig> } | null = null;
 
-const transport = nodemailer.createTransport(
-  MailtrapTransport({
-    token: mail.token,
-    sandbox: mail.sandbox,
-    ...(mail.sandbox ? { testInboxId: mail.inboxId } : {}),
-  })
-);
-
+function getTransport() {
+  if (cached) return cached;
+  const mail = requireEmailConfig();
+  const transport = nodemailer.createTransport(
+    MailtrapTransport({
+      token: mail.token,
+      sandbox: mail.sandbox,
+      ...(mail.sandbox ? { testInboxId: mail.inboxId } : {}),
+    }),
+  );
+  cached = { transport, mail };
+  return cached;
+}
 // Pure: builds the absolute verify URL from a base and raw token.
 export function buildVerificationLink(baseUrl: string, rawToken: string): string {
   const link = new URL("/api/auth/verify", baseUrl);
@@ -19,12 +24,13 @@ export function buildVerificationLink(baseUrl: string, rawToken: string): string
   return link.toString();
 }
 export function buildResetLink(baseUrl: string, rawToken: string): string {
-  const link = new URL("/api/auth/reset", baseUrl);
+  const link = new URL("/api/auth/reset-password", baseUrl);
   link.searchParams.set("token", rawToken);
   return link.toString();
 }
 
 export async function sendVerificationEmail(recipient: string, rawToken: string): Promise<void> {
+  const { transport, mail } = getTransport();
   const link = buildVerificationLink(mail.appUrl, rawToken);
 
   await transport.sendMail({
@@ -47,6 +53,7 @@ If you didn't create an account, you can ignore this email.</p>`,
 }
 
 export async function sendResetPasswordEmail(recipient: string, rawToken: string): Promise<void> {
+  const { transport, mail } = getTransport();
   const link = buildResetLink(mail.appUrl, rawToken);
 
   await transport.sendMail({
