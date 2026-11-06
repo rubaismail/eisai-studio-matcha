@@ -11,11 +11,13 @@ class HomeScreen extends StatefulWidget {
     this.onGoStory,
     this.onGoLocation,
     this.fetchMenu,
+    this.onGoAccount,
   });
 
   final VoidCallback onViewMenu;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoAccount;
   // test loader
   final Future<List<MenuItem>> Function()? fetchMenu;
 
@@ -29,6 +31,8 @@ class _FeaturedDrink {
     required this.description,
     this.subtitle = '',
     this.imageUrl = '',
+    this.imageAlt = '',
+    this.inspiredBy = '',
     this.assetName = '',
   });
 
@@ -36,6 +40,8 @@ class _FeaturedDrink {
   final String subtitle;
   final String description;
   final String imageUrl;
+  final String imageAlt;
+  final String inspiredBy;
   final String assetName;
 
   static String imageFor(String name) {
@@ -56,6 +62,8 @@ class _FeaturedDrink {
       name: item.name,
       description: item.description,
       imageUrl: item.imageUrl,
+      imageAlt: item.imageAlt,
+      inspiredBy: item.inspiredBy,
       assetName: imageFor(item.name),
     );
   }
@@ -114,12 +122,6 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<_FeaturedDrink>> _loadFeatured() async {
-    const preview = bool.fromEnvironment(
-      'USE_PREVIEW_MENU',
-      defaultValue: false,
-    );
-    if (preview) return previewDrinks;
-
     final items = await (widget.fetchMenu ?? menu_service.fetchMenu)();
     return items
         .where((item) {
@@ -371,13 +373,30 @@ class HomeScreenState extends State<HomeScreen> {
     if (drink.imageUrl.trim().isNotEmpty) {
       return Image.network(
         drink.imageUrl,
+        semanticLabel: drink.imageAlt.trim().isEmpty
+            ? null
+            : drink.imageAlt.trim(),
+        excludeFromSemantics: drink.imageAlt.trim().isEmpty,
         width: 128 * s,
         height: 216 * s,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => local,
+        errorBuilder: (_, __, ___) => drink.imageAlt.trim().isEmpty
+            ? ExcludeSemantics(child: local)
+            : Semantics(
+                label: drink.imageAlt.trim(),
+                image: true,
+                child: ExcludeSemantics(child: local),
+              ),
       );
     }
-    return local;
+    if (drink.imageAlt.trim().isNotEmpty) {
+      return Semantics(
+        label: drink.imageAlt.trim(),
+        image: true,
+        child: ExcludeSemantics(child: local),
+      );
+    }
+    return ExcludeSemantics(child: local);
   }
 
   Widget _drinkCard(_FeaturedDrink drink, double s) => Padding(
@@ -411,7 +430,6 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-
                 Center(
                   child: Transform.scale(
                     scale: 1.85,
@@ -622,7 +640,6 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-
                 if (_menuOpen)
                   Positioned.fill(
                     top: headerHeight,
@@ -644,14 +661,8 @@ class HomeScreenState extends State<HomeScreen> {
                           return;
                         }
                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final target = _storyKey.currentContext;
-                          if (target != null) {
-                            Scrollable.ensureVisible(
-                              target,
-                              duration: const Duration(milliseconds: 450),
-                              curve: Curves.easeInOut,
-                            );
-                          }
+                          if (!mounted) return;
+                          scrollToStory();
                         });
                       },
                       onLocation: () {
@@ -661,10 +672,14 @@ class HomeScreenState extends State<HomeScreen> {
                           return;
                         }
                         WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
                           _scrollToFooter();
                         });
                       },
-                      onAccount: null,
+                      onAccount: () {
+                        setState(() => _menuOpen = false);
+                        widget.onGoAccount?.call();
+                      },
                     ),
                   ),
               ],
