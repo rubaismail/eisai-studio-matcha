@@ -9,6 +9,8 @@ class DrinkDetailsScreen extends StatefulWidget {
     required this.description,
     this.asset = '',
     this.imageUrl = '',
+    this.imageAlt = '',
+    this.inspiredBy = '',
     this.onGoHome,
     this.onGoStory,
     this.onGoLocation,
@@ -19,6 +21,8 @@ class DrinkDetailsScreen extends StatefulWidget {
   final String description;
   final String asset;
   final String imageUrl;
+  final String imageAlt;
+  final String inspiredBy;
   final VoidCallback? onGoHome;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
@@ -105,18 +109,23 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
   );
 
   Widget _drinkImage() {
+    final alt = widget.imageAlt.trim();
     final local = widget.asset.isNotEmpty
         ? Image.asset(
             'assets/images/${widget.asset}',
             fit: BoxFit.contain,
+            semanticLabel: alt.isEmpty ? null : alt,
+            excludeFromSemantics: alt.isEmpty,
             errorBuilder: (_, __, ___) => _missingImage(),
           )
         : _missingImage();
 
-    if (widget.imageUrl.isNotEmpty) {
+    if (widget.imageUrl.trim().isNotEmpty) {
       return Image.network(
         widget.imageUrl,
         fit: BoxFit.contain,
+        semanticLabel: alt.isEmpty ? null : alt,
+        excludeFromSemantics: alt.isEmpty,
         errorBuilder: (_, __, ___) => local,
       );
     }
@@ -143,6 +152,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
     final figma = _figmaText[key];
     final subtitle = figma?.$1 ?? '';
     final description = widget.description;
+    final inspiredBy = widget.inspiredBy.trim();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -205,6 +215,18 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                                 ),
                                 SizedBox(height: 22 * s),
                                 Text(description, style: _q(16 * s)),
+                                if (inspiredBy.isNotEmpty) ...[
+                                  SizedBox(height: 24 * s),
+                                  Text(
+                                    'INSPIRED BY',
+                                    style: _a(12 * s, color: _muted),
+                                  ),
+                                  SizedBox(height: 10 * s),
+                                  Text(
+                                    inspiredBy,
+                                    style: _q(16 * s, color: _muted),
+                                  ),
+                                ],
                                 SizedBox(height: 86 * s),
                                 SizedBox(
                                   width: double.infinity,

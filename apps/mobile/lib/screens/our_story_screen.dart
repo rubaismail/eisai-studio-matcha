@@ -8,11 +8,13 @@ class OurStoryScreen extends StatelessWidget {
     this.onGoHome,
     this.onGoDrinks,
     this.onGoLocation,
+    this.onGoAccount,
   });
 
   final VoidCallback? onGoHome;
   final VoidCallback? onGoDrinks;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoAccount;
 
   static const _ink = Color(0xFF1F1F1F);
   static const _muted = Color(0xFF4F4F4F);
@@ -39,6 +41,7 @@ class OurStoryScreen extends StatelessWidget {
     onGoDrinks: onGoDrinks,
     onGoStory: () {},
     onGoLocation: onGoLocation,
+    onGoAccount: onGoAccount,
     body: (s) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

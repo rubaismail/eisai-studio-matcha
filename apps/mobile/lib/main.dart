@@ -3,6 +3,7 @@ import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/our_story_screen.dart';
 import 'screens/our_location_screen.dart';
+import 'screens/account_screen.dart';
 
 void main() {
   runApp(const EisaiApp());
@@ -44,19 +45,33 @@ class EisaiApp extends StatelessWidget {
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  const MainNavigation({super.key, this.initialIndex = 0});
+
+  final int initialIndex;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   void _selectTab(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  void _openAccount() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const AccountScreen()));
   }
 
   @override
@@ -68,21 +83,25 @@ class _MainNavigationState extends State<MainNavigation> {
           onViewMenu: () => _selectTab(1),
           onGoStory: () => _selectTab(2),
           onGoLocation: () => _selectTab(3),
+          onGoAccount: _openAccount,
         ),
         MenuScreen(
           onGoHome: () => _selectTab(0),
           onGoStory: () => _selectTab(2),
           onGoLocation: () => _selectTab(3),
+          onGoAccount: _openAccount,
         ),
         OurStoryScreen(
           onGoHome: () => _selectTab(0),
           onGoDrinks: () => _selectTab(1),
           onGoLocation: () => _selectTab(3),
+          onGoAccount: _openAccount,
         ),
         OurLocationScreen(
           onGoHome: () => _selectTab(0),
           onGoDrinks: () => _selectTab(1),
           onGoStory: () => _selectTab(2),
+          onGoAccount: _openAccount,
         ),
       ],
     );
