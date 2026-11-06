@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
-import 'dart:io';
 
 class AuthException implements Exception {
   const AuthException(this.message, {this.statusCode});
@@ -27,17 +28,47 @@ class AuthUser {
   );
 }
 
-class AuthService {
-  AuthService({http.Client? client, FlutterSecureStorage? storage})
-    : _client = client ?? http.Client(),
-      _storage = storage ?? const FlutterSecureStorage();
+abstract class SessionStore {
+  Future<String?> read(String key);
+  Future<void> write(String key, String value);
+  Future<void> delete(String key);
+}
 
-  static final AuthService instance = AuthService();
+class SecureSessionStore implements SessionStore {
+  SecureSessionStore([FlutterSecureStorage? storage])
+    : _storage = storage ?? const FlutterSecureStorage();
+
+  final FlutterSecureStorage _storage;
+
+  @override
+  Future<String?> read(String key) => _storage.read(key: key);
+
+  @override
+  Future<void> write(String key, String value) =>
+      _storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete(String key) => _storage.delete(key: key);
+}
+
+class AuthService {
+  AuthService({http.Client? client, SessionStore? store})
+    : _client = client ?? http.Client(),
+      _store = store ?? SecureSessionStore();
+
+  static AuthService instance = AuthService();
 
   static const _tokenKey = 'eisai_auth_token';
   static const _emailKey = 'eisai_auth_email';
-  final FlutterSecureStorage _storage;
+
+  final SessionStore _store;
   final http.Client _client;
+
+  final ValueNotifier<String?> _signedInEmail = ValueNotifier<String?>(null);
+  int _sessionRevision = 0;
+
+  ValueListenable<String?> get signedInEmailListenable => _signedInEmail;
+  String? get currentEmail => _signedInEmail.value;
 
   Uri _url(String path) =>
       Uri.parse('${apiUrl.replaceFirst(RegExp(r'/$'), '')}/auth/$path');
@@ -105,7 +136,7 @@ class AuthService {
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'email': email.trim().toLowerCase(),
-      'password': password, // Do not trim passwords.
+      'password': password, 
     });
     return data['message'] as String? ??
         'Check your email to verify your account.';
@@ -126,14 +157,10 @@ class AuthService {
         userData is! Map<String, dynamic>) {
       throw const AuthException('Invalid login response from server.');
     }
-    if (_expired(token)) {
-      throw const AuthException(
-        'Server returned an expired token. Please try again.',
-      );
-    }
     final user = AuthUser.fromJson(userData);
-    await _storage.write(key: _tokenKey, value: token);
-    await _storage.write(key: _emailKey, value: user.email);
+    await _store.write(_tokenKey, token);
+    await _store.write(_emailKey, user.email);
+    _signedInEmail.value = user.email;
     return user;
   }
 
@@ -153,41 +180,40 @@ class AuthService {
         'If an account exists for this email, a password-reset link has been sent.';
   }
 
-  Future<String?> validToken() async {
-    final token = await _storage.read(key: _tokenKey);
-    if (token == null) return null;
-    if (_expired(token)) {
-      await logout();
-      return null;
-    }
-    return token;
+  Future<String?> restoreSession() async {
+  final revision = _sessionRevision;
+  final token = await _store.read(_tokenKey);
+  if (revision != _sessionRevision) {
+    return null;
+  }
+  if (token == null || token.isEmpty) {
+    _signedInEmail.value = null;
+    return null;
+  }
+  final email = await _store.read(_emailKey);
+  if (revision != _sessionRevision) {
+    return null;
   }
 
-  Future<String?> signedInEmail() async {
-    if (await validToken() == null) return null;
-    return _storage.read(key: _emailKey);
+  _signedInEmail.value = email;
+  return email;
+}
+
+  Future<String?> validToken() async {
+    final token = await _store.read(_tokenKey);
+    return (token == null || token.isEmpty) ? null : token;
   }
+
+  Future<String?> signedInEmail() => restoreSession();
 
   Future<void> logout() async {
-    await _storage.delete(key: _tokenKey);
-    await _storage.delete(key: _emailKey);
-  }
+    _sessionRevision++;
 
-  bool _expired(String token) {
     try {
-      final parts = token.split('.');
-      if (parts.length != 3) return true;
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      );
-      if (payload is! Map || payload['exp'] is! num) return true;
-      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
-        (payload['exp'] as num).toInt() * 1000,
-        isUtc: true,
-      );
-      return !expiresAt.isAfter(DateTime.now().toUtc());
-    } catch (_) {
-      return true;
+      await _store.delete(_tokenKey);
+      await _store.delete(_emailKey);
+    } finally {
+      _signedInEmail.value = null;
     }
   }
 }
