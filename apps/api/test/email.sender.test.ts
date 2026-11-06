@@ -27,6 +27,7 @@ const ENV_KEYS = [
   'mailtrapUseSandbox',
   'mailtrapInboxId',
   'appUrl',
+  'webOrigin',
 ] as const;
 const originalEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, env[k]])) as Record<
   (typeof ENV_KEYS)[number],
@@ -78,16 +79,19 @@ test('sendVerificationEmail emits the verify URL with the raw token', async () =
 
 test('sendResetPasswordEmail emits the reset URL with the raw token', async () => {
   setValidEmailEnv();
+  env.webOrigin = 'https://shop.example.com/';
   const raw = 'r a+b/c&=?';
   await withAppUrl('https://api.example.com', () =>
     sendResetPasswordEmail('jane@example.com', raw),
   );
 
   assert.equal(sent.length, 1);
-  const url = new URL(firstUrl(sent[0].text ?? sent[0].html ?? ''));
-  assert.equal(url.origin, 'https://api.example.com');
-  assert.equal(url.pathname, '/api/auth/reset-password');
-  assert.equal(url.searchParams.get('token'), raw);
+  for (const body of [sent[0].text, sent[0].html]) {
+    const url = new URL(firstUrl(body ?? ''));
+    assert.equal(url.origin, 'https://shop.example.com');
+    assert.equal(url.pathname, '/reset-password');
+    assert.deepEqual([...url.searchParams], [['token', raw]]);
+  }
 });
 
 test('emitted verify URL has no double slash when APP_URL ends with /', async () => {
@@ -98,4 +102,13 @@ test('emitted verify URL has no double slash when APP_URL ends with /', async ()
   const link = firstUrl(sent[0].text ?? sent[0].html ?? '');
   assert.ok(!/\/\/api\/auth/.test(link), `double slash in ${link}`);
   assert.equal(new URL(link).pathname, '/api/auth/verify');
+});
+
+test('invalid website configuration sends no reset email', async () => {
+  setValidEmailEnv();
+  for (const origin of ['', 'not-a-url', 'javascript:alert(1)', 'https://user:pass@example.com']) {
+    env.webOrigin = origin;
+    await assert.rejects(sendResetPasswordEmail('jane@example.com', 'token'), /WEB_ORIGIN/);
+  }
+  assert.equal(sent.length, 0);
 });

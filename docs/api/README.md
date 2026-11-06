@@ -145,7 +145,7 @@ npx --yes --package=@apidevtools/swagger-cli@4.0.4 swagger-cli validate docs/api
 Schema validation checks OpenAPI structure and references. Review endpoint examples, access rules and actual server behavior separately; an accepted schema is not a substitute for integration tests.
 
 
-### Registration email configuration
+### Account email configuration
 
 For local development, set `MAILTRAP_USE_SANDBOX=true`, a sandbox API token in
 `MAILTRAP_TOKEN`, a positive `MAILTRAP_INBOX_ID`, and a valid `EMAIL_FROM` address.
@@ -158,6 +158,14 @@ The final domain is not needed during development. Links target `/api/auth/verif
 on that origin, with an encoded token. Missing/invalid configuration is rejected before
 registration creates an account or resend replaces a token. Configuration is loaded at
 startup; restart the API after changing it. Never commit real credentials.
+
+Password-reset emails use `WEB_ORIGIN` (locally `http://localhost:5173`) and open
+`/reset-password?token=<raw-token>` on the website. Set `WEB_ORIGIN` to the public
+website origin in production, even when the API uses a separate host. The browser
+form submits `{ "password": "..." }` to `POST /api/auth/reset-password?token=...`;
+the email must not link directly to that POST-only API endpoint. The frontend reset
+form is tracked separately in #50 and must be available before enabling the customer flow.
+Invalid website URL configuration is rejected before a reset token is stored.
 
 Registration defaults to 20 requests per IP and 3 per normalized email per 15 minutes;
 resend defaults to 10 per IP and 2 per email. Their counters are separate from login.

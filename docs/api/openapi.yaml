@@ -40,6 +40,8 @@ x-email-configuration:
       description: >-
         Public base URL used to build absolute verification links. Required in production; a blank
         value is rejected. Development defaults to http://localhost:4000 (or the configured PORT).
+    - name: WEB_ORIGIN
+      description: Website origin for password-reset forms; defaults to http://localhost:5173 locally. Set to the public website origin in production.
   verification-link:
     pattern: '<APP_URL origin>/api/auth/verify?token=<raw-token>'
   verification-token:
@@ -53,7 +55,7 @@ x-email-configuration:
     resend-cooldown-seconds: 60
     storage: Only a SHA-256 hash of the token is stored; the raw token exists only in the email.
   reset-link:
-    pattern: '<APP_URL origin>/reset-password?token=<raw-token>'
+    pattern: '<WEB_ORIGIN>/reset-password?token=<raw-token>'
   notes:
     - Never commit real tokens or sender credentials to this contract.
     - Resend responses are intentionally identical for unknown, verified, and eligible accounts.

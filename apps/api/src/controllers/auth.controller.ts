@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { User } from "../models/User.js";
 import { hashPassword } from "../config/password.js";
-import { requireEmailConfig } from "../config/env.js";
+import { requireEmailConfig, requireResetPasswordOrigin } from "../config/env.js";
 import { sendVerificationEmail, sendResetPasswordEmail } from "../services/email.js";
 import { randomBytes, createHash } from "node:crypto";
 
@@ -266,6 +266,7 @@ export async function resetPassword(req: Request, res: Response) {
 export async function forgotPassword(req: Request, res: Response) {
   try {
     requireEmailConfig();
+    requireResetPasswordOrigin();
 
     const shapeError = validateBodyShape(req.body, FORGOT_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });

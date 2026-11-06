@@ -740,6 +740,23 @@ test('forgot-password returns generic 200 and sends nothing for unknown email', 
   assert.equal(resetEmailCalls.length, 0);
 });
 
+test('forgot-password rejects invalid website configuration before storing a token', async () => {
+  const update = mockResetUpdate(1);
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp())
+      .post('/api/auth/forgot-password')
+      .send({ email: 'jane@example.com' });
+    assert.equal(res.status, 500);
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(resetEmailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
+});
+
 test('forgot-password writes a hashed token and emails the raw token', async () => {
   const update = mockResetUpdate(1);
   const res = await request(createApp())

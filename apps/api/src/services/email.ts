@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { MailtrapTransport } from "mailtrap";
-import { requireEmailConfig } from "../config/env.js";
+import { requireEmailConfig, requireResetPasswordOrigin } from "../config/env.js";
 
 let cached: { transport: ReturnType<typeof nodemailer.createTransport>; mail: ReturnType<typeof requireEmailConfig> } | null = null;
 
@@ -24,7 +24,7 @@ export function buildVerificationLink(baseUrl: string, rawToken: string): string
   return link.toString();
 }
 export function buildResetLink(baseUrl: string, rawToken: string): string {
-  const link = new URL("/api/auth/reset-password", baseUrl);
+  const link = new URL("/reset-password", baseUrl);
   link.searchParams.set("token", rawToken);
   return link.toString();
 }
@@ -53,8 +53,9 @@ If you didn't create an account, you can ignore this email.</p>`,
 }
 
 export async function sendResetPasswordEmail(recipient: string, rawToken: string): Promise<void> {
+  const origin = requireResetPasswordOrigin();
   const { transport, mail } = getTransport();
-  const link = buildResetLink(mail.appUrl, rawToken);
+  const link = buildResetLink(origin, rawToken);
 
   await transport.sendMail({
     from: mail.from,
