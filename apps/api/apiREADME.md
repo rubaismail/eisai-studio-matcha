@@ -7,8 +7,7 @@ The Express API accepts JSON requests and returns JSON responses. It connects to
 Start the API and website from the repository root with `npm run dev`. Set `MONGODB_URI` in `apps/api/.env` to the Atlas development connection string. Docker is not required. See the [project setup guide](../../README.md).
 
 **Shared contract:** [OpenAPI YAML](../../docs/api/openapi.yaml) · [contract decisions and SwaggerHub publication](../../docs/api/README.md). The YAML is the machine-readable source of truth; this README is the companion guide.
-This guide documents the target API contract alongside implemented behavior. The menu listing, seasonal listing, admin menu management, authentication flows (except password reset), image uploads, and health endpoints are implemented. Forgot-password and reset-password operations remain planned. See `x-implementation-status` in the OpenAPI contract for endpoint-level status.
-
+This guide documents the target API contract alongside implemented behavior. The menu listing, seasonal listing, admin menu management, authentication flows (including forgot-password and reset-password), image uploads, and health endpoints are implemented. See `x-implementation-status` in the OpenAPI contract for endpoint-level status.
 
 ## Quick navigation
 
@@ -177,13 +176,14 @@ Returns HTTP `200` with the same response whether or not the email is registered
 }
 ```
 
-### 6. POST /api/auth/reset-password
+### 6. POST /api/auth/reset-password?token=<password-reset-token>
 
 Sets a new password using the token from the reset email. No login JWT required.
 
+The reset token is sent as the `token` query parameter (taken from the emailed link), not in the JSON body. The request body contains only the new password:
+
 ```json
 {
-  "token": "<password-reset-token>",
   "password": "new-example-password"
 }
 ```
@@ -196,7 +196,8 @@ Returns HTTP `200`:
 }
 ```
 
-The new password is hashed and the reset token is consumed. Invalid input and expired, invalid or reused tokens return `400`.
+The new password is hashed and the reset token is consumed. A missing, expired, invalid or reused token returns `400`; a missing or invalid `password` in the body also returns `400`. Unknown body fields, including `token` in the body, are rejected with `400`.
+
 
 ### 7. GET /api/menu
 

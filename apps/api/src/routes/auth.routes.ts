@@ -1,24 +1,44 @@
 import { Router } from "express";
-import { register, verify, resendVerification } from "../controllers/auth.controller.js";
+import { register, verify, resendVerification, resetPassword, forgotPassword} from "../controllers/auth.controller.js";
 import { createLoginLimiters } from "../middleware/loginRateLimit.js";
 
-const windowMs = Number(process.env.AUTH_RATE_WINDOW_MS ?? 15 * 60_000);
+function intEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+const limiters = (opts: Parameters<typeof createLoginLimiters>[0]) =>
+  process.env.RATE_LIMIT_DISABLED === "1" ? [] : createLoginLimiters(opts);
 
-const registerLimiters = createLoginLimiters({
-  ipLimit: Number(process.env.REGISTER_IP_LIMIT ?? 20),
-  emailLimit: Number(process.env.REGISTER_EMAIL_LIMIT ?? 3),
+const windowMs = intEnv("AUTH_RATE_WINDOW_MS", 15 * 60_000);
+
+const registerLimiters = limiters({
+  ipLimit: intEnv("REGISTER_IP_LIMIT", 20),
+  emailLimit: intEnv("REGISTER_EMAIL_LIMIT", 3),
   windowMs,
 });
-const resendLimiters = createLoginLimiters({
-  ipLimit: Number(process.env.RESEND_IP_LIMIT ?? 10),
-  emailLimit: Number(process.env.RESEND_EMAIL_LIMIT ?? 2),
+const resendLimiters = limiters({
+  ipLimit: intEnv("RESEND_IP_LIMIT", 10),
+  emailLimit: intEnv("RESEND_EMAIL_LIMIT", 2),
   windowMs,
 });
-
+const forgotLimiters = limiters({
+  ipLimit: intEnv("FORGOT_IP_LIMIT", 10),
+  emailLimit: intEnv("FORGOT_EMAIL_LIMIT", 2),
+  windowMs,
+});
+const resetLimiters = limiters({
+  ipLimit: intEnv("RESET_IP_LIMIT", 10),
+  emailLimit: intEnv("RESET_EMAIL_LIMIT", 10),
+  windowMs,
+});
 const router = Router();
 
 router.get("/verify", verify);
 router.post("/register", ...registerLimiters, register);
 router.post("/resend-verification", ...resendLimiters, resendVerification);
+router.post("/forgot-password", ...forgotLimiters, forgotPassword);
+router.post("/reset-password", ...resetLimiters, resetPassword);
 
 export default router;

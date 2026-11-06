@@ -10,23 +10,29 @@ import { User } from '../src/models/User.js';
 // Registered BEFORE the controller is imported so it binds to the mock.
 type EmailCall = { to: string; rawToken: string };
 let emailCalls: EmailCall[] = [];
+type ResetEmailCall = { to: string; rawToken: string };
+let resetEmailCalls: ResetEmailCall[] = [];
 
 mock.module('../src/services/email.js', {
   namedExports: {
     sendVerificationEmail: async (to: string, rawToken: string) => {
       emailCalls.push({ to, rawToken });
     },
+    sendResetPasswordEmail: async (to: string, rawToken: string) => {
+      resetEmailCalls.push({ to, rawToken });
+    },
   },
 });
 
 // Import AFTER mock.module.
-const { register, resendVerification } = await import(
+const { register, resendVerification, forgotPassword, resetPassword } = await import(
   '../src/controllers/auth.controller.js'
 );
 
 afterEach(() => {
   mock.restoreAll();
   emailCalls = [];
+  resetEmailCalls = [];
 });
 
 const validBody = {
@@ -133,4 +139,58 @@ test('resend blocks excess attempts and does not send email when blocked', async
 
   assert.equal(update.mock.callCount(), 2);
   assert.equal(emailCalls.length, 2);
+});
+
+test('forgot-password and resend-verification have independent buckets', async () => {
+  mock.method(User, 'updateOne', async () => ({ modifiedCount: 0 }));
+  const app = express();
+  app.use(express.json());
+  app.post(
+    '/resend-verification',
+    ...createLoginLimiters({ ipLimit: 100, emailLimit: 1, windowMs: 60_000 }),
+    resendVerification,
+  );
+  app.post(
+    '/forgot-password',
+    ...createLoginLimiters({ ipLimit: 100, emailLimit: 1, windowMs: 60_000 }),
+    forgotPassword,
+  );
+
+  // Exhaust resend's email bucket for jane@example.com
+  assert.equal(
+    (await request(app).post('/resend-verification').send({ email: 'jane@example.com' })).status,
+    200,
+  );
+  assert.equal(
+    (await request(app).post('/resend-verification').send({ email: 'jane@example.com' })).status,
+    429,
+  );
+
+  // forgot-password must still work for the same email (separate bucket)
+  assert.equal(
+    (await request(app).post('/forgot-password').send({ email: 'jane@example.com' })).status,
+    200,
+  );
+});
+
+test('reset-password is IP-rate-limited', async () => {
+  mock.method(User, 'findOne', async () => null);
+  const app = express();
+  app.use(express.json());
+  app.post(
+    '/reset-password',
+    ...createLoginLimiters({ ipLimit: 2, emailLimit: 100, windowMs: 60_000 }),
+    resetPassword,
+  );
+
+  for (let i = 0; i < 2; i++) {
+    assert.equal(
+      (await request(app).post('/reset-password').query({ token: 't' }).send({ password: 'ExamplePassword123' })).status,
+      400, // invalid token, but not limited
+    );
+  }
+  assert.equal(
+    (await request(app).post('/reset-password').query({ token: 't' }).send({ password: 'ExamplePassword123' })).status,
+    429,
+  );
 });

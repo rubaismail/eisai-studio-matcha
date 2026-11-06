@@ -121,3 +121,17 @@ function requireAppUrl(): string {
 
   return parsed.origin + parsed.pathname.replace(/\/+$/, '');
 }
+
+// Password-reset emails open the website form, which submits to the API.
+export function requireResetPasswordOrigin(): string {
+  let url: URL;
+  try {
+    url = new URL(env.webOrigin.trim());
+  } catch {
+    throw new Error('WEB_ORIGIN must be a valid absolute URL for password-reset emails.');
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    throw new Error('WEB_ORIGIN must use http or https without credentials.');
+  }
+  return url.origin;
+}

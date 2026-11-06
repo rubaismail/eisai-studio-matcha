@@ -5,10 +5,11 @@ info:
   description: >-
     Shared target contract for React TypeScript and Flutter clients calling the Express/Node API
     with MongoDB. Based on apps/api/apiREADME.md. Each operation declares its implementation
-    status; registration, email verification, login, menu management and image uploads are implemented. See docs/api/README.md for
-    validation decisions, client token handling and publication status. JSON request bodies reject
-    unknown fields and null; clients must tolerate additional response fields except the explicit
-    safe login user projection. No checkout, favorites, refresh-token or logout endpoints.
+    status; registration, email verification, password reset, login, menu management and image
+    uploads are implemented. See docs/api/README.md for validation decisions, client token handling
+    and publication status. JSON request bodies reject unknown fields and null; clients must
+    tolerate additional response fields except the explicit safe login user projection. No
+    checkout, favorites, refresh-token or logout endpoints.
 servers:
   - url: http://localhost:4000/api
     description: Local development; replace with deployed API base URL for staging.
@@ -39,6 +40,8 @@ x-email-configuration:
       description: >-
         Public base URL used to build absolute verification links. Required in production; a blank
         value is rejected. Development defaults to http://localhost:4000 (or the configured PORT).
+    - name: WEB_ORIGIN
+      description: Website origin for password-reset forms; defaults to http://localhost:5173 locally. Set to the public website origin in production.
   verification-link:
     pattern: '<APP_URL origin>/api/auth/verify?token=<raw-token>'
   verification-token:
@@ -46,6 +49,13 @@ x-email-configuration:
     single-use: true
     resend-cooldown-seconds: 60
     storage: Only a SHA-256 hash of the token is stored; the raw token exists only in the email.
+  reset-token:
+    ttl-minutes: 15
+    single-use: true
+    resend-cooldown-seconds: 60
+    storage: Only a SHA-256 hash of the token is stored; the raw token exists only in the email.
+  reset-link:
+    pattern: '<WEB_ORIGIN>/reset-password?token=<raw-token>'
   notes:
     - Never commit real tokens or sender credentials to this contract.
     - Resend responses are intentionally identical for unknown, verified, and eligible accounts.
@@ -166,10 +176,12 @@ paths:
       description: >-
         For valid input, return the same success status and message regardless of account existence
         or eligibility. Tokens expire and can be used once.
+        Default limits: 10 requests per client IP and 2 per normalized email per 15 minutes.
+        Exceeding either limit returns 429; wait for Retry-After before retrying.
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Request a password-reset email
@@ -181,6 +193,8 @@ paths:
                 message: If an account exists for this email, a password-reset link has been sent.
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
       requestBody:
@@ -255,10 +269,13 @@ paths:
       description: >-
         Validate and consume the single-use reset token and hash the new password. No automatic
         login. Existing login JWT revocation is outside this baseline.
+        The token is supplied in the query string (from the emailed link), not the request body.
+        Default limits: 10 requests per client IP per 15 minutes.
+        Exceeding the limit returns 429; wait for Retry-After before retrying.
       tags:
         - Auth
       security: []
-      x-implementation-status: planned
+      x-implementation-status: implemented
       responses:
         '200':
           description: Reset a password
@@ -270,8 +287,18 @@ paths:
                 message: Password reset. Log in with your new password.
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
         '500':
           $ref: '#/components/responses/ServerError'
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Password-reset action token from the email link; not a login JWT.
       requestBody:
         required: true
         content:
@@ -279,7 +306,6 @@ paths:
             schema:
               $ref: '#/components/schemas/ResetPasswordRequest'
             example:
-              token: example-reset-token
               password: new-example-password
   /menu:
     get:
@@ -828,12 +854,8 @@ components:
     ResetPasswordRequest:
       type: object
       required:
-        - token
         - password
       properties:
-        token:
-          type: string
-          minLength: 1
         password:
           type: string
           format: password
@@ -1130,8 +1152,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            error: Too many login attempts. Try again later.
-
+            error: Too many requests. Try again later.
     BadRequest:
       description: Missing or invalid input, malformed ID, or invalid, expired or used action token.
       content:
