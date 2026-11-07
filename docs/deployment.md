@@ -39,18 +39,90 @@ Lightsail runs launch scripts with `/bin/sh` and ignores the `#!/bin/bash` line,
 
 ### Updating to a new commit
 
-From Lightsail browser SSH, as `ubuntu`:
+#### How it works
 
-```sh
-cd /srv/eisai/releases
-C=$(git ls-remote https://github.com/rubaismail/eisai-studio-matcha.git refs/heads/main | cut -c1-40)
-git clone --quiet https://github.com/rubaismail/eisai-studio-matcha.git $C && cd $C && git checkout --quiet $C
-npm ci && npm run build
-sudo ln -sfn /srv/eisai/releases/$C /srv/eisai/current
-sudo systemctl restart eisai-api && sleep 3 && curl -s localhost:4000/api/health
+Updates go to the **same Lightsail instance**. You don't create a new server per update. Each deployed GitHub commit gets its own folder, and a shortcut (symlink) named `current` points at the one that is live:
+
+```text
+/srv/eisai/releases/
+├── d9d91e0…/          ← previous release (kept for rollback)
+└── 4f2a7c1…/          ← new release, cloned and built from GitHub
+/srv/eisai/current  →  /srv/eisai/releases/4f2a7c1…   ← systemd runs the API from here
+/etc/eisai/api.env     ← secrets, shared by every release, never in a release folder
+MongoDB data           ← separate from the code; unaffected by switching releases
 ```
 
-To roll back, point `/srv/eisai/current` at the previous release folder and restart `eisai-api`. Delete old release folders occasionally and keep the last two or three.
+The flow:
+
+1. Merge to `main` on GitHub. Never edit code on the server.
+2. On the server, clone that commit into a **new** folder named after the commit, then install, test and build it there. The live API keeps running from the old folder while you do this.
+3. Switch `current` to the new folder and restart `eisai-api`. That's the only moment of downtime, a few seconds. The service runs the production preflight on startup and refuses to start if the config is invalid.
+4. Check health. If something's wrong, switch `current` back to the previous folder and restart. That rollback takes seconds because the old build is still on disk.
+
+Unlike a `git pull` in a single folder, a failed build never touches the running site, and there's always a known-good version to go back to.
+
+#### Deploy the latest `main`
+
+Open **Lightsail console → eisai-prod → Connect using SSH** (you're the `ubuntu` user), then run:
+
+```sh
+# 1. Note what's live now, so you can roll back.
+readlink /srv/eisai/current
+
+# 2. Find the latest commit on main and clone it into its own folder.
+cd /srv/eisai/releases
+C=$(git ls-remote https://github.com/rubaismail/eisai-studio-matcha.git refs/heads/main | cut -c1-40)
+echo "Deploying $C"
+git clone --quiet https://github.com/rubaismail/eisai-studio-matcha.git "$C"
+cd "$C" && git checkout --quiet "$C"
+
+# 3. Install, then lint + typecheck + test + build. Stop here if this fails;
+#    nothing live has changed yet.
+npm ci && npm run check
+
+# 4. Switch the live symlink atomically and restart the API.
+sudo ln -sfn "/srv/eisai/releases/$C" /srv/eisai/current.next
+sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
+sudo systemctl restart eisai-api
+
+# 5. Verify.
+sleep 3; curl -s localhost:4000/api/health; echo
+```
+
+Then open `https://api.eisaistudio.com/api/health` in a browser. If the API fails to start, `sudo journalctl -u eisai-api -n 50 --no-pager` shows why.
+
+To deploy a specific commit instead of the latest `main`, set `C` to the full 40-character commit hash before step 2's `git clone`.
+
+#### Roll back
+
+```sh
+ls -lt /srv/eisai/releases      # newest first; pick the previous known-good folder
+sudo ln -sfn /srv/eisai/releases/PREVIOUS_COMMIT /srv/eisai/current.next
+sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
+sudo systemctl restart eisai-api
+curl -s localhost:4000/api/health; echo
+```
+
+Rollback only switches **code**. If the new release changed how data is stored in MongoDB, the old code may not understand the new data. Take a backup before deploying changes like that.
+
+#### Clean up old releases
+
+Each release folder is a few hundred MB (it includes `node_modules`). Keep the current one and the last two or three; delete older ones, but never the one `readlink /srv/eisai/current` shows:
+
+```sh
+rm -rf /srv/eisai/releases/OLD_COMMIT
+```
+
+#### When you _would_ create a new instance
+
+Only to replace the server itself: a newer Ubuntu (see [Why Ubuntu 22.04](#why-ubuntu-2204-and-not-2404)), a bigger bundle, or recovery from a broken server. Lightsail can't change an instance's OS in place, but a bigger bundle can be made from a snapshot. To move to a new instance:
+
+1. Build the new instance with [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh). Its `/etc/eisai/api.env` gets a new database password and JWT secret.
+2. Copy the database over (`mongodump` on the old server, `mongorestore` on the new one), then run `sudo eisai-set-secrets` with the same Mailtrap and bucket values.
+3. Move the static IP `eisai-prod-ip` from the old instance to the new one: Lightsail → Networking → static IP → detach, then attach. DNS (`api → 18.189.160.224`) stays the same, so there's no GoDaddy change.
+4. Run `sudo certbot --nginx -d api.eisaistudio.com` on the new instance, check health, then delete the old instance.
+
+Changing `JWT_SECRET` logs out every user. To avoid that, copy the old `JWT_SECRET` into the new `api.env`.
 
 ## Readiness and scope
 
