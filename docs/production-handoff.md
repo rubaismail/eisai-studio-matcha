@@ -84,7 +84,7 @@ All commands run in Lightsail browser SSH (**Lightsail console â†’ eisai-prod â†
 | Restart API              | `sudo systemctl restart eisai-api`                                                                                                           |
 | Set or rotate secrets    | `sudo eisai-set-secrets` (blank answer keeps the current value)                                                                              |
 | Health check             | `curl -s localhost:4000/api/health`                                                                                                          |
-| Deploy a new commit      | See [Updating to a new commit](deployment.md#updating-to-a-new-commit)                                                                       |
+| Deploy a new commit      | `sudo eisai-deploy` (rollback: `sudo eisai-deploy PREVIOUS_COMMIT`). See [Updating to a new commit](deployment.md#updating-to-a-new-commit)  |
 | Certificate renewal test | `sudo certbot renew --dry-run`                                                                                                               |
 | Database shell (admin)   | `sudo bash -c 'source /etc/eisai/mongo-admin.env; mongosh -u "$MONGO_ADMIN_USER" -p "$MONGO_ADMIN_PASSWORD" --authenticationDatabase admin'` |
 

@@ -90,7 +90,7 @@ if [ ! -d "$REL" ]; then
 fi
 cd "$REL"
 sudo -u ubuntu -H npm ci --no-audit --no-fund
-if sudo -u ubuntu -H npm run check; then echo "CHECK: PASSED"; else echo "CHECK: FAILED (falling back to build only)"; sudo -u ubuntu -H npm run build; fi
+if sudo -u ubuntu -H npm run check; then echo "CHECK: PASSED"; sudo -u ubuntu touch "$REL/.eisai-built"; else echo "CHECK: FAILED (falling back to build only)"; sudo -u ubuntu -H npm run build; fi
 ln -sfn "$REL" /srv/eisai/current
 cp deploy/eisai-api.service /etc/systemd/system/eisai-api.service
 systemctl daemon-reload
@@ -135,6 +135,8 @@ if systemctl restart eisai-api; then sleep 3; curl -s http://127.0.0.1:4000/api/
 else journalctl -u eisai-api -n 20 --no-pager; fi
 EOF
 chmod 700 /usr/local/sbin/eisai-set-secrets
+# --- helper: sudo eisai-deploy [commit] (build, switch, auto-rollback) ---
+if [ -f "$REL/deploy/eisai-deploy.sh" ]; then install -m 0755 "$REL/deploy/eisai-deploy.sh" /usr/local/sbin/eisai-deploy; fi
 echo "=== bootstrap done $(date -u)"
 EOS
 chmod 700 /root/eisai-bootstrap.sh
