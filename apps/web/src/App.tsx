@@ -16,7 +16,9 @@ export default function App() {
   const isAdmin = adminMatches.some((match) => match !== null);
 
   return (
-    <>
+    // Admin pages are white from top to bottom, so the cream page background
+    // never shows. Other pages keep the cream background.
+    <div className={isAdmin ? 'min-h-screen bg-white' : undefined}>
       <Navbar />
       <main className={isAdmin ? undefined : 'mx-auto max-w-4xl p-6'}>
         <Routes>
@@ -32,6 +34,6 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
-    </>
+    </div>
   );
 }
