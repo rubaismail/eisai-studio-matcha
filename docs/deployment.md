@@ -6,18 +6,19 @@ Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the buil
 
 This section records what is actually deployed and why. The generic runbook below still applies. For live status, the pre-handoff checklist and day-to-day commands, see [production-handoff.md](production-handoff.md).
 
-| Item               | Value                                                                                                                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lightsail instance | `eisai-prod`, `us-east-2a`, Ubuntu **22.04** LTS, 2 GB RAM bundle (`small_3_0`)                                                                                                                                                                 |
-| Static IP          | `eisai-prod-ip` = `18.189.160.224`                                                                                                                                                                                                              |
-| API hostname       | `https://api.eisaistudio.com` (GoDaddy DNS: `A api → 18.189.160.224`). The website will live on `eisaistudio.com`, so the API has its own Nginx server block instead of the shared-origin template.                                             |
-| Database           | MongoDB 8.0 on the same instance, loopback only, auth on, database `eisai_production`, app user `eisaiApp` (`readWrite` on that database only). Admin credentials: `/etc/eisai/mongo-admin.env` (root-only).                                    |
-| Secrets            | `/etc/eisai/api.env` (root-only). Set or rotate with `sudo eisai-set-secrets`.                                                                                                                                                                  |
-| Image storage      | Lightsail bucket `eisai-menu-images-8402db`, public object reads, accessed with a bucket access key.                                                                                                                                            |
-| Firewall           | 80/443 open; SSH (22) only from Lightsail browser SSH (`lightsail-connect`). Also `ufw` on the host.                                                                                                                                            |
-| TLS                | Let's Encrypt via `sudo certbot --nginx -d api.eisaistudio.com`; certbot edited the Nginx site file and renews automatically.                                                                                                                   |
-| Provisioning       | [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh), passed as the instance launch script. It sets up Nginx for HTTP only; certbot adds HTTPS afterwards.                                                                         |
-| Email              | Mailtrap, temporarily on a team member's personal account with `eisaistudio.com` as the sending domain. Move to the client's Mailtrap account when it exists: verify the domain there, then re-run `sudo eisai-set-secrets` with the new token. |
+| Item               | Value                                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lightsail instance | `eisai-prod`, `us-east-2a`, Ubuntu **22.04** LTS, 2 GB RAM bundle (`small_3_0`)                                                                                                                              |
+| Static IP          | `eisai-prod-ip` = `18.189.160.224`                                                                                                                                                                           |
+| API hostname       | `https://api.eisaistudio.com` (GoDaddy DNS: `A api → 18.189.160.224`). The website will live on `eisaistudio.com`, so the API has its own Nginx server block instead of the shared-origin template.          |
+| Database           | MongoDB 8.0 on the same instance, loopback only, auth on, database `eisai_production`, app user `eisaiApp` (`readWrite` on that database only). Admin credentials: `/etc/eisai/mongo-admin.env` (root-only). |
+| Secrets            | `/etc/eisai/api.env` (root-only). Set or rotate with `sudo eisai-set-secrets`.                                                                                                                               |
+| Deploys            | `sudo eisai-deploy [commit]`: builds the commit in its own release folder, switches only if checks pass, auto-rolls back if unhealthy. See [Updating to a new commit](#updating-to-a-new-commit).            |
+| Image storage      | Lightsail bucket `eisai-menu-images-8402db`, public object reads, accessed with a bucket access key.                                                                                                         |
+| Firewall           | 80/443 open; SSH (22) only from Lightsail browser SSH (`lightsail-connect`). Also `ufw` on the host.                                                                                                         |
+| TLS                | Let's Encrypt via `sudo certbot --nginx -d api.eisaistudio.com`; certbot edited the Nginx site file and renews automatically.                                                                                |
+| Provisioning       | [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh), passed as the instance launch script. It sets up Nginx for HTTP only; certbot adds HTTPS afterwards.                                      |
+| Email              | Mailtrap, on the client's account (`contact@eisaistudio.com`), sending domain `eisaistudio.com` (verified). Token set with `sudo eisai-set-secrets`.                                                         |
 
 ### Why Ubuntu 22.04 and not 24.04
 
@@ -61,9 +62,46 @@ The flow:
 
 Unlike a `git pull` in a single folder, a failed build never touches the running site, and there's always a known-good version to go back to.
 
-#### Deploy the latest `main`
+#### Deploy with `eisai-deploy` (recommended)
 
-Open **Lightsail console → eisai-prod → Connect using SSH** (you're the `ubuntu` user), then run:
+Open **Lightsail console → eisai-prod → Connect using SSH**, then run:
+
+```sh
+sudo eisai-deploy
+```
+
+That deploys the latest commit on `main`. To deploy a specific commit, pass its full 40-character hash: `sudo eisai-deploy <commit>`.
+
+The script ([deploy/eisai-deploy.sh](../deploy/eisai-deploy.sh), installed as `/usr/local/sbin/eisai-deploy`) runs every step below in order:
+
+1. Looks up the commit and clones it into `/srv/eisai/releases/<commit>`. If a folder for that commit is already there, it's reused.
+2. Runs `npm ci && npm run check` as `ubuntu`. **If that fails, it stops and nothing live changes.** On success it writes a `.eisai-built` marker in the release folder.
+3. Switches `current` atomically. If the release's `deploy/eisai-api.service` changed, it installs that too. Then it restarts `eisai-api`.
+4. Waits up to 30 seconds for `/api/health` to report `ok`. **If it doesn't, the script prints the service log, switches back to the previous release and restarts it automatically.**
+
+The script never deletes releases, secrets or database data. It prints the releases on disk so you can clean up old ones yourself.
+
+Run it in a terminal you can leave open: the check step takes several minutes on the 2 GB server. The browser terminal is fine for this, because the command is short.
+
+#### Roll back
+
+```sh
+ls -1t /srv/eisai/releases          # newest first; pick the previous known-good commit
+sudo eisai-deploy PREVIOUS_COMMIT
+```
+
+A release that has the `.eisai-built` marker switches back in seconds, with no rebuild. A release without one, such as the first release built by the bootstrap script on an older server, is checked again first, which takes minutes. If the API is down and you need it back immediately, switch manually:
+
+```sh
+sudo ln -sfn /srv/eisai/releases/PREVIOUS_COMMIT /srv/eisai/current.next
+sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
+sudo systemctl restart eisai-api
+curl -s localhost:4000/api/health; echo
+```
+
+#### What the script does by hand (fallback)
+
+Only needed if `eisai-deploy` isn't installed. **Never skip step 3.** The service runs the built code (`apps/api/dist`) and `node_modules` from the release folder, and `git clone` contains neither, so switching to an unbuilt release takes the API down. In the browser terminal, run each line separately, in one terminal tab, so `$C` stays set.
 
 ```sh
 # 1. Note what's live now, so you can roll back.
@@ -78,30 +116,30 @@ cd "$C" && git checkout --quiet "$C"
 
 # 3. Install, then lint + typecheck + test + build. Stop here if this fails;
 #    nothing live has changed yet.
-npm ci && npm run check
+npm ci && npm run check && touch .eisai-built
 
 # 4. Switch the live symlink atomically and restart the API.
 sudo ln -sfn "/srv/eisai/releases/$C" /srv/eisai/current.next
 sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
 sudo systemctl restart eisai-api
 
-# 5. Verify.
+# 5. Verify. If it isn't ok, roll back (above).
 sleep 3; curl -s localhost:4000/api/health; echo
 ```
 
-Then open `https://api.eisaistudio.com/api/health` in a browser. If the API fails to start, `sudo journalctl -u eisai-api -n 50 --no-pager` shows why.
+`C=$(...)` and `echo "Deploying $C"` must be separate commands. On one line without `;`, `$C` is still empty when `echo` runs.
 
-To deploy a specific commit instead of the latest `main`, set `C` to the full 40-character commit hash before step 2's `git clone`.
+#### Installing or updating `eisai-deploy`
 
-#### Roll back
+New servers get it from the bootstrap script. On a server built before the script existed, or to pick up a newer version of it, install it from a reviewed commit on `main`:
 
 ```sh
-ls -lt /srv/eisai/releases      # newest first; pick the previous known-good folder
-sudo ln -sfn /srv/eisai/releases/PREVIOUS_COMMIT /srv/eisai/current.next
-sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
-sudo systemctl restart eisai-api
-curl -s localhost:4000/api/health; echo
+C=FULL_COMMIT_HASH
+curl -fsSL "https://raw.githubusercontent.com/rubaismail/eisai-studio-matcha/$C/deploy/eisai-deploy.sh" -o /tmp/eisai-deploy
+sudo install -m 0755 /tmp/eisai-deploy /usr/local/sbin/eisai-deploy && rm /tmp/eisai-deploy
 ```
+
+Use a commit hash, not `main`, so you install exactly the version you reviewed.
 
 Rollback only switches **code**. If the new release changed how data is stored in MongoDB, the old code may not understand the new data. Take a backup before deploying changes like that.
 
