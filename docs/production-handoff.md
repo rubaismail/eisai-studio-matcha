@@ -6,13 +6,13 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 
 ## What is live
 
-| Component     | Where                                             | Notes                                                                                                                                                                                                                                        |
-| ------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                       |
-| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`. Empty: nothing seeded.                                                                                                                                                                                          |
-| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload not yet tested live.                                                                                                                                                                                             |
-| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                            |
-| DNS           | GoDaddy                                           | `A api → 18.189.160.224`, plus Mailtrap records `mt98`, `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. The apex `eisaistudio.com` is still GoDaddy "Parked". Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
+| Component     | Where                                             | Notes                                                                                                                                                                                                                                                                                                   |
+| ------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                                                                                  |
+| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`. Empty: nothing seeded.                                                                                                                                                                                                                                                     |
+| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload not yet tested live.                                                                                                                                                                                                                                                        |
+| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                                                                                       |
+| DNS           | GoDaddy                                           | `A api → 18.189.160.224`, plus Mailtrap records `mt29` (client account), `mt98` (old personal account, to delete), `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. The apex `eisaistudio.com` is still GoDaddy "Parked". Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
 
 ### Verified on November 7, 2026
 
@@ -41,13 +41,13 @@ Things set up temporarily under a team member's identity, or not finished yet.
 
 ### Email (Mailtrap)
 
-- [ ] Mailtrap is on a **team member's personal account** for now. When the client creates their Mailtrap account:
-  1. Add `eisaistudio.com` as a sending domain there. Mailtrap shows its DNS records; update GoDaddy if they differ from the current `mt98` / `mt-link` / DKIM records.
-  2. Complete **sender information** (the client's business name and address) and the **compliance check**.
-  3. Create an API token with **Admin on the `eisaistudio.com` domain only** (no "View Email Content", nothing else).
-  4. On the server, run `sudo eisai-set-secrets` and enter only the new `MAILTRAP_TOKEN` (press Enter to keep the other values).
-  5. Delete the domain and token from the personal account.
-- [ ] Until then, the personal account must have sender information and the compliance check done, or no email is delivered.
+- [ ] Moving Mailtrap from a team member's personal account to the client's account (`contact@eisaistudio.com`):
+  1. ~~Add `eisaistudio.com` (not `www.`) as a sending domain in the client's account.~~ Done. Its domain verification record is `CNAME mt29 → smtp.mailtrap.live`, added in GoDaddy. DKIM (`rwmt1`/`rwmt2._domainkey`), DMARC (`_dmarc`) and `mt-link` are the same for every Mailtrap account and were already in place.
+  2. The account owner accepts Mailtrap's sending rules and clicks **Verify DNS records**.
+  3. Complete **sender information** (the client's business name and address; only the account owner can edit it) and the **compliance check**.
+  4. Create an API token with **Admin on the `eisaistudio.com` domain only** (no "View Email Content", nothing else).
+  5. On the server, run `sudo eisai-set-secrets` and enter only the new `MAILTRAP_TOKEN` (press Enter to keep the other values).
+  6. Delete the domain and token from the personal account, then delete the personal account's old verification record `CNAME mt98` in GoDaddy. Do **not** delete `mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` or `_dmarc`.
 - [ ] `EMAIL_FROM` is `no-reply@eisaistudio.com`. If the client wants replies, change it to a real Microsoft 365 mailbox.
 
 ### Credentials to rotate or hand over
