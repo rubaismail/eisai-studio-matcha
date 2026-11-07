@@ -498,7 +498,7 @@ export default function MenuItemForm({
               <img
                 src={previewSrc}
                 alt={previewAlt}
-                className="max-h-36 max-w-28 object-contain"
+                className="size-full object-contain p-2"
               />
             </div>
           )}

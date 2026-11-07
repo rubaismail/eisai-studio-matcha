@@ -77,7 +77,7 @@ function DrinkRow({
             <img
               src={item.imageUrl}
               alt=""
-              className={`h-15 w-9 object-contain @2xl:h-19 @2xl:w-11 ${hidden ? 'opacity-55' : ''}`}
+              className={`size-full object-contain p-1 ${hidden ? 'opacity-55' : ''}`}
             />
           )}
         </div>
