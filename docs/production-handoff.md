@@ -1,6 +1,6 @@
 # Production handoff
 
-Status as of November 7, 2026. The production **API** is live at `https://api.eisaistudio.com`. The website is not deployed yet, and live email is blocked on Mailtrap account steps (see below). Server details and the reasons behind them are in [deployment.md](deployment.md#production-server-as-built-november-2026).
+Status as of November 7, 2026. The production **API** is live at `https://api.eisaistudio.com`. Live email works through the client's Mailtrap account. The website is not deployed yet. Server details and the reasons behind them are in [deployment.md](deployment.md#production-server-as-built-november-2026).
 
 This repository is public. Never put secrets, AWS account IDs, or customer data in this file.
 
@@ -20,12 +20,13 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 - `GET /api/menu` and `/api/menu/seasonal` → 200, empty lists.
 - `GET /api/admin/menu` with no login → 401.
 - `npm run check` (lint, type checks, all tests, both builds) passed on the server for commit `d9d91e0`.
+- Live email through the client's Mailtrap account: register → resend-verification → verification email received → verify link → `Email verified`. A direct Mailtrap API send from the server also succeeded.
+- A verified account was promoted to `admin` with the database shell ([admin-account-setup.md](admin-account-setup.md)). It is a team member's temporary account; see the credentials checklist below.
 
 ### Not yet verified
 
-- Email delivery: registration verification, resend, forgot/reset password. Blocked until Mailtrap sender information and the compliance check are done.
-- Image upload to the bucket and public image URLs.
-- First admin account ([admin-account-setup.md](admin-account-setup.md)) and admin menu create/edit/delete.
+- Forgot/reset password end to end. The email sends, but the link points to the website (`WEB_ORIGIN`), which is not deployed.
+- Admin login, menu create/edit/delete, image upload to the bucket and public image URLs.
 - Reboot recovery, certificate renewal dry run (`sudo certbot renew --dry-run`), backups and restore.
 - The rest of the [live acceptance checklist](deployment.md#live-acceptance-checklist).
 
@@ -41,13 +42,15 @@ Things set up temporarily under a team member's identity, or not finished yet.
 
 ### Email (Mailtrap)
 
-- [ ] Moving Mailtrap from a team member's personal account to the client's account (`contact@eisaistudio.com`):
-  1. ~~Add `eisaistudio.com` (not `www.`) as a sending domain in the client's account.~~ Done. Its domain verification record is `CNAME mt29 → smtp.mailtrap.live`, added in GoDaddy. DKIM (`rwmt1`/`rwmt2._domainkey`), DMARC (`_dmarc`) and `mt-link` are the same for every Mailtrap account and were already in place.
-  2. The account owner accepts Mailtrap's sending rules and clicks **Verify DNS records**.
-  3. Complete **sender information** (the client's business name and address; only the account owner can edit it) and the **compliance check**.
-  4. Create an API token with **Admin on the `eisaistudio.com` domain only** (no "View Email Content", nothing else).
-  5. On the server, run `sudo eisai-set-secrets` and enter only the new `MAILTRAP_TOKEN` (press Enter to keep the other values).
-  6. Delete the domain and token from the personal account, then delete the personal account's old verification record `CNAME mt98` in GoDaddy. Do **not** delete `mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` or `_dmarc`.
+Mailtrap now runs on the client's account (`contact@eisaistudio.com`). Done on November 7, 2026:
+
+- Sending domain `eisaistudio.com` (not `www.`) is **Verified**, with sender information and the compliance check complete. Its domain verification record is `CNAME mt29 → smtp.mailtrap.live` in GoDaddy. DKIM (`rwmt1`/`rwmt2._domainkey`), DMARC (`_dmarc`) and `mt-link` are the same for every Mailtrap account.
+- API token `eisai-prod-api`: Admin on `eisaistudio.com` only (Mailtrap ticks "View Email Content" automatically with Admin), never expires. It is set on the server as `MAILTRAP_TOKEN`.
+
+Remaining:
+
+- [ ] Delete the `eisaistudio.com` domain and its token from the team member's personal Mailtrap account. Then delete the old verification record `CNAME mt98` in GoDaddy. Do **not** delete `mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` or `_dmarc`.
+- [ ] To replace the token later, create a new one with the same permissions, set it with `sudo eisai-set-secrets` (see the paste warning under [Day-to-day operations](#day-to-day-operations)), confirm email still sends, then delete the old token.
 - [ ] `EMAIL_FROM` is `no-reply@eisaistudio.com`. If the client wants replies, change it to a real Microsoft 365 mailbox.
 
 ### Credentials to rotate or hand over
@@ -86,6 +89,27 @@ All commands run in Lightsail browser SSH (**Lightsail console → eisai-prod �
 | Database shell (admin)   | `sudo bash -c 'source /etc/eisai/mongo-admin.env; mongosh -u "$MONGO_ADMIN_USER" -p "$MONGO_ADMIN_PASSWORD" --authenticationDatabase admin'` |
 
 Secrets live only in `/etc/eisai/` on the server. Nothing in this repository contains them.
+
+### Lightsail browser terminal gotchas
+
+- **Long pastes break.** The browser terminal can drop the start of a long pasted command, or split it across lines. Paste short commands one at a time, and check that the line starts correctly before pressing Enter. Ctrl+C may not reach the server; close the tab instead.
+- **Hidden prompts hide mistakes.** `sudo eisai-set-secrets` doesn't show what you type at `(hidden)` prompts. In November 2026, the command text itself was accidentally saved as `MAILTRAP_TOKEN`, and every email failed with `Unauthorized`. After setting a secret, check its length and last 4 characters without printing it:
+
+  ```bash
+  sudo awk -F= '/^MAILTRAP_TOKEN=/{print length($2), substr($2,length($2)-3)}' /etc/eisai/api.env
+  ```
+
+  Compare them with the masked token in Mailtrap (Settings → API Tokens).
+
+- **Test Mailtrap directly** when email fails, using the token saved on the server (it isn't printed). Run each line separately:
+
+  ```bash
+  T=$(sudo awk -F= '/^MAILTRAP_TOKEN=/{print substr($0,index($0,"=")+1)}' /etc/eisai/api.env)
+  J='{"from":{"email":"no-reply@eisaistudio.com"},"to":[{"email":"YOUR_EMAIL"}],"subject":"Test","text":"Test"}'
+  curl -s https://send.api.mailtrap.io/api/send -H "Authorization: Bearer $T" -H "Content-Type: application/json" -d "$J"; echo; unset T J
+  ```
+
+  `{"success":true,...}` means the token and domain work, so the problem is in the app. Check `sudo journalctl -u eisai-api -n 100 --no-pager`.
 
 ## Rebuilding the server from scratch
 
