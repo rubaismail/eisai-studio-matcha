@@ -407,7 +407,7 @@ test('resend returns 500 when email delivery fails', async () => {
   emailImpl = async () => {
     throw new Error('mailtrap down');
   };
-  mock.method(console, 'error', () => {});
+  const logged = mock.method(console, 'error', () => {});
 
   const res = await request(createApp())
     .post('/api/auth/resend-verification')
@@ -415,6 +415,13 @@ test('resend returns 500 when email delivery fails', async () => {
 
   assert.equal(res.status, 500);
   assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  // The cause is logged server-side so operators can debug it...
+  assert.equal(logged.mock.callCount(), 1);
+  const [label, err] = logged.mock.calls[0].arguments as [string, Error];
+  assert.equal(label, 'resend-verification failed:');
+  assert.equal(err.message, 'mailtrap down');
+  // ...but never reaches the client.
+  assert.ok(!JSON.stringify(res.body).includes('mailtrap down'));
 });
 
 test('resend rejects invalid input', async () => {

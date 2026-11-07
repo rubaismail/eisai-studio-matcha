@@ -211,7 +211,9 @@ export async function resendVerification(req: Request, res: Response) {
     return res
       .status(200)
       .json({ message: "If this account needs verification, a verification email has been sent." });
-  } catch {
+  } catch (err) {
+    // Log server-side only (same as register); the client still gets the generic message.
+    console.error("resend-verification failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
