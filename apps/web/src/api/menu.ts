@@ -12,15 +12,23 @@ export async function getAdminMenu(): Promise<MenuItem[]> {
   return data.items;
 }
 
-export async function setOnMenu(
+// The on/off settings staff can change straight from the menu list.
+export type MenuFlag = 'isAvailable' | 'isRecommended' | 'isFeatured';
+
+export async function setMenuFlag(
   id: string,
-  isAvailable: boolean,
+  flag: MenuFlag,
+  value: boolean,
 ): Promise<MenuItem> {
   const data = await apiRequest<{ item: MenuItem }>(`/menu/${id}`, {
     method: 'PUT',
-    body: { isAvailable },
+    body: { [flag]: value },
   });
   return data.item;
+}
+
+export function setOnMenu(id: string, isAvailable: boolean): Promise<MenuItem> {
+  return setMenuFlag(id, 'isAvailable', isAvailable);
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {

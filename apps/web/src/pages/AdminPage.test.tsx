@@ -28,6 +28,7 @@ const mango: MenuItem = {
   description: 'Mango puree',
   imageUrl: '/mango.png',
   isAvailable: true,
+  isFeatured: true,
 };
 const breeze: MenuItem = {
   ...baseItem,
@@ -36,6 +37,8 @@ const breeze: MenuItem = {
   description: 'Coconut water',
   imageUrl: '',
   isAvailable: false,
+  // Featured but hidden, so it must not count as "on home".
+  isFeatured: true,
 };
 
 const success = (data: unknown) => ({
@@ -79,7 +82,9 @@ test('loads all items from the admin endpoint with the saved token', async () =>
   const [url, init] = fetchMock.mock.calls[0]!;
   expect(url).toBe('/api/menu/admin/menu');
   expect(init.headers.Authorization).toBe('Bearer test-token');
-  expect(screen.getByText(/2 drinks · 1 on the menu/)).toBeInTheDocument();
+  expect(
+    screen.getByText('2 drinks · 1 on the menu · 1 on home'),
+  ).toBeInTheDocument();
   expect(screen.getAllByText('Hidden')).toHaveLength(1);
   const hiddenRow = screen
     .getByRole('heading', { name: 'Okinawa Breeze' })
@@ -102,7 +107,102 @@ test('links to the add and edit forms and labels each checkbox', async () => {
   expect(
     screen.getByRole('checkbox', { name: 'On menu: Okinawa Breeze' }),
   ).not.toBeChecked();
+  expect(
+    screen.getByRole('checkbox', { name: 'Recommended: Mango Dango' }),
+  ).not.toBeChecked();
+  expect(
+    screen.getByRole('checkbox', { name: 'On home: Mango Dango' }),
+  ).toBeChecked();
+  expect(
+    screen.getByRole('checkbox', { name: 'Recommended: Okinawa Breeze' }),
+  ).not.toBeChecked();
+  expect(
+    screen.getByRole('checkbox', { name: 'On home: Okinawa Breeze' }),
+  ).toBeChecked();
 });
+
+test('counts a drink as on home only when it is also on the menu', async () => {
+  const fetchMock = renderPage();
+  await findMango();
+  // Okinawa Breeze is featured but hidden, so only Mango Dango counts.
+  expect(
+    screen.getByText('2 drinks · 1 on the menu · 1 on home'),
+  ).toBeInTheDocument();
+
+  fetchMock.mockResolvedValueOnce(
+    success({ item: { ...breeze, isAvailable: true } }),
+  );
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: 'On menu: Okinawa Breeze' }),
+  );
+  expect(
+    await screen.findByText('2 drinks · 2 on the menu · 2 on home'),
+  ).toBeInTheDocument();
+});
+
+const flagCases = [
+  { label: 'Recommended', flag: 'isRecommended', onHomeAfter: 1 },
+  { label: 'On home', flag: 'isFeatured', onHomeAfter: 0 },
+] as const;
+
+test.each(flagCases)(
+  '$label: disables the row while saving and updates from the server reply',
+  async ({ label, flag, onHomeAfter }) => {
+    const fetchMock = renderPage();
+    await findMango();
+    const checkbox = screen.getByRole('checkbox', {
+      name: `${label}: Mango Dango`,
+    });
+    const before = mango[flag];
+    checkbox.focus();
+    let reply!: (response: unknown) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        reply = resolve;
+      }),
+    );
+    fireEvent.click(checkbox);
+
+    await waitFor(() => expect(checkbox).toBeDisabled());
+    expect(mangoCheckbox()).toBeDisabled();
+    expect(checkbox).toHaveProperty('checked', before);
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe('/api/menu/m1');
+    expect(init.method).toBe('PUT');
+    expect(init.body).toBe(JSON.stringify({ [flag]: !before }));
+
+    reply(success({ item: { ...mango, [flag]: !before } }));
+    await waitFor(() => expect(checkbox).toBeEnabled());
+    expect(checkbox).toHaveProperty('checked', !before);
+    expect(checkbox).toHaveFocus();
+    expect(mangoCheckbox()).toBeEnabled();
+    expect(
+      screen.getByText(`2 drinks · 1 on the menu · ${onHomeAfter} on home`),
+    ).toBeInTheDocument();
+  },
+);
+
+test.each(flagCases)(
+  '$label: leaves the row unchanged and shows an error when saving fails',
+  async ({ label, flag }) => {
+    const fetchMock = renderPage();
+    await findMango();
+    const checkbox = screen.getByRole('checkbox', {
+      name: `${label}: Mango Dango`,
+    });
+    fetchMock.mockResolvedValueOnce(failure);
+    fireEvent.click(checkbox);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent("Couldn't update Mango Dango");
+    expect(alert.closest('li')).toHaveTextContent('Mango Dango');
+    expect(checkbox).toHaveProperty('checked', mango[flag]);
+    expect(checkbox).toBeEnabled();
+    expect(
+      screen.getByText('2 drinks · 1 on the menu · 1 on home'),
+    ).toBeInTheDocument();
+  },
+);
 
 // Regression: a space inside the sr-only span was dropped, giving "EditMango Dango".
 test('keeps a space between the action and the drink name', async () => {
@@ -165,7 +265,10 @@ test('disables the checkbox while saving and updates from the server reply', asy
   expect(checkbox).not.toBeChecked();
   expect(checkbox).toBeEnabled();
   expect(checkbox).toHaveFocus();
-  expect(screen.getByText(/0 on the menu/)).toBeInTheDocument();
+  // Hiding a featured drink also takes it out of the "on home" count.
+  expect(
+    screen.getByText('2 drinks · 0 on the menu · 0 on home'),
+  ).toBeInTheDocument();
 });
 
 test('leaves the row unchanged and shows an error when saving fails', async () => {
@@ -242,7 +345,9 @@ test('removes the row only after the delete succeeds', async () => {
   ).toBeNull();
   expect(screen.getByRole('heading', { level: 1, name: 'Menu' })).toHaveFocus();
   expect(screen.getByRole('status')).toHaveTextContent('Mango Dango deleted.');
-  expect(screen.getByText(/1 drink · 0 on the menu/)).toBeInTheDocument();
+  expect(
+    screen.getByText('1 drink · 0 on the menu · 0 on home'),
+  ).toBeInTheDocument();
 });
 
 test('keeps the row and dialog open and shows an error when delete fails', async () => {
