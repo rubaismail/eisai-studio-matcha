@@ -1,6 +1,7 @@
 // Every page of the website is listed here. Add a <Route> when you add a page.
 import { Route, Routes } from 'react-router';
 import Navbar from './components/Navbar';
+import AdminPage from './pages/AdminPage';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -13,7 +14,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/menu" element={<MenuPage />} />
-          {/* Coming soon: /login, /register, /verify-email, /reset-password, /admin */}
+          {/* TODO: wrap /admin with the shared admin guard once it exists. */}
+          <Route path="/admin" element={<AdminPage />} />
+          {/* Coming soon: /login, /register, /verify-email, /reset-password */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
