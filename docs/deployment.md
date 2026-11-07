@@ -1,6 +1,56 @@
 # Lightsail staging deployment
 
-Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. Region recommendation for Orlando: US East (N. Virginia), `us-east-1`. The user selected Lightsail; hostname, instance size/budget, account access and maintenance owner still need confirmation. Nothing in this PR provisions AWS resources.
+Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. The Eisai project's selected Region is US East (Ohio), `us-east-2`, using AWS profile `eisai`. All Regional resources must remain in this Region. The user selected Lightsail; hostname, instance size/budget and maintenance owner still need confirmation. These instructions do not provision AWS resources.
+
+## Production server as built (November 2026)
+
+This section records what is actually deployed and why. The generic runbook below still applies. For live status, the pre-handoff checklist and day-to-day commands, see [production-handoff.md](production-handoff.md).
+
+| Item               | Value                                                                                                                                                                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lightsail instance | `eisai-prod`, `us-east-2a`, Ubuntu **22.04** LTS, 2 GB RAM bundle (`small_3_0`)                                                                                                                                                                 |
+| Static IP          | `eisai-prod-ip` = `18.189.160.224`                                                                                                                                                                                                              |
+| API hostname       | `https://api.eisaistudio.com` (GoDaddy DNS: `A api → 18.189.160.224`). The website will live on `eisaistudio.com`, so the API has its own Nginx server block instead of the shared-origin template.                                             |
+| Database           | MongoDB 8.0 on the same instance, loopback only, auth on, database `eisai_production`, app user `eisaiApp` (`readWrite` on that database only). Admin credentials: `/etc/eisai/mongo-admin.env` (root-only).                                    |
+| Secrets            | `/etc/eisai/api.env` (root-only). Set or rotate with `sudo eisai-set-secrets`.                                                                                                                                                                  |
+| Image storage      | Lightsail bucket `eisai-menu-images-8402db`, public object reads, accessed with a bucket access key.                                                                                                                                            |
+| Firewall           | 80/443 open; SSH (22) only from Lightsail browser SSH (`lightsail-connect`). Also `ufw` on the host.                                                                                                                                            |
+| TLS                | Let's Encrypt via `sudo certbot --nginx -d api.eisaistudio.com`; certbot edited the Nginx site file and renews automatically.                                                                                                                   |
+| Provisioning       | [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh), passed as the instance launch script. It sets up Nginx for HTTP only; certbot adds HTTPS afterwards.                                                                         |
+| Email              | Mailtrap, temporarily on a team member's personal account with `eisaistudio.com` as the sending domain. Move to the client's Mailtrap account when it exists: verify the domain there, then re-run `sudo eisai-set-secrets` with the new token. |
+
+### Why Ubuntu 22.04 and not 24.04
+
+The first build used Lightsail's Ubuntu 24.04 image. MongoDB 8.0 refused to start:
+
+> MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility with this version of MongoDB.
+
+Lightsail's 24.04 image ships a 6.19+ kernel. MongoDB 8.0+ crashes on those kernels because its bundled TCMalloc violates the kernel's rseq ABI, so MongoDB added a startup check that exits instead ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912); see also SERVER-125742 and SERVER-136848). No fixed MongoDB version existed as of November 2026. Options considered:
+
+- **Ubuntu 22.04 (chosen):** runs a pre-6.19 kernel, so MongoDB 8 works unmodified and the database stays on the instance as planned.
+- MongoDB Atlas: avoids the kernel entirely, but the database would move off AWS billing and out of the planned design.
+- Pinning an old kernel on 24.04: blocks kernel security updates and is easy to undo by accident.
+
+The bootstrap script refuses to run on a 6.19+ kernel so this can't fail silently. **Follow-up:** Ubuntu 22.04 standard support ends April 2027. Before then, check MongoDB's release notes and the issues above. Once a MongoDB release supports kernel 6.19+, build a new 24.04 (or later) instance, restore a backup onto it, and move the static IP. Until then, don't install HWE or other kernels newer than 6.18 on this server; check with `uname -r`.
+
+### Lightsail launch script gotcha
+
+Lightsail runs launch scripts with `/bin/sh` and ignores the `#!/bin/bash` line, so bash-only syntax (`set -o pipefail`, `>(...)`) fails on line 1. The bootstrap script is a small sh wrapper that writes the real script to `/root/eisai-bootstrap.sh` and runs it with bash. Output goes to `/var/log/eisai-bootstrap.log`; cloud-init's own log is `/var/log/cloud-init-output.log`.
+
+### Updating to a new commit
+
+From Lightsail browser SSH, as `ubuntu`:
+
+```sh
+cd /srv/eisai/releases
+C=$(git ls-remote https://github.com/rubaismail/eisai-studio-matcha.git refs/heads/main | cut -c1-40)
+git clone --quiet https://github.com/rubaismail/eisai-studio-matcha.git $C && cd $C && git checkout --quiet $C
+npm ci && npm run build
+sudo ln -sfn /srv/eisai/releases/$C /srv/eisai/current
+sudo systemctl restart eisai-api && sleep 3 && curl -s localhost:4000/api/health
+```
+
+To roll back, point `/srv/eisai/current` at the previous release folder and restart `eisai-api`. Delete old release folders occasionally and keep the last two or three.
 
 ## Readiness and scope
 
@@ -8,7 +58,7 @@ PR #71 implements `POST /api/auth/forgot-password` and `POST /api/auth/reset-pas
 
 ## Server prerequisites
 
-1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing. Choose a supported Ubuntu LTS image compatible with the selected MongoDB release. Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
+1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing. Choose a supported Ubuntu LTS image compatible with the selected MongoDB release (currently Ubuntu 22.04; see "Why Ubuntu 22.04 and not 24.04" above). Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
 2. Attach a static IP, select a staging hostname and point its DNS to that IP. The template assumes the website and API share one HTTPS origin. Permit public TCP 80/443; permit SSH only from authorized administrator IPs. Apply the same restrictions to IPv6 if enabled. Do not expose 4000 or 27017. Configure the host firewall too.
 3. Install Node 24 and npm, Nginx, Git, MongoDB server, MongoDB Database Tools and a certificate renewal client using their official instructions for that OS. Install Node at `/usr/bin/node`, or adjust both paths in the service file. Do not use a developer's nvm path in systemd. Run `node --version` before building.
 4. Configure MongoDB persistent storage, bind only to loopback and enable authorization. Bootstrap the database administrator locally, then create an application user with `readWrite` on `eisai_staging` only. Use a separate backup identity. Enable `mongod` on boot. Keep staging test data non-sensitive. Atlas remains local-development-only for this project.
