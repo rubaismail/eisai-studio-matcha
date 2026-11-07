@@ -483,3 +483,48 @@ test('Cancel with unsaved changes asks first and only leaves when confirmed', as
   await expectBackOnList(fetchMock);
   expect(formRequests(fetchMock)).toHaveLength(0);
 });
+
+// --- Preview tile ---
+
+const tile = () => within(inPanel().getByRole('region', { name: 'Preview' }));
+
+test('the preview tile updates live as the drink is filled in', () => {
+  renderAt('/admin/new', []);
+  expect(tile().getByText('No photo yet')).toBeInTheDocument();
+  expect(tile().getByText('Drink name')).toBeInTheDocument();
+  expect(tile().queryByText('Recommended')).toBeNull();
+
+  type(/drink name/i, 'Kyoto Fog');
+  type(/what’s in it/i, 'Whole milk / Earl grey foam');
+  expect(tile().getByText('Kyoto Fog')).toBeInTheDocument();
+  expect(tile().getByText('Whole milk / Earl grey foam')).toBeInTheDocument();
+  expect(tile().queryByText('Drink name')).toBeNull();
+
+  fireEvent.click(field(/recommended badge/i));
+  expect(tile().getByText('Recommended')).toBeInTheDocument();
+  fireEvent.click(field(/recommended badge/i));
+  expect(tile().queryByText('Recommended')).toBeNull();
+});
+
+test('the preview photo uses the description as alt, or the drink name when empty', async () => {
+  renderAt('/admin/m1/edit', [{ ...mango, imageAlt: '' }]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  expect(tile().getByRole('img')).toHaveAttribute('src', '/mango.png');
+  expect(tile().getByRole('img')).toHaveAccessibleName('Mango Dango');
+  expect(tile().queryByText('No photo yet')).toBeNull();
+
+  type(/describe the photo/i, 'Iced matcha with mango');
+  expect(tile().getByRole('img')).toHaveAccessibleName(
+    'Iced matcha with mango',
+  );
+});
+
+test('the preview is display-only and adds nothing to the tab order', async () => {
+  renderAt('/admin/m1/edit', [mango]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  const region = inPanel().getByRole('region', { name: 'Preview' });
+  expect(
+    region.querySelectorAll('a, button, input, select, textarea, [tabindex]'),
+  ).toHaveLength(0);
+  expect(tile().getByText('Recommended')).toBeInTheDocument();
+});

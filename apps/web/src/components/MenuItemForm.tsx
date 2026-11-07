@@ -597,6 +597,47 @@ export default function MenuItemForm({
           ))}
         </fieldset>
 
+        {/* How the menu tile will look. Display only: nothing in it is focusable. */}
+        <section
+          aria-labelledby={fieldId('preview')}
+          className="flex flex-col gap-2.5"
+        >
+          <h3
+            id={fieldId('preview')}
+            className={`font-normal text-[#4a4a4a] ${smallLabel}`}
+          >
+            Preview
+          </h3>
+          <div className="flex w-[220px] flex-col gap-1.5 border border-[#e4e4e4] bg-white p-3 xl:border-0">
+            <div className="relative mb-1 flex h-[245px] items-center justify-center overflow-hidden bg-[#f4f4f4]">
+              {previewSrc ? (
+                <img
+                  src={previewSrc}
+                  alt={previewAlt}
+                  className="h-2/3 w-1/2 object-contain"
+                />
+              ) : (
+                <p className="text-[13px] text-[#595959]">No photo yet</p>
+              )}
+              {values.isRecommended && (
+                <span className="absolute top-2.5 left-2.5 bg-[#1a1a1a] px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-white uppercase">
+                  Recommended
+                </span>
+              )}
+            </div>
+            <p
+              className={`${smallLabel} ${values.name.trim() ? 'text-[#1a1a1a]' : 'text-[#595959]'}`}
+            >
+              {values.name.trim() || 'Drink name'}
+            </p>
+            {values.description.trim() && (
+              <p className="text-[13px] leading-[18px] text-[#4a4a4a]">
+                {values.description.trim()}
+              </p>
+            )}
+          </div>
+        </section>
+
         <div className="flex flex-col gap-2.5 sm:flex-row">
           <button
             type="submit"
