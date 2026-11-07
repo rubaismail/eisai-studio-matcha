@@ -56,6 +56,7 @@ Things set up temporarily under a team member's identity, or not finished yet.
 - [ ] **Certbot notification email:** change it to the client's or maintainer's address: `sudo certbot update_account --email NEW_ADDRESS`.
 - [ ] **MongoDB admin credentials** live in `/etc/eisai/mongo-admin.env` on the server (root-only). Copy them into the client's password manager. The app uses a separate, limited user.
 - [ ] `JWT_SECRET` and the database app password were generated on the server and never left it. No rotation is needed unless the server is compromised. Rotating `JWT_SECRET` logs everyone out.
+- [ ] **Temporary developer admin accounts:** remove any admin accounts team members made for testing. List admins with `db.users.find({role: "admin"}, {email: 1})` in the database shell (see Day-to-day operations), then demote with `db.users.updateOne({email: "DEV_EMAIL"}, {$set: {role: "customer"}})` or delete with `db.users.deleteOne({email: "DEV_EMAIL"})`. Only the client's own admin account should be left.
 
 ### Unfinished production work
 
