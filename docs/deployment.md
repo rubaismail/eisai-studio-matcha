@@ -1,6 +1,128 @@
 # Lightsail staging deployment
 
-Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. Region recommendation for Orlando: US East (N. Virginia), `us-east-1`. The user selected Lightsail; hostname, instance size/budget, account access and maintenance owner still need confirmation. Nothing in this PR provisions AWS resources.
+Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. The Eisai project's selected Region is US East (Ohio), `us-east-2`, using AWS profile `eisai`. All Regional resources must remain in this Region. The user selected Lightsail; hostname, instance size/budget and maintenance owner still need confirmation. These instructions do not provision AWS resources.
+
+## Production server as built (November 2026)
+
+This section records what is actually deployed and why. The generic runbook below still applies. For live status, the pre-handoff checklist and day-to-day commands, see [production-handoff.md](production-handoff.md).
+
+| Item               | Value                                                                                                                                                                                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lightsail instance | `eisai-prod`, `us-east-2a`, Ubuntu **22.04** LTS, 2 GB RAM bundle (`small_3_0`)                                                                                                                                                                 |
+| Static IP          | `eisai-prod-ip` = `18.189.160.224`                                                                                                                                                                                                              |
+| API hostname       | `https://api.eisaistudio.com` (GoDaddy DNS: `A api → 18.189.160.224`). The website will live on `eisaistudio.com`, so the API has its own Nginx server block instead of the shared-origin template.                                             |
+| Database           | MongoDB 8.0 on the same instance, loopback only, auth on, database `eisai_production`, app user `eisaiApp` (`readWrite` on that database only). Admin credentials: `/etc/eisai/mongo-admin.env` (root-only).                                    |
+| Secrets            | `/etc/eisai/api.env` (root-only). Set or rotate with `sudo eisai-set-secrets`.                                                                                                                                                                  |
+| Image storage      | Lightsail bucket `eisai-menu-images-8402db`, public object reads, accessed with a bucket access key.                                                                                                                                            |
+| Firewall           | 80/443 open; SSH (22) only from Lightsail browser SSH (`lightsail-connect`). Also `ufw` on the host.                                                                                                                                            |
+| TLS                | Let's Encrypt via `sudo certbot --nginx -d api.eisaistudio.com`; certbot edited the Nginx site file and renews automatically.                                                                                                                   |
+| Provisioning       | [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh), passed as the instance launch script. It sets up Nginx for HTTP only; certbot adds HTTPS afterwards.                                                                         |
+| Email              | Mailtrap, temporarily on a team member's personal account with `eisaistudio.com` as the sending domain. Move to the client's Mailtrap account when it exists: verify the domain there, then re-run `sudo eisai-set-secrets` with the new token. |
+
+### Why Ubuntu 22.04 and not 24.04
+
+The first build used Lightsail's Ubuntu 24.04 image. MongoDB 8.0 refused to start:
+
+> MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility with this version of MongoDB.
+
+Lightsail's 24.04 image ships a 6.19+ kernel. MongoDB 8.0+ crashes on those kernels because its bundled TCMalloc violates the kernel's rseq ABI, so MongoDB added a startup check that exits instead ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912); see also SERVER-125742 and SERVER-136848). No fixed MongoDB version existed as of November 2026. Options considered:
+
+- **Ubuntu 22.04 (chosen):** runs a pre-6.19 kernel, so MongoDB 8 works unmodified and the database stays on the instance as planned.
+- MongoDB Atlas: avoids the kernel entirely, but the database would move off AWS billing and out of the planned design.
+- Pinning an old kernel on 24.04: blocks kernel security updates and is easy to undo by accident.
+
+The bootstrap script refuses to run on a 6.19+ kernel so this can't fail silently. **Follow-up:** Ubuntu 22.04 standard support ends April 2027. Before then, check MongoDB's release notes and the issues above. Once a MongoDB release supports kernel 6.19+, build a new 24.04 (or later) instance, restore a backup onto it, and move the static IP. Until then, don't install HWE or other kernels newer than 6.18 on this server; check with `uname -r`.
+
+### Lightsail launch script gotcha
+
+Lightsail runs launch scripts with `/bin/sh` and ignores the `#!/bin/bash` line, so bash-only syntax (`set -o pipefail`, `>(...)`) fails on line 1. The bootstrap script is a small sh wrapper that writes the real script to `/root/eisai-bootstrap.sh` and runs it with bash. Output goes to `/var/log/eisai-bootstrap.log`; cloud-init's own log is `/var/log/cloud-init-output.log`.
+
+### Updating to a new commit
+
+#### How it works
+
+Updates go to the **same Lightsail instance**. You don't create a new server per update. Each deployed GitHub commit gets its own folder, and a shortcut (symlink) named `current` points at the one that is live:
+
+```text
+/srv/eisai/releases/
+├── d9d91e0…/          ← previous release (kept for rollback)
+└── 4f2a7c1…/          ← new release, cloned and built from GitHub
+/srv/eisai/current  →  /srv/eisai/releases/4f2a7c1…   ← systemd runs the API from here
+/etc/eisai/api.env     ← secrets, shared by every release, never in a release folder
+MongoDB data           ← separate from the code; unaffected by switching releases
+```
+
+The flow:
+
+1. Merge to `main` on GitHub. Never edit code on the server.
+2. On the server, clone that commit into a **new** folder named after the commit, then install, test and build it there. The live API keeps running from the old folder while you do this.
+3. Switch `current` to the new folder and restart `eisai-api`. That's the only moment of downtime, a few seconds. The service runs the production preflight on startup and refuses to start if the config is invalid.
+4. Check health. If something's wrong, switch `current` back to the previous folder and restart. That rollback takes seconds because the old build is still on disk.
+
+Unlike a `git pull` in a single folder, a failed build never touches the running site, and there's always a known-good version to go back to.
+
+#### Deploy the latest `main`
+
+Open **Lightsail console → eisai-prod → Connect using SSH** (you're the `ubuntu` user), then run:
+
+```sh
+# 1. Note what's live now, so you can roll back.
+readlink /srv/eisai/current
+
+# 2. Find the latest commit on main and clone it into its own folder.
+cd /srv/eisai/releases
+C=$(git ls-remote https://github.com/rubaismail/eisai-studio-matcha.git refs/heads/main | cut -c1-40)
+echo "Deploying $C"
+git clone --quiet https://github.com/rubaismail/eisai-studio-matcha.git "$C"
+cd "$C" && git checkout --quiet "$C"
+
+# 3. Install, then lint + typecheck + test + build. Stop here if this fails;
+#    nothing live has changed yet.
+npm ci && npm run check
+
+# 4. Switch the live symlink atomically and restart the API.
+sudo ln -sfn "/srv/eisai/releases/$C" /srv/eisai/current.next
+sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
+sudo systemctl restart eisai-api
+
+# 5. Verify.
+sleep 3; curl -s localhost:4000/api/health; echo
+```
+
+Then open `https://api.eisaistudio.com/api/health` in a browser. If the API fails to start, `sudo journalctl -u eisai-api -n 50 --no-pager` shows why.
+
+To deploy a specific commit instead of the latest `main`, set `C` to the full 40-character commit hash before step 2's `git clone`.
+
+#### Roll back
+
+```sh
+ls -lt /srv/eisai/releases      # newest first; pick the previous known-good folder
+sudo ln -sfn /srv/eisai/releases/PREVIOUS_COMMIT /srv/eisai/current.next
+sudo mv -Tf /srv/eisai/current.next /srv/eisai/current
+sudo systemctl restart eisai-api
+curl -s localhost:4000/api/health; echo
+```
+
+Rollback only switches **code**. If the new release changed how data is stored in MongoDB, the old code may not understand the new data. Take a backup before deploying changes like that.
+
+#### Clean up old releases
+
+Each release folder is a few hundred MB (it includes `node_modules`). Keep the current one and the last two or three; delete older ones, but never the one `readlink /srv/eisai/current` shows:
+
+```sh
+rm -rf /srv/eisai/releases/OLD_COMMIT
+```
+
+#### When you _would_ create a new instance
+
+Only to replace the server itself: a newer Ubuntu (see [Why Ubuntu 22.04](#why-ubuntu-2204-and-not-2404)), a bigger bundle, or recovery from a broken server. Lightsail can't change an instance's OS in place, but a bigger bundle can be made from a snapshot. To move to a new instance:
+
+1. Build the new instance with [deploy/lightsail-bootstrap.sh](../deploy/lightsail-bootstrap.sh). Its `/etc/eisai/api.env` gets a new database password and JWT secret.
+2. Copy the database over (`mongodump` on the old server, `mongorestore` on the new one), then run `sudo eisai-set-secrets` with the same Mailtrap and bucket values.
+3. Move the static IP `eisai-prod-ip` from the old instance to the new one: Lightsail → Networking → static IP → detach, then attach. DNS (`api → 18.189.160.224`) stays the same, so there's no GoDaddy change.
+4. Run `sudo certbot --nginx -d api.eisaistudio.com` on the new instance, check health, then delete the old instance.
+
+Changing `JWT_SECRET` logs out every user. To avoid that, copy the old `JWT_SECRET` into the new `api.env`.
 
 ## Readiness and scope
 
@@ -8,7 +130,7 @@ PR #71 implements `POST /api/auth/forgot-password` and `POST /api/auth/reset-pas
 
 ## Server prerequisites
 
-1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing. Choose a supported Ubuntu LTS image compatible with the selected MongoDB release. Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
+1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing. Choose a supported Ubuntu LTS image compatible with the selected MongoDB release (currently Ubuntu 22.04; see "Why Ubuntu 22.04 and not 24.04" above). Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
 2. Attach a static IP, select a staging hostname and point its DNS to that IP. The template assumes the website and API share one HTTPS origin. Permit public TCP 80/443; permit SSH only from authorized administrator IPs. Apply the same restrictions to IPv6 if enabled. Do not expose 4000 or 27017. Configure the host firewall too.
 3. Install Node 24 and npm, Nginx, Git, MongoDB server, MongoDB Database Tools and a certificate renewal client using their official instructions for that OS. Install Node at `/usr/bin/node`, or adjust both paths in the service file. Do not use a developer's nvm path in systemd. Run `node --version` before building.
 4. Configure MongoDB persistent storage, bind only to loopback and enable authorization. Bootstrap the database administrator locally, then create an application user with `readWrite` on `eisai_staging` only. Use a separate backup identity. Enable `mongod` on boot. Keep staging test data non-sensitive. Atlas remains local-development-only for this project.
