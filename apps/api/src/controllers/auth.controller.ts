@@ -168,7 +168,9 @@ export async function verify(req: Request, res: Response) {
     } else {
       return res.status(200).json({ message: "Email verified. You can now login." });
     }
-  } catch {
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("verify failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
@@ -260,7 +262,9 @@ export async function resetPassword(req: Request, res: Response) {
     }
 
     return res.status(200).json({ message: "Password reset. Log in with your new password." });
-  } catch {
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("reset-password failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
@@ -303,7 +307,9 @@ export async function forgotPassword(req: Request, res: Response) {
     return res
       .status(200)
       .json({ message: "If an account exists for this email, a password-reset link has been sent." });
-  } catch {
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("forgot-password failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }

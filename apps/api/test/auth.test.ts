@@ -85,6 +85,19 @@ function mockResetUpdate(matchedCount: number) {
     modifiedCount: matchedCount,
   }));
 }
+// A 500 must log its cause server-side (for operators) but never send it to the client.
+function assertLoggedNotLeaked(
+  logged: ReturnType<typeof mock.method>,
+  label: string,
+  cause: string,
+  body: unknown,
+) {
+  assert.equal(logged.mock.callCount(), 1);
+  const [loggedLabel, err] = logged.mock.calls[0].arguments as [string, Error];
+  assert.equal(loggedLabel, label);
+  assert.equal(err.message, cause);
+  assert.ok(!JSON.stringify(body).includes(cause));
+}
 
 // ---- Registration: success and normalization --------------------------------
 
@@ -311,6 +324,21 @@ test('verify marks the user verified atomically', async () => {
   assert.equal(update.$unset?.verificationTokenExpires, '');
 });
 
+test('verify returns a generic 500 and logs the cause when the database fails', async () => {
+  mock.method(User, 'findOneAndUpdate', async () => {
+    throw new Error('db down');
+  });
+  const logged = mock.method(console, 'error', () => {});
+
+  const res = await request(createApp())
+    .get('/api/auth/verify')
+    .query({ token: 'raw-token' });
+
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'verify failed:', 'db down', res.body);
+});
+
 test('verify rejects missing and empty tokens', async () => {
   const app = createApp();
   const missing = await request(app).get('/api/auth/verify');
@@ -415,13 +443,7 @@ test('resend returns 500 when email delivery fails', async () => {
 
   assert.equal(res.status, 500);
   assert.deepEqual(res.body, { error: MSG_INTERNAL });
-  // The cause is logged server-side so operators can debug it...
-  assert.equal(logged.mock.callCount(), 1);
-  const [label, err] = logged.mock.calls[0].arguments as [string, Error];
-  assert.equal(label, 'resend-verification failed:');
-  assert.equal(err.message, 'mailtrap down');
-  // ...but never reaches the client.
-  assert.ok(!JSON.stringify(res.body).includes('mailtrap down'));
+  assertLoggedNotLeaked(logged, 'resend-verification failed:', 'mailtrap down', res.body);
 });
 
 test('resend rejects invalid input', async () => {
@@ -823,7 +845,7 @@ test('forgot-password returns 500 and writes no token when email delivery fails'
   emailImpl = async () => {
     throw new Error('mailtrap down');
   };
-  mock.method(console, 'error', () => {});
+  const logged = mock.method(console, 'error', () => {});
 
   const res = await request(createApp())
     .post('/api/auth/forgot-password')
@@ -831,6 +853,7 @@ test('forgot-password returns 500 and writes no token when email delivery fails'
 
   assert.equal(res.status, 500);
   assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'forgot-password failed:', 'mailtrap down', res.body);
 });
 
 // ---- Reset password ---------------------------------------------------------
@@ -864,6 +887,25 @@ test('reset-password updates the hash and unsets the token atomically', async ()
   assert.equal(await bcrypt.compare('NewPassword123', newHash), true);
   assert.equal(updateDoc.$unset?.resetPasswordToken, '');
   assert.equal(updateDoc.$unset?.resetPasswordExpires, '');
+});
+
+test('reset-password returns a generic 500 and logs the cause when the database fails', async () => {
+  mockFindOneResetUser();
+  mock.method(User, 'updateOne', async () => {
+    throw new Error('db down');
+  });
+  const logged = mock.method(console, 'error', () => {});
+
+  const res = await request(createApp())
+    .post('/api/auth/reset-password')
+    .query({ token: 'raw-token' })
+    .send(resetBody());
+
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'reset-password failed:', 'db down', res.body);
+  // The new password must never end up in the log.
+  assert.ok(!JSON.stringify(logged.mock.calls[0].arguments.map(String)).includes('NewPassword123'));
 });
 
 test('reset-password with an invalid password does not consume the token', async () => {
