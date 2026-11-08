@@ -270,14 +270,14 @@ test('a field’s message clears as soon as it is edited', () => {
   expect(screen.getByText('Enter your first name.')).toBeInTheDocument();
 });
 
-test('the sign-up limit (429) disables the button and says how long', async () => {
+test('the sign-up limit (429) disables the button and asks to try later', async () => {
   const fetchMock = renderRegister([
     jsonResponse(429, { error: 'Too many login attempts. Try again later.' }),
   ]);
   fill();
   submit();
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Too many sign-up attempts. Please try again in 15 minutes.',
+    'Too many sign-up attempts. Please try again later.',
   );
   expect(
     screen.getByRole('button', { name: 'Create account →' }),

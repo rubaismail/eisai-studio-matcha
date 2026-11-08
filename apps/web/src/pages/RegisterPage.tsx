@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { register } from '../api/auth';
 import { ApiError } from '../api/client';
-import { formatWait } from '../auth/useResendVerification';
 import { useAuth } from '../auth/AuthContext';
 import {
   confirmPasswordError,
@@ -159,11 +158,7 @@ export default function RegisterPage() {
       )}
       {problem === 'rate-limited' && (
         <Notice tone="error">
-          Too many sign-up attempts. Please try again in{' '}
-          {formatWait(
-            Math.ceil(((lockedUntil ?? Date.now()) - Date.now()) / 1000),
-          )}
-          .
+          Too many sign-up attempts. Please try again later.
         </Notice>
       )}
       {problem === 'failed' && (
