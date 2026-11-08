@@ -64,7 +64,7 @@ class EisaiFooter extends StatelessWidget {
                     Text('CONTACT', style: _a(12 * s, color: _lime)),
                     SizedBox(height: 19 * s),
                     Text(
-                      '[EMAIL ADDRESS]',
+                      '[contact@eisaistudio]',
                       softWrap: true,
                       style: _a(12 * s, color: const Color(0xFFD7D7D7)),
                     ),

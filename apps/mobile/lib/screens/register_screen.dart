@@ -48,21 +48,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _error = error);
       return;
     }
+
+    final submittedEmail = _email.text.trim().toLowerCase();
+    final submittedFirstName = _first.text;
+    final submittedLastName = _last.text;
+    final submittedPassword = _password.text;
+
     setState(() {
       _error = null;
       _loading = true;
     });
     try {
       await AuthService.instance.register(
-        firstName: _first.text,
-        lastName: _last.text,
-        email: _email.text,
-        password: _password.text,
+        firstName: submittedFirstName,
+        lastName: submittedLastName,
+        email: submittedEmail,
+        password: submittedPassword,
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => CheckEmailScreen(email: _email.text.trim()),
+          builder: (_) => CheckEmailScreen(email: submittedEmail),
         ),
       );
     } on AuthException catch (e) {
@@ -99,15 +105,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: 'FIRST NAME',
         hint: 'Your first name',
         controller: _first,
+        enabled: !_loading,
       ),
       const SizedBox(height: 20),
-      AuthField(title: 'LAST NAME', hint: 'Your last name', controller: _last),
+      AuthField(
+        title: 'LAST NAME',
+        hint: 'Your last name',
+        controller: _last,
+        enabled: !_loading,
+      ),
       const SizedBox(height: 20),
       AuthField(
         title: 'EMAIL ADDRESS',
         hint: 'you@example.com',
         controller: _email,
         email: true,
+        enabled: !_loading,
       ),
       const SizedBox(height: 20),
       AuthField(
@@ -115,6 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         hint: 'Enter a password',
         controller: _password,
         password: true,
+        enabled: !_loading,
       ),
       const SizedBox(height: 20),
       AuthField(
@@ -122,6 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         hint: 'Re-enter your password',
         controller: _confirm,
         password: true,
+        enabled: !_loading,
       ),
       if (_error != null) ...[
         const SizedBox(height: 12),

@@ -156,12 +156,14 @@ class AuthField extends StatelessWidget {
     required this.controller,
     this.password = false,
     this.email = false,
+    this.enabled = true,
     this.errorText,
     this.onChanged,
   });
   final String title, hint;
   final TextEditingController controller;
   final bool password, email;
+  final bool enabled;
   final String? errorText;
   final ValueChanged<String>? onChanged;
   @override
@@ -175,6 +177,7 @@ class AuthField extends StatelessWidget {
         child: TextField(
           controller: controller,
           obscureText: password,
+          enabled: enabled,
           onChanged: onChanged,
           keyboardType: email ? TextInputType.emailAddress : TextInputType.text,
           textInputAction: TextInputAction.next,

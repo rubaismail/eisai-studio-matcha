@@ -67,6 +67,25 @@ class AuthService {
   final ValueNotifier<String?> _signedInEmail = ValueNotifier<String?>(null);
   int _sessionRevision = 0;
 
+  Future<void> _storageQueue = Future<void>.value();
+
+  Future<T> _withStorageLock<T>(Future<T> Function() operation) {
+    final result = _storageQueue.then((_) => operation());
+    _storageQueue = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {},
+    );
+    return result;
+  }
+
+  void _checkLoginRevision(int revision) {
+    if (revision != _sessionRevision) {
+      throw const AuthException(
+        'Login was cancelled because the session changed.',
+      );
+    }
+  }
+
   ValueListenable<String?> get signedInEmailListenable => _signedInEmail;
   String? get currentEmail => _signedInEmail.value;
 
@@ -136,7 +155,7 @@ class AuthService {
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'email': email.trim().toLowerCase(),
-      'password': password, 
+      'password': password,
     });
     return data['message'] as String? ??
         'Check your email to verify your account.';
@@ -146,10 +165,13 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final revision = ++_sessionRevision;
     final data = await _post('login', {
       'email': email.trim().toLowerCase(),
       'password': password,
     });
+    _checkLoginRevision(revision);
+
     final token = data['token'];
     final userData = data['user'];
     if (token is! String ||
@@ -158,10 +180,15 @@ class AuthService {
       throw const AuthException('Invalid login response from server.');
     }
     final user = AuthUser.fromJson(userData);
-    await _store.write(_tokenKey, token);
-    await _store.write(_emailKey, user.email);
-    _signedInEmail.value = user.email;
-    return user;
+
+    return _withStorageLock<AuthUser>(() async {
+      _checkLoginRevision(revision);
+      await _store.write(_tokenKey, token);
+      await _store.write(_emailKey, user.email);
+      _checkLoginRevision(revision);
+      _signedInEmail.value = user.email;
+      return user;
+    });
   }
 
   Future<String> resendVerification(String email) async {
@@ -181,23 +208,23 @@ class AuthService {
   }
 
   Future<String?> restoreSession() async {
-  final revision = _sessionRevision;
-  final token = await _store.read(_tokenKey);
-  if (revision != _sessionRevision) {
-    return null;
-  }
-  if (token == null || token.isEmpty) {
-    _signedInEmail.value = null;
-    return null;
-  }
-  final email = await _store.read(_emailKey);
-  if (revision != _sessionRevision) {
-    return null;
-  }
+    final revision = _sessionRevision;
+    final token = await _store.read(_tokenKey);
+    if (revision != _sessionRevision) {
+      return null;
+    }
+    if (token == null || token.isEmpty) {
+      _signedInEmail.value = null;
+      return null;
+    }
+    final email = await _store.read(_emailKey);
+    if (revision != _sessionRevision) {
+      return null;
+    }
 
-  _signedInEmail.value = email;
-  return email;
-}
+    _signedInEmail.value = email;
+    return email;
+  }
 
   Future<String?> validToken() async {
     final token = await _store.read(_tokenKey);
@@ -208,12 +235,14 @@ class AuthService {
 
   Future<void> logout() async {
     _sessionRevision++;
+    _signedInEmail.value = null;
 
-    try {
-      await _store.delete(_tokenKey);
-      await _store.delete(_emailKey);
-    } finally {
-      _signedInEmail.value = null;
-    }
+    return _withStorageLock<void>(() async {
+      try {
+        await _store.delete(_tokenKey);
+      } finally {
+        await _store.delete(_emailKey);
+      }
+    });
   }
 }

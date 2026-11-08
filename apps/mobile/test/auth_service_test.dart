@@ -7,10 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'auth_test_helpers.dart';
 
-AuthService serviceWith(
-  http.Client client, [
-  MemorySessionStore? store,
-]) => AuthService(client: client, store: store ?? MemorySessionStore());
+AuthService serviceWith(http.Client client, [MemorySessionStore? store]) =>
+    AuthService(client: client, store: store ?? MemorySessionStore());
 
 class PausedSessionStore extends MemorySessionStore {
   PausedSessionStore(super.initial);
@@ -38,31 +36,52 @@ class PausedSessionStore extends MemorySessionStore {
   }
 }
 
+class PausedWriteStore extends MemorySessionStore {
+  PausedWriteStore() : super();
+
+  final writeStarted = Completer<void>();
+  final resumeWrite = Completer<void>();
+  bool _pausedOnce = false;
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (key == tokenKey && !_pausedOnce) {
+      _pausedOnce = true;
+      writeStarted.complete();
+      await resumeWrite.future;
+    }
+    await super.write(key, value);
+  }
+}
+
 void main() {
   group('login', () {
-    test('stores token + email, notifies listeners, normalises email', () async {
-      final api = FakeApi((_) => jsonResponse(200, loginBody()));
-      final store = MemorySessionStore();
-      final service = serviceWith(api.client, store);
-      final seen = <String?>[];
-      service.signedInEmailListenable.addListener(
-        () => seen.add(service.currentEmail),
-      );
+    test(
+      'stores token + email, notifies listeners, normalises email',
+      () async {
+        final api = FakeApi((_) => jsonResponse(200, loginBody()));
+        final store = MemorySessionStore();
+        final service = serviceWith(api.client, store);
+        final seen = <String?>[];
+        service.signedInEmailListenable.addListener(
+          () => seen.add(service.currentEmail),
+        );
 
-      final user = await service.login(
-        email: '  User@Example.COM ',
-        password: ' pw ',
-      );
+        final user = await service.login(
+          email: '  User@Example.COM ',
+          password: ' pw ',
+        );
 
-      expect(user.email, 'user@example.com');
-      expect(api.last.url.path, endsWith('/auth/login'));
-      expect(api.lastBody['email'], 'user@example.com');
-      expect(api.lastBody['password'], ' pw '); // passwords are not trimmed
-      expect(store.values[tokenKey], 'token-abc');
-      expect(store.values[emailKey], 'user@example.com');
-      expect(service.currentEmail, 'user@example.com');
-      expect(seen, ['user@example.com']);
-    });
+        expect(user.email, 'user@example.com');
+        expect(api.last.url.path, endsWith('/auth/login'));
+        expect(api.lastBody['email'], 'user@example.com');
+        expect(api.lastBody['password'], ' pw '); // passwords are not trimmed
+        expect(store.values[tokenKey], 'token-abc');
+        expect(store.values[emailKey], 'user@example.com');
+        expect(service.currentEmail, 'user@example.com');
+        expect(seen, ['user@example.com']);
+      },
+    );
 
     test('accepts a token that looks expired by the device clock', () async {
       final api = FakeApi(
@@ -111,6 +130,58 @@ void main() {
       );
     });
 
+    test('pending login cannot sign in after logout', () async {
+      final requestStarted = Completer<void>();
+      final response = Completer<http.Response>();
+      final client = MockClient((request) {
+        requestStarted.complete();
+        return response.future;
+      });
+      final store = MemorySessionStore();
+      final service = serviceWith(client, store);
+
+      final loginFuture = service.login(
+        email: 'user@example.com',
+        password: 'secret',
+      );
+      final loginExpectation = expectLater(
+        loginFuture,
+        throwsA(isA<AuthException>()),
+      );
+      await requestStarted.future;
+      await service.logout();
+      response.complete(jsonResponse(200, loginBody()));
+      await loginExpectation;
+
+      expect(store.values, isEmpty);
+      expect(service.currentEmail, isNull);
+      expect(await service.validToken(), isNull);
+    });
+
+    test('logout wins during token storage write', () async {
+      final api = FakeApi((_) => jsonResponse(200, loginBody()));
+      final store = PausedWriteStore();
+      final service = serviceWith(api.client, store);
+      final loginFuture = service.login(
+        email: 'user@example.com',
+        password: 'secret',
+      );
+      final loginExpectation = expectLater(
+        loginFuture,
+        throwsA(isA<AuthException>()),
+      );
+
+      await store.writeStarted.future;
+      final logoutFuture = service.logout();
+      expect(service.currentEmail, isNull);
+      store.resumeWrite.complete();
+      await loginExpectation;
+      await logoutFuture;
+
+      expect(store.values, isEmpty);
+      expect(service.currentEmail, isNull);
+      expect(await service.validToken(), isNull);
+    });
     test('missing token or user is an invalid response', () async {
       final api = FakeApi((_) => jsonResponse(200, {'user': {}}));
       final store = MemorySessionStore();
@@ -129,10 +200,7 @@ void main() {
   });
 
   group('network and parsing errors', () {
-    Future<void> expectMessage(
-      Object error,
-      String message,
-    ) async {
+    Future<void> expectMessage(Object error, String message) async {
       final client = MockClient((_) async => throw error);
       await expectLater(
         serviceWith(client).login(email: 'a@b.co', password: 'x'),
@@ -142,25 +210,37 @@ void main() {
       );
     }
 
-    test('socket error', () => expectMessage(
-      const SocketException('down'),
-      'Cannot connect to the server. Make sure the API is running.',
-    ));
+    test(
+      'socket error',
+      () => expectMessage(
+        const SocketException('down'),
+        'Cannot connect to the server. Make sure the API is running.',
+      ),
+    );
 
-    test('client error', () => expectMessage(
-      http.ClientException('boom'),
-      'Unable to reach the server. Check your connection.',
-    ));
+    test(
+      'client error',
+      () => expectMessage(
+        http.ClientException('boom'),
+        'Unable to reach the server. Check your connection.',
+      ),
+    );
 
-    test('timeout', () => expectMessage(
-      TimeoutException('slow'),
-      'The server took too long to respond. Please try again.',
-    ));
+    test(
+      'timeout',
+      () => expectMessage(
+        TimeoutException('slow'),
+        'The server took too long to respond. Please try again.',
+      ),
+    );
 
-    test('unknown error', () => expectMessage(
-      StateError('?'),
-      'An unexpected error occurred. Please try again.',
-    ));
+    test(
+      'unknown error',
+      () => expectMessage(
+        StateError('?'),
+        'An unexpected error occurred. Please try again.',
+      ),
+    );
 
     test('non-JSON body', () async {
       final client = MockClient((_) async => http.Response('<html>', 502));
@@ -168,7 +248,11 @@ void main() {
         serviceWith(client).login(email: 'a@b.co', password: 'x'),
         throwsA(
           isA<AuthException>()
-              .having((e) => e.message, 'message', 'Unexpected server response.')
+              .having(
+                (e) => e.message,
+                'message',
+                'Unexpected server response.',
+              )
               .having((e) => e.statusCode, 'statusCode', 502),
         ),
       );
@@ -263,7 +347,11 @@ void main() {
       await expectLater(
         serviceWith(api.client).forgotPassword('a@b.co'),
         throwsA(
-          isA<AuthException>().having((e) => e.message, 'message', 'Server down'),
+          isA<AuthException>().having(
+            (e) => e.message,
+            'message',
+            'Server down',
+          ),
         ),
       );
     });
@@ -275,14 +363,19 @@ void main() {
         tokenKey: 'tok',
         emailKey: 'saved@example.com',
       });
-      final service = serviceWith(MockClient((_) async => http.Response('', 500)), store);
+      final service = serviceWith(
+        MockClient((_) async => http.Response('', 500)),
+        store,
+      );
 
       expect(await service.restoreSession(), 'saved@example.com');
       expect(service.currentEmail, 'saved@example.com');
     });
 
     test('restoreSession with nothing stored is signed out', () async {
-      final service = serviceWith(MockClient((_) async => http.Response('', 500)));
+      final service = serviceWith(
+        MockClient((_) async => http.Response('', 500)),
+      );
       expect(await service.restoreSession(), isNull);
       expect(service.currentEmail, isNull);
     });
@@ -292,7 +385,10 @@ void main() {
         tokenKey: 'tok',
         emailKey: 'saved@example.com',
       });
-      final service = serviceWith(MockClient((_) async => http.Response('', 500)), store);
+      final service = serviceWith(
+        MockClient((_) async => http.Response('', 500)),
+        store,
+      );
       await service.restoreSession();
       var notified = 0;
       service.signedInEmailListenable.addListener(() => notified++);
@@ -307,31 +403,29 @@ void main() {
   });
 
   test('logout prevents an old session restoration', () async {
-  final store = PausedSessionStore({
-    tokenKey: 'old-token',
-    emailKey: 'old@example.com',
+    final store = PausedSessionStore({
+      tokenKey: 'old-token',
+      emailKey: 'old@example.com',
+    });
+
+    final service = serviceWith(
+      MockClient((_) async => http.Response('', 500)),
+      store,
+    );
+
+    final restoreFuture = service.restoreSession();
+    await store.readStarted.future;
+
+    await service.logout();
+
+    expect(service.currentEmail, isNull);
+    expect(store.values, isEmpty);
+
+    store.resumeRead.complete();
+    final restoredEmail = await restoreFuture;
+
+    expect(restoredEmail, isNull);
+    expect(service.currentEmail, isNull);
+    expect(await service.validToken(), isNull);
   });
-
-  final service = serviceWith(
-    MockClient(
-      (_) async => http.Response('', 500),
-    ),
-    store,
-  );
-
-  final restoreFuture = service.restoreSession();
-  await store.readStarted.future;
-
-  await service.logout();
-
-  expect(service.currentEmail, isNull);
-  expect(store.values, isEmpty);
-
-  store.resumeRead.complete();
-  final restoredEmail = await restoreFuture;
-
-  expect(restoredEmail, isNull);
-  expect(service.currentEmail, isNull);
-  expect(await service.validToken(), isNull);
-});
 }

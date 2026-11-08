@@ -31,7 +31,6 @@ class EisaiNavigationOverlay extends StatelessWidget {
 
         return Stack(
           children: [
-            // Dims the Home screen, but not its white header.
             Positioned.fill(
               child: GestureDetector(
                 onTap: onClose,

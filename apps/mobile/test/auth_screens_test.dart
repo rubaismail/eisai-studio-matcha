@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:eisai_mobile/screens/account_screen.dart';
 import 'package:eisai_mobile/screens/check_email_screen.dart';
 import 'package:eisai_mobile/screens/login_screen.dart';
@@ -30,7 +34,11 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> fillLogin(WidgetTester tester, String email, String password) async {
+Future<void> fillLogin(
+  WidgetTester tester,
+  String email,
+  String password,
+) async {
   await tester.enterText(find.byType(TextField).at(0), email);
   await tester.enterText(find.byType(TextField).at(1), password);
 }
@@ -46,9 +54,7 @@ void main() {
       var succeeded = false;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: LoginScreen(onLoginSuccess: () => succeeded = true),
-        ),
+        MaterialApp(home: LoginScreen(onLoginSuccess: () => succeeded = true)),
       );
       await fillLogin(tester, 'user@example.com', 'secret');
       await tapText(tester, 'Log in →');
@@ -146,6 +152,56 @@ void main() {
       expect(find.byType(CheckEmailScreen), findsOneWidget);
     });
 
+    testWidgets('registration uses submitted email after controller changes', (
+      tester,
+    ) async {
+      useTallViewport(tester);
+      final requestStarted = Completer<void>();
+      final response = Completer<http.Response>();
+      String? submittedToApi;
+      String? resentToApi;
+
+      final client = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        if (request.url.path.endsWith('/auth/register')) {
+          submittedToApi = body['email'] as String;
+          requestStarted.complete();
+          return response.future;
+        }
+        if (request.url.path.endsWith('/auth/resend-verification')) {
+          resentToApi = body['email'] as String;
+          return jsonResponse(200, {'message': 'Verification email sent!'});
+        }
+        return jsonResponse(404, {});
+      });
+      AuthService.instance = AuthService(
+        client: client,
+        store: MemorySessionStore(),
+      );
+
+      await tester.pumpWidget(const MaterialApp(home: RegisterScreen()));
+      await fillRegister(tester);
+      final submitButton = find.text('Create account →');
+      await tester.ensureVisible(submitButton);
+      await tester.tap(submitButton);
+      await tester.pump();
+      await requestStarted.future;
+      expect(submittedToApi, 'ada@example.com');
+
+      final field = tester.widget<TextField>(find.byType(TextField).at(2));
+      expect(field.enabled, isFalse);
+
+      field.controller!.text = 'changed@example.com';
+      response.complete(jsonResponse(201, {'message': 'ok'}));
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckEmailScreen), findsOneWidget);
+      expect(find.text('ada@example.com'), findsOneWidget);
+      expect(find.text('changed@example.com'), findsNothing);
+
+      await tapText(tester, 'RESEND EMAIL');
+      expect(resentToApi, 'ada@example.com');
+    });
+
     testWidgets('mismatched passwords are rejected locally', (tester) async {
       useTallViewport(tester);
       final api = FakeApi((_) => jsonResponse(201, {}));
@@ -191,7 +247,9 @@ void main() {
       tester,
     ) async {
       useTallViewport(tester);
-      install(FakeApi((_) => jsonResponse(200, loginBody(email: 'new@example.com'))));
+      install(
+        FakeApi((_) => jsonResponse(200, loginBody(email: 'new@example.com'))),
+      );
 
       await tester.pumpWidget(const MaterialApp(home: AccountScreen()));
       await tester.pumpAndSettle();
@@ -204,7 +262,10 @@ void main() {
 
     testWidgets('logout clears the session and shows login', (tester) async {
       useTallViewport(tester);
-      final store = MemorySessionStore({tokenKey: 't', emailKey: 'me@example.com'});
+      final store = MemorySessionStore({
+        tokenKey: 't',
+        emailKey: 'me@example.com',
+      });
       install(FakeApi((_) => jsonResponse(200, {})), store);
 
       await tester.pumpWidget(const MaterialApp(home: AccountScreen()));
@@ -258,190 +319,114 @@ void main() {
   });
 
   group('CheckEmailScreen', () {
-  testWidgets('resend button sends email and shows success', (
-    tester,
-  ) async {
-    useTallViewport(tester);
+    testWidgets('resend button sends email and shows success', (tester) async {
+      useTallViewport(tester);
 
-    final api = FakeApi(
-      (_) => jsonResponse(200, {
-        'message': 'Verification email sent!',
-      }),
-    );
+      final api = FakeApi(
+        (_) => jsonResponse(200, {'message': 'Verification email sent!'}),
+      );
 
-    install(api);
+      install(api);
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: CheckEmailScreen(
-          email: 'user@example.com',
-        ),
-      ),
-    );
+      await tester.pumpWidget(
+        const MaterialApp(home: CheckEmailScreen(email: 'user@example.com')),
+      );
 
-    await tapText(tester, 'RESEND EMAIL');
+      await tapText(tester, 'RESEND EMAIL');
 
-    expect(
-      api.last.url.path,
-      endsWith('/auth/resend-verification'),
-    );
+      expect(api.last.url.path, endsWith('/auth/resend-verification'));
 
-    expect(
-      api.lastBody['email'],
-      'user@example.com',
-    );
+      expect(api.lastBody['email'], 'user@example.com');
 
-    expect(
-      find.text('Verification email sent!'),
-      findsOneWidget,
-    );
+      expect(find.text('Verification email sent!'), findsOneWidget);
+    });
+
+    testWidgets('resend button shows API error', (tester) async {
+      useTallViewport(tester);
+
+      final api = FakeApi(
+        (_) => jsonResponse(429, {'error': 'Too many requests'}),
+      );
+
+      install(api);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: CheckEmailScreen(email: 'user@example.com')),
+      );
+
+      await tapText(tester, 'RESEND EMAIL');
+
+      expect(
+        find.text('Too many requests. Please wait before trying again.'),
+        findsOneWidget,
+      );
+    });
   });
 
-  testWidgets('resend button shows API error', (
-    tester,
-  ) async {
-    useTallViewport(tester);
+  group('ForgotPasswordScreen', () {
+    testWidgets('reset button sends email and shows confirmation', (
+      tester,
+    ) async {
+      useTallViewport(tester);
 
-    final api = FakeApi(
-      (_) => jsonResponse(429, {
-        'error': 'Too many requests',
-      }),
-    );
+      final api = FakeApi(
+        (_) => jsonResponse(200, {'message': 'Reset email sent'}),
+      );
 
-    install(api);
+      install(api);
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: CheckEmailScreen(
-          email: 'user@example.com',
-        ),
-      ),
-    );
+      await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
 
-    await tapText(tester, 'RESEND EMAIL');
+      await tester.enterText(find.byType(TextField).first, 'user@example.com');
 
-    expect(
-      find.text(
-        'Too many requests. Please wait before trying again.',
-      ),
-      findsOneWidget,
-    );
+      await tapText(tester, 'SEND RESET LINK →');
+
+      expect(api.last.url.path, endsWith('/auth/forgot-password'));
+
+      expect(api.lastBody['email'], 'user@example.com');
+
+      expect(find.text('Check your inbox.'), findsOneWidget);
+
+      expect(
+        find.text('If an account exists, we’ll email a reset link.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('invalid email prevents API request', (tester) async {
+      useTallViewport(tester);
+
+      final api = FakeApi((_) => jsonResponse(200, {}));
+
+      install(api);
+
+      await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
+
+      await tester.enterText(find.byType(TextField).first, 'invalid-email');
+
+      await tapText(tester, 'SEND RESET LINK →');
+
+      expect(find.text('Please enter a valid email address.'), findsOneWidget);
+
+      expect(api.requests, isEmpty);
+    });
+
+    testWidgets('server error appears on reset screen', (tester) async {
+      useTallViewport(tester);
+
+      final api = FakeApi(
+        (_) => jsonResponse(500, {'error': 'Server unavailable'}),
+      );
+
+      install(api);
+
+      await tester.pumpWidget(const MaterialApp(home: ForgotPasswordScreen()));
+
+      await tester.enterText(find.byType(TextField).first, 'user@example.com');
+
+      await tapText(tester, 'SEND RESET LINK →');
+
+      expect(find.text('Server unavailable'), findsOneWidget);
+    });
   });
-});
-
-group('ForgotPasswordScreen', () {
-  testWidgets('reset button sends email and shows confirmation', (
-    tester,
-  ) async {
-    useTallViewport(tester);
-
-    final api = FakeApi(
-      (_) => jsonResponse(200, {
-        'message': 'Reset email sent',
-      }),
-    );
-
-    install(api);
-
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: ForgotPasswordScreen(),
-      ),
-    );
-
-    await tester.enterText(
-      find.byType(TextField).first,
-      'user@example.com',
-    );
-
-    await tapText(tester, 'SEND RESET LINK →');
-
-    expect(
-      api.last.url.path,
-      endsWith('/auth/forgot-password'),
-    );
-
-    expect(
-      api.lastBody['email'],
-      'user@example.com',
-    );
-
-    expect(
-      find.text('Check your inbox.'),
-      findsOneWidget,
-    );
-
-    expect(
-      find.text(
-        'If an account exists, we’ll email a reset link.',
-      ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('invalid email prevents API request', (
-    tester,
-  ) async {
-    useTallViewport(tester);
-
-    final api = FakeApi(
-      (_) => jsonResponse(200, {}),
-    );
-
-    install(api);
-
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: ForgotPasswordScreen(),
-      ),
-    );
-
-    await tester.enterText(
-      find.byType(TextField).first,
-      'invalid-email',
-    );
-
-    await tapText(tester, 'SEND RESET LINK →');
-
-    expect(
-      find.text('Please enter a valid email address.'),
-      findsOneWidget,
-    );
-
-    expect(api.requests, isEmpty);
-  });
-
-  testWidgets('server error appears on reset screen', (
-    tester,
-  ) async {
-    useTallViewport(tester);
-
-    final api = FakeApi(
-      (_) => jsonResponse(500, {
-        'error': 'Server unavailable',
-      }),
-    );
-
-    install(api);
-
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: ForgotPasswordScreen(),
-      ),
-    );
-
-    await tester.enterText(
-      find.byType(TextField).first,
-      'user@example.com',
-    );
-
-    await tapText(tester, 'SEND RESET LINK →');
-
-    expect(
-      find.text('Server unavailable'),
-      findsOneWidget,
-    );
-  });
-});
-
 }
