@@ -723,6 +723,92 @@ test('a delayed save can’t close or change a newer form, but still updates the
   expect(bodyOf(formRequests(fetchMock)[0]!)).toEqual({ name: 'Mango Tango' });
 });
 
+// --- A list reload can't undo a confirmed save (PR #81 review) ---
+
+// Queues a reply that stays pending until the returned function is called.
+function delayNextReply(fetchMock: ReturnType<typeof vi.fn>) {
+  let reply!: (response: unknown) => void;
+  fetchMock.mockReturnValueOnce(
+    new Promise((resolve) => {
+      reply = resolve;
+    }),
+  );
+  return (response: unknown) => reply(response);
+}
+
+test('a list reload that started before a save finished can’t restore the old values', async () => {
+  const fetchMock = renderAt('/admin/m1/edit', [mango]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(1));
+  const replyToSave = delayNextReply(fetchMock);
+  const replyToReload = delayNextReply(fetchMock);
+  const replyToRefetch = delayNextReply(fetchMock);
+  const saved = { ...mango, name: 'Mango Tango' };
+
+  type(/drink name/i, 'Mango Tango');
+  saveChanges();
+  await waitFor(() =>
+    expect(inPanel().getByRole('button', { name: 'Saving…' })).toBeDisabled(),
+  );
+  // Cancel while saving: the panel closes and a list reload starts.
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  fireEvent.click(inPanel().getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(2));
+
+  // The save finishes first, then the reload replies with the pre-save list.
+  replyToSave(success({ item: saved }));
+  expect(
+    await screen.findByRole('heading', { name: 'Mango Tango' }),
+  ).toBeInTheDocument();
+  replyToReload(success({ items: [mango] }));
+
+  // The outdated reply is ignored and the list is fetched again.
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(3));
+  expect(screen.getByRole('heading', { name: 'Mango Tango' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Mango Dango' })).toBeNull();
+
+  replyToRefetch(success({ items: [saved] }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('heading', { name: 'Mango Tango' }),
+    ).toBeInTheDocument(),
+  );
+  expect(screen.queryByRole('heading', { name: 'Mango Dango' })).toBeNull();
+  expect(listLoads(fetchMock)).toBe(3);
+});
+
+test('a list reload that overlaps a checkbox save can’t undo it', async () => {
+  const fetchMock = renderAt('/admin/k2/edit', [mango, kyoto]);
+  await inPanel().findByRole('heading', { name: 'Editing Kyoto Fog' });
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(1));
+  const recommended = screen.getByRole('checkbox', {
+    name: 'Recommended: Mango Dango',
+  });
+  expect(recommended).toBeChecked();
+  const replyToToggle = delayNextReply(fetchMock);
+  const replyToReload = delayNextReply(fetchMock);
+  const toggled = { ...mango, isRecommended: false };
+
+  // Untick Recommended in the list, then close the form, which reloads the list.
+  fireEvent.click(recommended);
+  await waitFor(() => expect(recommended).toBeDisabled());
+  fireEvent.click(inPanel().getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(2));
+
+  replyToToggle(success({ item: toggled }));
+  await waitFor(() => expect(recommended).toBeEnabled());
+  expect(recommended).not.toBeChecked();
+
+  // The fresh fetch after the outdated reply returns the server's current list.
+  fetchMock.mockResolvedValue(success({ items: [toggled, kyoto] }));
+  replyToReload(success({ items: [mango, kyoto] }));
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(3));
+  await waitFor(() => expect(recommended).not.toBeChecked());
+  expect(
+    screen.getByRole('checkbox', { name: 'Recommended: Mango Dango' }),
+  ).not.toBeChecked();
+});
+
 // --- Category ---
 
 test('create sends the category typed in', async () => {

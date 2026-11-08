@@ -333,13 +333,29 @@ export default function AdminPage() {
     (item) => item.isAvailable && item.isFeatured,
   ).length;
 
+  // A list reply must never undo a save it doesn't include. Each load gets a
+  // number, and every confirmed save bumps `changes`. A reply that a newer load
+  // overtook is ignored. A reply that started before a save finished is ignored
+  // too, and the list is fetched again, so it reflects that save.
+  const latestLoad = useRef(0);
+  const changes = useRef(0);
+
   const loadMenu = useCallback(() => {
+    const load = ++latestLoad.current;
+    const changesAtStart = changes.current;
     getAdminMenu()
       .then((menu) => {
+        if (load !== latestLoad.current) return;
+        if (changesAtStart !== changes.current) {
+          loadMenu();
+          return;
+        }
         setItems(menu);
         setStatus('ready');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => {
+        if (load === latestLoad.current) setStatus('error');
+      });
   }, []);
 
   useEffect(() => {
@@ -393,6 +409,8 @@ export default function AdminPage() {
     setPending(id, true);
     try {
       const result = await request();
+      // Even an overtaken save changed the server, so list loads already in flight are out of date.
+      changes.current += 1;
       if (isLatest()) onSuccess(result);
     } catch (err) {
       if (isLatest()) throw err;
@@ -541,7 +559,12 @@ export default function AdminPage() {
             <MenuItemForm
               key="new"
               onClose={closePanel}
-              runSave={(save) => save().then(saveToList)}
+              runSave={(save) =>
+                save().then((saved) => {
+                  changes.current += 1;
+                  saveToList(saved);
+                })
+              }
             />
           ) : status === 'loading' ? (
             <p className="text-[#1a1a1a]">Loading drink…</p>
