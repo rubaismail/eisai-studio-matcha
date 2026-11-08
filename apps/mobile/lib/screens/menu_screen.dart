@@ -29,8 +29,9 @@ class _Drink {
   const _Drink({
     required this.name,
     required this.description,
-    this.subtitle = '',
     this.imageUrl = '',
+    this.imageAlt = '',
+    this.inspiredBy = '',
     this.asset = '',
     this.price,
     this.category = 'Drinks',
@@ -45,8 +46,10 @@ class _Drink {
 
   final String name;
   final String description;
-  final String subtitle;
+  final String subtitle = '';
   final String imageUrl;
+  final String imageAlt;
+  final String inspiredBy;
   final String asset;
   final double? price;
   final String category;
@@ -92,6 +95,8 @@ class _Drink {
       name: item.name,
       description: item.description,
       imageUrl: item.imageUrl,
+      imageAlt: item.imageAlt,
+      inspiredBy: item.inspiredBy,
       asset: _assetFor(item.name),
       price: item.price,
       category: item.category,
@@ -111,61 +116,6 @@ class _MenuScreenState extends State<MenuScreen> {
   static const _muted = Color(0xFF5F5F5F);
   static const _lavender = Color(0xFFEEF0FF);
   static const _dark = Color(0xFF191919);
-
-  static const bool _preview = bool.fromEnvironment(
-    'MENU_PREVIEW',
-    defaultValue: false,
-  );
-
-  // This is preview data not the live menu.
-  static const _sampleDrinks = <_Drink>[
-    _Drink(
-      name: 'Golden Hour',
-      subtitle: '(Banana bread)',
-      description:
-          'Matcha or Hojicha / Eisai’s banana milk / Banana sea salt Foam',
-      asset: 'golden_hour.png',
-      isRecommended: true,
-      isFeatured: true,
-      matcha: true,
-      hojicha: true,
-    ),
-    _Drink(
-      name: 'Mango Dango',
-      subtitle: '(Mango sticky rice)',
-      description: 'Matcha / Mango puree / Whole milk / Coconut sauce',
-      asset: 'mango_dango.png',
-      isRecommended: true,
-      isFeatured: true,
-    ),
-    _Drink(
-      name: 'Tokyo Rose',
-      description: 'Matcha or Hojicha / Whole milk / Housemade rose syrup',
-      asset: 'rose.png',
-      isFeatured: true,
-      matcha: true,
-      hojicha: true,
-    ),
-    _Drink(
-      name: 'Toasted Coconut',
-      description:
-          'Matcha or Hojicha / Eisai’s toasted coconut milk / Toasted coconut Foam',
-      asset: 'toasted_coconut.png',
-      isRecommended: true,
-      hojicha: true,
-    ),
-    _Drink(
-      name: 'Kyoto Fog',
-      description:
-          'Matcha / Whole milk / Housemade earl grey syrup / Earl grey foam',
-      asset: 'kyoto_fog.png',
-    ),
-    _Drink(
-      name: 'Okinawa Breeze',
-      description: 'Matcha / Coconut Water / Agave syrup',
-      asset: 'okinawa_breeze.png',
-    ),
-  ];
 
   late Future<List<_Drink>> _drinksFuture;
   final _searchController = TextEditingController();
@@ -199,8 +149,6 @@ class _MenuScreenState extends State<MenuScreen> {
       final items = await widget.fetchMenu!();
       return items.where((e) => e.isAvailable).map(_Drink.fromModel).toList();
     }
-
-    if (_preview) return _sampleDrinks;
 
     final items = await menu_service.fetchMenu();
     return items
@@ -250,6 +198,7 @@ class _MenuScreenState extends State<MenuScreen> {
   }) {
     return Image.asset(
       'assets/images/$name',
+      excludeFromSemantics: true,
       width: width,
       height: height,
       fit: fit,
@@ -561,6 +510,8 @@ class _MenuScreenState extends State<MenuScreen> {
       return Image.network(
         d.imageUrl,
         fit: BoxFit.contain,
+        semanticLabel: d.imageAlt.trim().isEmpty ? null : d.imageAlt.trim(),
+        excludeFromSemantics: d.imageAlt.trim().isEmpty,
         errorBuilder: (_, __, ___) => _localDrinkImage(d),
       );
     }
@@ -572,6 +523,8 @@ class _MenuScreenState extends State<MenuScreen> {
       return Image.asset(
         'assets/images/${d.asset}',
         fit: BoxFit.contain,
+        semanticLabel: d.imageAlt.trim().isEmpty ? null : d.imageAlt.trim(),
+        excludeFromSemantics: d.imageAlt.trim().isEmpty,
         errorBuilder: (_, __, ___) =>
             const Center(child: Icon(Icons.local_cafe_outlined, size: 54)),
       );
@@ -593,6 +546,8 @@ class _MenuScreenState extends State<MenuScreen> {
           description: d.description,
           asset: d.asset,
           imageUrl: d.imageUrl,
+          imageAlt: d.imageAlt,
+          inspiredBy: d.inspiredBy,
           onGoHome: widget.onGoHome,
           onGoStory: widget.onGoStory,
           onGoLocation: widget.onGoLocation,

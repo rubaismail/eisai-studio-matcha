@@ -6,6 +6,8 @@ class MenuItem {
     required this.price,
     this.category = 'Drinks',
     this.imageUrl = '',
+    this.imageAlt = '',
+    this.inspiredBy = '',
     this.teaBases = const [],
     this.isRecommended = false,
     this.isFeatured = false,
@@ -17,11 +19,14 @@ class MenuItem {
   final String name;
   final String description;
   final double price;
-
   final String category;
   final String imageUrl;
-  final List<String> teaBases;
 
+  final String imageAlt;
+
+  final String inspiredBy;
+
+  final List<String> teaBases;
   final bool isRecommended;
   final bool isFeatured;
   final bool isSeasonal;
@@ -35,6 +40,8 @@ class MenuItem {
       price: (json['price'] as num).toDouble(),
       category: (json['category'] ?? 'Drinks') as String,
       imageUrl: (json['imageUrl'] ?? '') as String,
+      imageAlt: (json['imageAlt'] ?? '') as String,
+      inspiredBy: (json['inspiredBy'] ?? '') as String,
       teaBases: (json['teaBases'] as List<dynamic>? ?? [])
           .map((base) => base.toString())
           .toList(),
