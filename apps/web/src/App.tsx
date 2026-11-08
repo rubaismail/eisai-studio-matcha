@@ -1,13 +1,23 @@
 // Every page of the website is listed here. Add a <Route> when you add a page.
+import type { ReactNode } from 'react';
 import { Route, Routes, useMatch } from 'react-router';
+import { RequireAdmin, RequireAuth } from './auth/guards';
+import Footer from './components/Footer';
 import Navbar from './components/Navbar';
+import AccountPage from './pages/AccountPage';
 import AdminPage from './pages/AdminPage';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
 
+// Old narrow layout for Home and Menu until #24.
+function Narrow({ children }: { children: ReactNode }) {
+  return <div className="mx-auto max-w-4xl p-6">{children}</div>;
+}
+
 export default function App() {
-  // The admin pages are full width. Every other page keeps the narrow column.
+  // Admin pages are full width with no footer.
   const adminMatches = [
     useMatch('/admin'),
     useMatch('/admin/new'),
@@ -16,24 +26,71 @@ export default function App() {
   const isAdmin = adminMatches.some((match) => match !== null);
 
   return (
-    // Admin pages are white from top to bottom, so the cream page background
-    // never shows. Other pages keep the cream background.
-    <div className={isAdmin ? 'min-h-screen bg-white' : undefined}>
+    <div className="flex min-h-screen flex-col bg-white">
       <Navbar />
-      <main className={isAdmin ? undefined : 'mx-auto max-w-4xl p-6'}>
+      <main className="flex-1">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/menu" element={<MenuPage />} />
-          {/* TODO: wrap /admin with the shared admin guard once it exists. */}
-          <Route path="/admin" element={<AdminPage />} />
-          {/* TODO: wrap the add/edit routes with the shared admin guard once it exists.
-              They show the dashboard with the add/edit form open. */}
-          <Route path="/admin/new" element={<AdminPage />} />
-          <Route path="/admin/:id/edit" element={<AdminPage />} />
-          {/* Coming soon: /login, /register, /verify-email, /reset-password */}
-          <Route path="*" element={<NotFoundPage />} />
+          <Route
+            path="/"
+            element={
+              <Narrow>
+                <HomePage />
+              </Narrow>
+            }
+          />
+          <Route
+            path="/menu"
+            element={
+              <Narrow>
+                <MenuPage />
+              </Narrow>
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <AccountPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/new"
+            element={
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/:id/edit"
+            element={
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            }
+          />
+          {/* TODO: /register, /verify-email, /forgot-password, /reset-password */}
+          <Route
+            path="*"
+            element={
+              <Narrow>
+                <NotFoundPage />
+              </Narrow>
+            }
+          />
         </Routes>
       </main>
+      {!isAdmin && <Footer />}
     </div>
   );
 }
