@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Link, useMatch, useNavigate, useParams } from 'react-router';
 import {
   deleteMenuItem,
   getAdminMenu,
@@ -7,6 +7,7 @@ import {
   setOnMenu,
 } from '../api/menu';
 import type { MenuFlag } from '../api/menu';
+import MenuItemForm from '../components/MenuItemForm';
 import type { MenuItem } from '../types/menu';
 
 const focusRing =
@@ -62,44 +63,45 @@ function DrinkRow({
   }
 
   return (
-    <li className="border-b border-[#e4e4e4] py-4 md:py-4.5">
-      {/* Phone: photo and name, then checkboxes, then actions, each full width.
-          Tablet: checkboxes sit under the name, with actions on the right.
-          Desktop: everything on one line, like the Figma frame. */}
-      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2.5 md:grid-cols-[4.5rem_minmax(0,1fr)_auto] md:gap-x-7 md:gap-y-1 lg:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] lg:gap-y-0">
-        <div className="flex h-17.5 w-14 items-center justify-center bg-[#f4f4f4] md:row-span-2 md:h-22.5 md:w-18 lg:row-span-1">
+    <li className="border-b border-[#e4e4e4] py-4 @2xl:py-4.5">
+      {/* Sized by the list's width (it shrinks when the form panel is open).
+          Narrow: photo and name, then checkboxes, then actions, each full width.
+          Medium: checkboxes sit under the name, with actions on the right.
+          Wide: everything on one line, like the Figma frame. */}
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2.5 @2xl:grid-cols-[4.5rem_minmax(0,1fr)_auto] @2xl:gap-x-7 @2xl:gap-y-1 @4xl:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] @4xl:gap-y-0">
+        <div className="flex h-17.5 w-14 items-center justify-center bg-[#f4f4f4] @2xl:row-span-2 @2xl:h-22.5 @2xl:w-18 @4xl:row-span-1">
           {item.imageUrl && (
             <img
               src={item.imageUrl}
               alt=""
-              className={`h-15 w-9 object-contain md:h-19 md:w-11 ${hidden ? 'opacity-55' : ''}`}
+              className={`size-full object-contain p-1 ${hidden ? 'opacity-55' : ''}`}
             />
           )}
         </div>
-        <div className="flex min-w-0 flex-col gap-1 md:gap-1.5 md:self-end lg:self-center">
-          <div className="flex flex-wrap items-center gap-2 md:gap-2.5">
+        <div className="flex min-w-0 flex-col gap-1 @2xl:gap-1.5 @2xl:self-end @4xl:self-center">
+          <div className="flex flex-wrap items-center gap-2 @2xl:gap-2.5">
             {/* Hidden rows use a lighter gray that still passes AA contrast. */}
             <h2
-              className={`text-[22px] font-normal md:text-[28px] md:leading-7 md:tracking-[-0.02em] ${hidden ? 'text-[#6b6b6b]' : 'text-[#1a1a1a]'}`}
+              className={`text-[22px] font-normal @2xl:text-[28px] @2xl:leading-7 @2xl:tracking-[-0.02em] ${hidden ? 'text-[#6b6b6b]' : 'text-[#1a1a1a]'}`}
             >
               {item.name}
             </h2>
             {hidden && (
-              <span className="border border-dashed border-[#1a1a1a] px-1.5 py-0.5 font-mono text-[11px] tracking-[0.08em] text-[#1a1a1a] uppercase md:px-2 md:py-0.75">
+              <span className="border border-dashed border-[#1a1a1a] px-1.5 py-0.5 font-mono text-[11px] tracking-[0.08em] text-[#1a1a1a] uppercase @2xl:px-2 @2xl:py-0.75">
                 Hidden
               </span>
             )}
           </div>
           {item.description && (
             <p
-              className={`text-[13px] leading-4.5 md:text-[14px] md:leading-5 ${hidden ? 'text-[#6b6b6b]' : 'text-[#4a4a4a]'}`}
+              className={`text-[13px] leading-4.5 @2xl:text-[14px] @2xl:leading-5 ${hidden ? 'text-[#6b6b6b]' : 'text-[#4a4a4a]'}`}
             >
               {item.description}
             </p>
           )}
         </div>
 
-        <div className="col-span-2 flex flex-wrap gap-x-3.5 md:col-span-1 md:col-start-2 md:gap-x-5 lg:col-start-3 lg:row-start-1 lg:flex-nowrap">
+        <div className="col-span-2 flex flex-wrap gap-x-3.5 @2xl:col-span-1 @2xl:col-start-2 @2xl:gap-x-5 @4xl:col-start-3 @4xl:row-start-1 @4xl:flex-nowrap">
           {toggles.map(({ flag, label }) => (
             <label
               key={flag}
@@ -123,7 +125,7 @@ function DrinkRow({
           ))}
         </div>
 
-        <div className="col-span-2 flex flex-col gap-2.5 md:col-span-1 md:col-start-3 md:row-span-2 md:row-start-1 md:flex-row md:items-center md:gap-5 lg:col-start-4 lg:row-span-1">
+        <div className="col-span-2 flex flex-col gap-2.5 @2xl:col-span-1 @2xl:col-start-3 @2xl:row-span-2 @2xl:row-start-1 @2xl:flex-row @2xl:items-center @2xl:gap-5 @4xl:col-start-4 @4xl:row-span-1">
           {/* Links can't be disabled, so while saving it's marked aria-disabled
               and clicks are ignored. It stays focusable so focus isn't lost. */}
           <Link
@@ -132,7 +134,7 @@ function DrinkRow({
             onClick={(e) => {
               if (pending) e.preventDefault();
             }}
-            className={`${whiteButton} w-full px-4 md:w-auto md:px-7 ${pending ? 'cursor-not-allowed opacity-60' : ''}`}
+            className={`${whiteButton} w-full px-4 @2xl:w-auto @2xl:px-7 ${pending ? 'cursor-not-allowed opacity-60' : ''}`}
           >
             Edit <span className="sr-only">{item.name}</span>
           </Link>
@@ -149,7 +151,7 @@ function DrinkRow({
       {error && (
         <p
           role="alert"
-          className="mt-2 text-[14px] text-[#b42318] md:text-right"
+          className="mt-2 text-[14px] text-[#b42318] @2xl:text-right"
         >
           {error}
         </p>
@@ -313,6 +315,16 @@ export default function AdminPage() {
   const requestVersions = useRef(new Map<string, number>());
   const headingRef = useRef<HTMLHeadingElement>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
+  const focusAfterPanel = useRef(false);
+  const navigate = useNavigate();
+
+  // /admin/new and /admin/:id/edit open the add/edit form beside the list.
+  const isNew = useMatch('/admin/new') !== null;
+  const { id: editId } = useParams();
+  const panelOpen = isNew || editId !== undefined;
+  const editItem = editId
+    ? items.find((item) => item._id === editId)
+    : undefined;
 
   const deleteTarget = items.find((item) => item._id === deleteId);
   const onMenuCount = items.filter((item) => item.isAvailable).length;
@@ -321,14 +333,49 @@ export default function AdminPage() {
     (item) => item.isAvailable && item.isFeatured,
   ).length;
 
-  useEffect(() => {
+  // A list reply must never undo a save it doesn't include. Each load gets a
+  // number, and every confirmed save bumps `changes`. A reply that a newer load
+  // overtook is ignored. A reply that started before a save finished is ignored
+  // too, and the list is fetched again, so it reflects that save.
+  const latestLoad = useRef(0);
+  const changes = useRef(0);
+
+  const loadMenu = useCallback(() => {
+    const load = ++latestLoad.current;
+    const changesAtStart = changes.current;
     getAdminMenu()
       .then((menu) => {
+        if (load !== latestLoad.current) return;
+        if (changesAtStart !== changes.current) {
+          loadMenu();
+          return;
+        }
         setItems(menu);
         setStatus('ready');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => {
+        if (load === latestLoad.current) setStatus('error');
+      });
   }, []);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
+
+  // Saving or cancelling closes the panel and reloads the list.
+  function closePanel() {
+    focusAfterPanel.current = true;
+    navigate('/admin');
+    loadMenu();
+  }
+
+  // Once the panel is gone, focus goes back to the top of the list.
+  useEffect(() => {
+    if (!panelOpen && focusAfterPanel.current) {
+      focusAfterPanel.current = false;
+      headingRef.current?.focus();
+    }
+  }, [panelOpen]);
 
   // Runs once the dialog is gone, so focus isn't lost along with it.
   useEffect(() => {
@@ -362,12 +409,24 @@ export default function AdminPage() {
     setPending(id, true);
     try {
       const result = await request();
+      // Even an overtaken save changed the server, so list loads already in flight are out of date.
+      changes.current += 1;
       if (isLatest()) onSuccess(result);
     } catch (err) {
       if (isLatest()) throw err;
     } finally {
       if (isLatest()) setPending(id, false);
     }
+  }
+
+  // Puts a drink saved from the form into the list, new or edited. This runs even
+  // if the user has already left that form, so the list matches the server.
+  function saveToList(saved: MenuItem) {
+    setItems((current) =>
+      current.some((item) => item._id === saved._id)
+        ? current.map((item) => (item._id === saved._id ? saved : item))
+        : [...current, saved],
+    );
   }
 
   function updateItem(updated: MenuItem) {
@@ -391,99 +450,151 @@ export default function AdminPage() {
   }
 
   return (
-    <section className="bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24">
-      <div className="flex flex-col gap-5 pb-5 md:flex-row md:items-end md:justify-between md:pb-6">
-        <div className="flex flex-col gap-2 md:gap-2.5">
-          <h1
-            ref={headingRef}
-            tabIndex={-1}
-            className="text-[44px] font-normal tracking-[-0.02em] text-[#1a1a1a] outline-none md:text-[56px] md:leading-14"
+    // Wide screens: list on the left, form panel on the right.
+    // Narrower: while the form is open it takes the whole page.
+    <div className="xl:flex xl:items-stretch">
+      <section
+        className={`min-w-0 flex-1 bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24 ${panelOpen ? 'hidden xl:block' : ''}`}
+      >
+        <div className="flex flex-col gap-5 pb-5 md:flex-row md:items-end md:justify-between md:pb-6">
+          <div className="flex flex-col gap-2 md:gap-2.5">
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-[44px] font-normal tracking-[-0.02em] text-[#1a1a1a] outline-none md:text-[56px] md:leading-14"
+            >
+              Menu
+            </h1>
+            {status === 'ready' && (
+              <p className="font-mono text-[12px] tracking-[0.08em] text-[#4a4a4a] uppercase md:text-[13px]">
+                {items.length} {items.length === 1 ? 'drink' : 'drinks'} ·{' '}
+                {onMenuCount} on the menu · {onHomeCount} on home
+              </p>
+            )}
+          </div>
+          <Link
+            to="/admin/new"
+            className={`${blackButton} w-full px-4 md:w-auto md:px-7`}
           >
-            Menu
-          </h1>
-          {status === 'ready' && (
-            <p className="font-mono text-[12px] tracking-[0.08em] text-[#4a4a4a] uppercase md:text-[13px]">
-              {items.length} {items.length === 1 ? 'drink' : 'drinks'} ·{' '}
-              {onMenuCount} on the menu · {onHomeCount} on home
-            </p>
-          )}
+            + Add a drink
+          </Link>
         </div>
-        <Link
-          to="/admin/new"
-          className={`${blackButton} w-full px-4 md:w-auto md:px-7`}
-        >
-          + Add a drink
-        </Link>
-      </div>
 
-      <p role="status" className="sr-only">
-        {announcement}
-      </p>
+        <p role="status" className="sr-only">
+          {announcement}
+        </p>
 
-      {status === 'loading' && (
-        <p className="text-[#1a1a1a]">Loading drinks…</p>
-      )}
-      {status === 'error' && (
-        <p role="alert" className="text-[#b42318]">
-          Couldn't load the menu. Check that you're signed in and the API is
-          running.
-        </p>
-      )}
-      {status === 'ready' && items.length === 0 && (
-        <p className="border-t border-[#1a1a1a] pt-5 text-[#1a1a1a]">
-          No drinks yet
-        </p>
-      )}
-      {items.length > 0 && (
-        <>
-          <ul className="border-t border-[#1a1a1a]">
-            {items.map((item) => (
-              <DrinkRow
-                key={item._id}
-                item={item}
-                pending={pendingIds.has(item._id)}
-                onToggle={(flag, value) =>
-                  mutate(
-                    item._id,
-                    () => setMenuFlag(item._id, flag, value),
-                    updateItem,
-                  )
-                }
-                onDeleteClick={(target, trigger) => {
-                  returnFocusTo.current = trigger;
-                  setDeleteId(target._id);
-                }}
-              />
-            ))}
-          </ul>
-          <p className="mt-4 text-[14px] leading-5 text-[#4a4a4a]">
-            Hiding a drink takes it off the public menu without deleting it, so
-            it’s easy to bring back next season.
+        {status === 'loading' && (
+          <p className="text-[#1a1a1a]">Loading drinks…</p>
+        )}
+        {status === 'error' && (
+          <p role="alert" className="text-[#b42318]">
+            Couldn't load the menu. Check that you're signed in and the API is
+            running.
           </p>
-        </>
-      )}
+        )}
+        {status === 'ready' && items.length === 0 && (
+          <p className="border-t border-[#1a1a1a] pt-5 text-[#1a1a1a]">
+            No drinks yet
+          </p>
+        )}
+        {items.length > 0 && (
+          <>
+            <ul className="@container border-t border-[#1a1a1a]">
+              {items.map((item) => (
+                <DrinkRow
+                  key={item._id}
+                  item={item}
+                  pending={pendingIds.has(item._id)}
+                  onToggle={(flag, value) =>
+                    mutate(
+                      item._id,
+                      () => setMenuFlag(item._id, flag, value),
+                      updateItem,
+                    )
+                  }
+                  onDeleteClick={(target, trigger) => {
+                    returnFocusTo.current = trigger;
+                    setDeleteId(target._id);
+                  }}
+                />
+              ))}
+            </ul>
+            <p className="mt-4 text-[14px] leading-5 text-[#4a4a4a]">
+              Hiding a drink takes it off the public menu without deleting it,
+              so it’s easy to bring back next season.
+            </p>
+          </>
+        )}
 
-      {deleteTarget && (
-        <DeleteDialog
-          item={deleteTarget}
-          busy={pendingIds.has(deleteTarget._id)}
-          onCancel={() => setDeleteId(null)}
-          onDelete={() =>
-            mutate(
-              deleteTarget._id,
-              () => deleteMenuItem(deleteTarget._id),
-              () => handleDeleted(deleteTarget._id),
-            )
-          }
-          onHide={() =>
-            mutate(
-              deleteTarget._id,
-              () => setOnMenu(deleteTarget._id, false),
-              handleHidden,
-            )
-          }
-        />
+        {deleteTarget && (
+          <DeleteDialog
+            item={deleteTarget}
+            busy={pendingIds.has(deleteTarget._id)}
+            onCancel={() => setDeleteId(null)}
+            onDelete={() =>
+              mutate(
+                deleteTarget._id,
+                () => deleteMenuItem(deleteTarget._id),
+                () => handleDeleted(deleteTarget._id),
+              )
+            }
+            onHide={() =>
+              mutate(
+                deleteTarget._id,
+                () => setOnMenu(deleteTarget._id, false),
+                handleHidden,
+              )
+            }
+          />
+        )}
+      </section>
+
+      {panelOpen && (
+        <section
+          aria-label={isNew ? 'Add a drink' : 'Edit drink'}
+          className="bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24 xl:w-[440px] xl:shrink-0 xl:border-l xl:border-[#1a1a1a] xl:bg-[#f4f4f4] xl:px-9"
+        >
+          {isNew ? (
+            <MenuItemForm
+              key="new"
+              onClose={closePanel}
+              runSave={(save) =>
+                save().then((saved) => {
+                  changes.current += 1;
+                  saveToList(saved);
+                })
+              }
+            />
+          ) : status === 'loading' ? (
+            <p className="text-[#1a1a1a]">Loading drink…</p>
+          ) : editItem ? (
+            <MenuItemForm
+              key={editItem._id}
+              item={editItem}
+              onClose={closePanel}
+              // Saving shares the drink's pending state with its row, so the two
+              // can't overlap, and the saved drink goes into the list.
+              pending={pendingIds.has(editItem._id)}
+              runSave={(save) => mutate(editItem._id, save, saveToList)}
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <p role="alert" className="text-[#b42318]">
+                {status === 'error'
+                  ? 'Couldn’t load the drink. Check that you’re signed in and the API is running.'
+                  : 'We couldn’t find that drink. It may have been deleted.'}
+              </p>
+              <Link
+                to="/admin"
+                className={`self-start text-[#1a1a1a] underline ${smallLabel} ${focusRing}`}
+              >
+                ← Back to the list
+              </Link>
+            </div>
+          )}
+        </section>
       )}
-    </section>
+    </div>
   );
 }

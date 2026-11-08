@@ -1,4 +1,4 @@
-import { apiGet, apiRequest } from './client';
+import { apiGet, apiRequest, apiUpload } from './client';
 import type { MenuItem } from '../types/menu';
 
 export async function getMenu(): Promise<MenuItem[]> {
@@ -33,4 +33,35 @@ export function setOnMenu(id: string, isAvailable: boolean): Promise<MenuItem> {
 
 export async function deleteMenuItem(id: string): Promise<void> {
   await apiRequest<{ message: string }>(`/menu/${id}`, { method: 'DELETE' });
+}
+
+// What the add/edit form sends.
+export type MenuItemInput = Omit<MenuItem, '_id'>;
+
+export async function createMenuItem(input: MenuItemInput): Promise<MenuItem> {
+  const data = await apiRequest<{ item: MenuItem }>('/menu', {
+    method: 'POST',
+    body: input,
+  });
+  return data.item;
+}
+
+// Send only the fields that changed.
+export async function updateMenuItem(
+  id: string,
+  changes: Partial<MenuItemInput>,
+): Promise<MenuItem> {
+  const data = await apiRequest<{ item: MenuItem }>(`/menu/${id}`, {
+    method: 'PUT',
+    body: changes,
+  });
+  return data.item;
+}
+
+// Returns the uploaded photo's URL. Throws ApiError (413 too large, 415 wrong type).
+export async function uploadMenuImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('image', file);
+  const data = await apiUpload<{ imageUrl: string }>('/uploads', form);
+  return data.imageUrl;
 }
