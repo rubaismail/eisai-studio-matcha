@@ -390,3 +390,107 @@ test('Hide instead hides the drink and is not offered for hidden drinks', async 
   expect(mangoCheckbox()).not.toBeChecked();
   expect(deleteButton).toHaveFocus();
 });
+
+// --- One save at a time per drink (PR #79 review) ---
+
+// Queues a reply that stays pending until the returned function is called.
+function delayNextReply(fetchMock: ReturnType<typeof vi.fn>) {
+  let reply!: (response: unknown) => void;
+  fetchMock.mockReturnValueOnce(
+    new Promise((resolve) => {
+      reply = resolve;
+    }),
+  );
+  return (response: unknown) => reply(response);
+}
+
+test('Hide instead can’t start while a Recommended save is pending, and the drink ends up hidden', async () => {
+  const fetchMock = renderPage();
+  await findMango();
+  const recommended = screen.getByRole('checkbox', {
+    name: 'Recommended: Mango Dango',
+  });
+  const replyToRecommended = delayNextReply(fetchMock);
+  fireEvent.click(recommended);
+
+  // While the Recommended save is pending, every action for this drink is blocked.
+  await waitFor(() => expect(recommended).toBeDisabled());
+  expect(mangoCheckbox()).toBeDisabled();
+  expect(mangoDelete()).toBeDisabled();
+  expect(
+    screen.getByRole('link', { name: 'Edit Mango Dango' }),
+  ).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(mangoDelete());
+  expect(screen.queryByRole('dialog')).toBeNull();
+  // Other drinks aren't affected.
+  expect(
+    screen.getByRole('button', { name: 'Delete Okinawa Breeze' }),
+  ).toBeEnabled();
+
+  // The Recommended reply arrives (still on the menu at that point).
+  replyToRecommended(
+    success({ item: { ...mango, isRecommended: true, isAvailable: true } }),
+  );
+  await waitFor(() => expect(mangoDelete()).toBeEnabled());
+  expect(recommended).toBeChecked();
+
+  // Now Hide instead can run, and once every reply is in, the drink is hidden.
+  fireEvent.click(mangoDelete());
+  fetchMock.mockResolvedValueOnce(
+    success({ item: { ...mango, isRecommended: true, isAvailable: false } }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Hide instead' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(mangoCheckbox()).not.toBeChecked();
+  expect(recommended).toBeChecked();
+  const row = screen
+    .getByRole('heading', { name: 'Mango Dango' })
+    .closest('li')!;
+  expect(within(row).getByText('Hidden')).toBeInTheDocument();
+  expect(
+    screen.getByText('2 drinks · 0 on the menu · 0 on home'),
+  ).toBeInTheDocument();
+});
+
+test('a pending Hide instead from the dialog also locks the drink’s row', async () => {
+  const fetchMock = renderPage();
+  await findMango();
+  fireEvent.click(mangoDelete());
+  const replyToHide = delayNextReply(fetchMock);
+  fireEvent.click(screen.getByRole('button', { name: 'Hide instead' }));
+
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Hide instead' })).toBeDisabled(),
+  );
+  expect(
+    screen.getByRole('button', { name: 'Delete for good' }),
+  ).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  expect(mangoCheckbox()).toBeDisabled();
+  expect(
+    screen.getByRole('checkbox', { name: 'Recommended: Mango Dango' }),
+  ).toBeDisabled();
+
+  replyToHide(success({ item: { ...mango, isAvailable: false } }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(mangoCheckbox()).toBeEnabled();
+  expect(mangoCheckbox()).not.toBeChecked();
+});
+
+test('Edit does nothing while a save for that drink is pending', async () => {
+  const fetchMock = renderPage();
+  await findMango();
+  const replyToToggle = delayNextReply(fetchMock);
+  fireEvent.click(mangoCheckbox());
+  await waitFor(() => expect(mangoCheckbox()).toBeDisabled());
+
+  const edit = screen.getByRole('link', { name: 'Edit Mango Dango' });
+  const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+  edit.dispatchEvent(click);
+  expect(click.defaultPrevented).toBe(true);
+
+  replyToToggle(success({ item: { ...mango, isAvailable: false } }));
+  await waitFor(() => expect(edit).not.toHaveAttribute('aria-disabled'));
+});

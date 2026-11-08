@@ -25,16 +25,16 @@ const toggles: { flag: MenuFlag; label: string }[] = [
 
 function DrinkRow({
   item,
-  onUpdated,
+  pending,
+  onToggle,
   onDeleteClick,
 }: {
   item: MenuItem;
-  onUpdated: (item: MenuItem) => void;
+  // True while any save for this drink is in flight, from this row or the dialog.
+  pending: boolean;
+  onToggle: (flag: MenuFlag, value: boolean) => Promise<void>;
   onDeleteClick: (item: MenuItem, trigger: HTMLButtonElement) => void;
 }) {
-  // All of the row's checkboxes are disabled while one saves. Each reply is the
-  // whole item, so a slower reply could otherwise undo a newer change.
-  const [saving, setSaving] = useState<MenuFlag | null>(null);
   const [error, setError] = useState('');
   const checkboxes = useRef<Partial<Record<MenuFlag, HTMLInputElement | null>>>(
     {},
@@ -44,23 +44,20 @@ function DrinkRow({
 
   // A disabled checkbox loses keyboard focus, so give it back when it re-enables.
   useEffect(() => {
-    if (saving === null && refocus.current) {
+    if (!pending && refocus.current) {
       checkboxes.current[refocus.current]?.focus();
       refocus.current = null;
     }
-  }, [saving]);
+  }, [pending]);
 
   async function handleToggle(flag: MenuFlag, value: boolean) {
     refocus.current =
       document.activeElement === checkboxes.current[flag] ? flag : null;
-    setSaving(flag);
     setError('');
     try {
-      onUpdated(await setMenuFlag(item._id, flag, value));
+      await onToggle(flag, value);
     } catch {
       setError(`Couldn't update ${item.name}. Please try again.`);
-    } finally {
-      setSaving(null);
     }
   }
 
@@ -114,7 +111,7 @@ function DrinkRow({
                 }}
                 type="checkbox"
                 checked={item[flag]}
-                disabled={saving !== null}
+                disabled={pending}
                 onChange={(e) => void handleToggle(flag, e.target.checked)}
                 className={`size-5 shrink-0 accent-[#1a1a1a] disabled:cursor-not-allowed ${focusRing}`}
               />
@@ -127,16 +124,23 @@ function DrinkRow({
         </div>
 
         <div className="col-span-2 flex flex-col gap-2.5 md:col-span-1 md:col-start-3 md:row-span-2 md:row-start-1 md:flex-row md:items-center md:gap-5 lg:col-start-4 lg:row-span-1">
+          {/* Links can't be disabled, so while saving it's marked aria-disabled
+              and clicks are ignored. It stays focusable so focus isn't lost. */}
           <Link
             to={`/admin/${item._id}/edit`}
-            className={`${whiteButton} w-full px-4 md:w-auto md:px-7`}
+            aria-disabled={pending || undefined}
+            onClick={(e) => {
+              if (pending) e.preventDefault();
+            }}
+            className={`${whiteButton} w-full px-4 md:w-auto md:px-7 ${pending ? 'cursor-not-allowed opacity-60' : ''}`}
           >
             Edit <span className="sr-only">{item.name}</span>
           </Link>
           <button
             type="button"
+            disabled={pending}
             onClick={(e) => onDeleteClick(item, e.currentTarget)}
-            className={`min-h-11 text-[#b42318] underline ${smallLabel} ${focusRing}`}
+            className={`min-h-11 text-[#b42318] underline disabled:cursor-not-allowed disabled:opacity-60 ${smallLabel} ${focusRing}`}
           >
             Delete <span className="sr-only">{item.name}</span>
           </button>
@@ -156,16 +160,18 @@ function DrinkRow({
 
 function DeleteDialog({
   item,
+  busy,
   onCancel,
-  onDeleted,
-  onHidden,
+  onDelete,
+  onHide,
 }: {
   item: MenuItem;
+  // Shared with the drink's row: true while any save for this drink is in flight.
+  busy: boolean;
   onCancel: () => void;
-  onDeleted: (id: string) => void;
-  onHidden: (item: MenuItem) => void;
+  onDelete: () => Promise<void>;
+  onHide: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -211,25 +217,20 @@ function DeleteDialog({
   }, [busy, onCancel]);
 
   async function handleDelete() {
-    setBusy(true);
     setError('');
     try {
-      await deleteMenuItem(item._id);
-      onDeleted(item._id);
+      await onDelete();
     } catch {
       setError(`Couldn't delete ${item.name}. Please try again.`);
-      setBusy(false);
     }
   }
 
   async function handleHide() {
-    setBusy(true);
     setError('');
     try {
-      onHidden(await setOnMenu(item._id, false));
+      await onHide();
     } catch {
       setError(`Couldn't hide ${item.name}. Please try again.`);
-      setBusy(false);
     }
   }
 
@@ -304,6 +305,12 @@ export default function AdminPage() {
   );
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  // Drinks with a save in flight. Shared by each row and the delete dialog.
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // The latest request number per drink, so overtaken replies can be ignored.
+  const requestVersions = useRef(new Map<string, number>());
   const headingRef = useRef<HTMLHeadingElement>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
 
@@ -330,6 +337,38 @@ export default function AdminPage() {
       returnFocusTo.current = null;
     }
   }, [deleteId]);
+
+  function setPending(id: string, isPending: boolean) {
+    setPendingIds((current) => {
+      const next = new Set(current);
+      if (isPending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  // Every save for a drink goes through here, from its row or the delete dialog.
+  // The drink's actions stay disabled until the save finishes, and a reply that a
+  // newer request for the same drink has overtaken is ignored, so an old reply
+  // can never overwrite newer data. Errors are rethrown for the caller to show.
+  async function mutate<T>(
+    id: string,
+    request: () => Promise<T>,
+    onSuccess: (result: T) => void,
+  ) {
+    const version = (requestVersions.current.get(id) ?? 0) + 1;
+    requestVersions.current.set(id, version);
+    const isLatest = () => requestVersions.current.get(id) === version;
+    setPending(id, true);
+    try {
+      const result = await request();
+      if (isLatest()) onSuccess(result);
+    } catch (err) {
+      if (isLatest()) throw err;
+    } finally {
+      if (isLatest()) setPending(id, false);
+    }
+  }
 
   function updateItem(updated: MenuItem) {
     setItems((current) =>
@@ -402,7 +441,14 @@ export default function AdminPage() {
               <DrinkRow
                 key={item._id}
                 item={item}
-                onUpdated={updateItem}
+                pending={pendingIds.has(item._id)}
+                onToggle={(flag, value) =>
+                  mutate(
+                    item._id,
+                    () => setMenuFlag(item._id, flag, value),
+                    updateItem,
+                  )
+                }
                 onDeleteClick={(target, trigger) => {
                   returnFocusTo.current = trigger;
                   setDeleteId(target._id);
@@ -420,9 +466,22 @@ export default function AdminPage() {
       {deleteTarget && (
         <DeleteDialog
           item={deleteTarget}
+          busy={pendingIds.has(deleteTarget._id)}
           onCancel={() => setDeleteId(null)}
-          onDeleted={handleDeleted}
-          onHidden={handleHidden}
+          onDelete={() =>
+            mutate(
+              deleteTarget._id,
+              () => deleteMenuItem(deleteTarget._id),
+              () => handleDeleted(deleteTarget._id),
+            )
+          }
+          onHide={() =>
+            mutate(
+              deleteTarget._id,
+              () => setOnMenu(deleteTarget._id, false),
+              handleHidden,
+            )
+          }
         />
       )}
     </section>
