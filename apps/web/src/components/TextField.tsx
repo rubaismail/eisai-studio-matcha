@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { InputHTMLAttributes, Ref } from 'react';
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react';
 import { focusRing, label as labelClass } from './styles';
 
 interface TextFieldProps extends Omit<
@@ -7,7 +7,7 @@ interface TextFieldProps extends Omit<
   'className'
 > {
   label: string;
-  error?: string;
+  error?: ReactNode;
   // Red border without a message (e.g. under an alert).
   invalid?: boolean;
   ref?: Ref<HTMLInputElement>;
