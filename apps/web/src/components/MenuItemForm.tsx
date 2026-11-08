@@ -401,7 +401,7 @@ export default function MenuItemForm({
             </h2>
           </>
         )}
-        <p className={hint}>Drink name and price are required.</p>
+        <p className={hint}>Drink name, category and price are required.</p>
       </div>
 
       {(summaryFields.length > 0 || saveError) && (
