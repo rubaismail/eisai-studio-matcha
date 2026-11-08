@@ -18,6 +18,12 @@ function verifyOnce(token: string): Promise<void> {
   if (!request) {
     request = verifyEmail(token).then(() => undefined);
     requests.set(token, request);
+    // Forget failures other than "used or expired" (400), even if the page
+    // was closed meanwhile, so the next visit or "Try again" asks again.
+    request.catch((err) => {
+      if (!(err instanceof ApiError && err.status === 400))
+        requests.delete(token);
+    });
   }
   return request;
 }
@@ -57,8 +63,6 @@ export default function VerifyEmailPage() {
         if (err instanceof ApiError && err.status === 400) {
           showResult('expired');
         } else {
-          // Let "Try again" send the same token again.
-          requests.delete(token);
           setFailed(true);
         }
       });

@@ -131,9 +131,9 @@ test('403 asks to verify the email and can resend the link', async () => {
       name: 'No email? Request a new verification link →',
     }),
   );
-  expect(await screen.findByRole('status')).toHaveTextContent(
-    'a new link is on its way',
-  );
+  expect(
+    await screen.findByText(/a new link is on its way/),
+  ).toBeInTheDocument();
   const [url, init] = fetchMock.mock.calls[1];
   expect(url).toBe('/api/auth/resend-verification');
   expect(JSON.parse(init.body)).toEqual({ email: 'jane@example.com' });
@@ -246,7 +246,7 @@ test('resending verification uses the address that was refused, not an edited on
       name: 'No email? Request a new verification link →',
     }),
   );
-  await screen.findByRole('status');
+  await screen.findByText(/a new link is on its way/);
   expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
     email: 'first@example.com',
   });
@@ -266,4 +266,24 @@ test('three clicks before the page re-renders still send one request', async () 
   });
   expect(await screen.findByText('account page')).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test('resending from the login page explains the resend limit', async () => {
+  renderLogin(undefined, [
+    jsonResponse(403, { error: 'Please verify your email first' }),
+    jsonResponse(429, { error: 'Too many login attempts. Try again later.' }),
+  ]);
+  fillAndSubmit();
+  await screen.findByText('Please verify your email to log in.');
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'No email? Request a new verification link →',
+    }),
+  );
+  expect(
+    await screen.findByText('You’ve asked for several links already.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/Please try again in 15 minutes/),
+  ).toBeInTheDocument();
 });

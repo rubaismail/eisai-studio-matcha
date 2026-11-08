@@ -56,13 +56,13 @@ test('Resend email sends to that address, then waits a minute', async () => {
 
   expect(resendButton()).toBeDisabled();
   expect(
-    screen.getByText(/ask for another in (60|59|58) seconds/),
+    screen.getByText(/You can ask for a new link in (60|59|58) seconds/),
   ).toBeInTheDocument();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(61_000);
   });
   expect(resendButton()).toBeEnabled();
-  expect(screen.queryByText(/ask for another in/)).toBeNull();
+  expect(screen.queryByText(/You can ask for a new link in/)).toBeNull();
 });
 
 test('the resend limit (429) says how long to wait', async () => {
@@ -134,4 +134,46 @@ test('three quick clicks on Resend send one request', async () => {
     await screen.findByText(/a new link is on its way/),
   ).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test('right after sign-up, Resend waits out the API’s one-minute cooldown', () => {
+  renderPage({ email: 'jane@example.com', sentAt: Date.now() });
+  expect(resendButton()).toBeDisabled();
+  expect(
+    screen.getByText(/You can ask for a new link in (60|59) seconds/),
+  ).toBeInTheDocument();
+});
+
+test('a link sent over a minute ago can be resent right away', () => {
+  renderPage({ email: 'jane@example.com', sentAt: Date.now() - 120_000 });
+  expect(resendButton()).toBeEnabled();
+});
+
+test('the wait belongs to one address, so fixing a typo is not blocked', async () => {
+  const fetchMock = renderPage(null, [
+    jsonResponse(200, {}),
+    jsonResponse(200, {}),
+  ]);
+  const field = () => screen.getByLabelText('Email address');
+  const send = () => screen.getByRole('button', { name: /new link|sending/i });
+
+  fireEvent.change(field(), { target: { value: 'jon@exmaple.com' } });
+  fireEvent.click(send());
+  expect(
+    await screen.findByText(/a new link is on its way/),
+  ).toBeInTheDocument();
+  expect(send()).toBeDisabled();
+
+  fireEvent.change(field(), { target: { value: 'jon@example.com' } });
+  expect(send()).toBeEnabled();
+  expect(screen.queryByText(/a new link is on its way/)).toBeNull();
+  fireEvent.click(send());
+  await screen.findByText(/a new link is on its way/);
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+    email: 'jon@example.com',
+  });
+
+  // Back to the first address: still waiting, in any letter case.
+  fireEvent.change(field(), { target: { value: 'JON@exmaple.com' } });
+  expect(send()).toBeDisabled();
 });

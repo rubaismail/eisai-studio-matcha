@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { register } from '../api/auth';
 import { ApiError } from '../api/client';
+import { formatWait } from '../auth/useResendVerification';
 import { useAuth } from '../auth/AuthContext';
 import {
   confirmPasswordError,
@@ -12,7 +13,7 @@ import {
 import AccountLayout from '../components/AccountLayout';
 import Notice from '../components/Notice';
 import TextField from '../components/TextField';
-import { focusRing, primaryButton } from '../components/styles';
+import { focusRing, primaryButton, switchLink } from '../components/styles';
 
 type Field = 'firstName' | 'lastName' | 'email' | 'password' | 'confirm';
 const FIELD_ORDER: Field[] = [
@@ -24,6 +25,9 @@ const FIELD_ORDER: Field[] = [
 ];
 
 type Problem = 'none' | 'duplicate' | 'invalid' | 'rate-limited' | 'failed';
+
+// The API's sign-up limit window, used when the wait time isn't readable.
+const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
 
 export default function RegisterPage() {
   const { user } = useAuth();
@@ -41,6 +45,19 @@ export default function RegisterPage() {
   // Blocks repeat submits at once; `submitting` only updates on the next render.
   const inFlight = useRef(false);
   const refs = useRef<Partial<Record<Field, HTMLInputElement | null>>>({});
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (lockedUntil === null) return;
+    const timer = setTimeout(
+      () => {
+        setLockedUntil(null);
+        setProblem('none');
+      },
+      Math.max(0, lockedUntil - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [lockedUntil]);
 
   if (user && !submitting) {
     return (
@@ -55,8 +72,12 @@ export default function RegisterPage() {
       },
       name,
       value: values[name],
-      onChange: (e: ChangeEvent<HTMLInputElement>) =>
-        setValues((current) => ({ ...current, [name]: e.target.value })),
+      onChange: (e: ChangeEvent<HTMLInputElement>) => {
+        setValues((current) => ({ ...current, [name]: e.target.value }));
+        // Clear this field's message once it's being fixed.
+        setErrors((current) => ({ ...current, [name]: undefined }));
+        if (name === 'email' && problem === 'duplicate') setProblem('none');
+      },
       error: errors[name],
     };
   }
@@ -77,7 +98,7 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (inFlight.current) return;
+    if (inFlight.current || lockedUntil !== null) return;
     setProblem('none');
     if (!validate()) return;
 
@@ -93,7 +114,7 @@ export default function RegisterPage() {
       });
       navigate('/check-email', {
         replace: true,
-        state: { email: email.toLowerCase() },
+        state: { email: email.toLowerCase(), sentAt: Date.now() },
       });
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
@@ -101,8 +122,13 @@ export default function RegisterPage() {
         setProblem('duplicate');
         refs.current.email?.focus();
       } else if (status === 400) setProblem('invalid');
-      else if (status === 429) setProblem('rate-limited');
-      else setProblem('failed');
+      else if (status === 429) {
+        const seconds =
+          (err instanceof ApiError && err.retryAfterSeconds) ||
+          DEFAULT_LOCKOUT_SECONDS;
+        setLockedUntil(Date.now() + seconds * 1000);
+        setProblem('rate-limited');
+      } else setProblem('failed');
       inFlight.current = false;
       setSubmitting(false);
     }
@@ -133,7 +159,11 @@ export default function RegisterPage() {
       )}
       {problem === 'rate-limited' && (
         <Notice tone="error">
-          Too many sign-up attempts. Please wait a few minutes and try again.
+          Too many sign-up attempts. Please try again in{' '}
+          {formatWait(
+            Math.ceil(((lockedUntil ?? Date.now()) - Date.now()) / 1000),
+          )}
+          .
         </Notice>
       )}
       {problem === 'failed' && (
@@ -188,7 +218,7 @@ export default function RegisterPage() {
         />
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || lockedUntil !== null}
           className={`w-full ${primaryButton}`}
         >
           {submitting ? 'Creating account…' : 'Create account →'}
@@ -202,10 +232,7 @@ export default function RegisterPage() {
         <span className="text-[16px] md:text-[17px]">
           Already have an account?
         </span>
-        <Link
-          to="/login"
-          className={`font-mono text-[13px] tracking-[0.08em] uppercase underline underline-offset-2 hover:no-underline md:text-[14px] ${focusRing}`}
-        >
+        <Link to="/login" className={switchLink}>
           Log in
         </Link>
       </p>

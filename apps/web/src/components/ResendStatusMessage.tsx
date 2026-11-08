@@ -16,25 +16,27 @@ export default function ResendStatusMessage({
   status: ResendStatus;
   secondsLeft: number;
 }) {
+  const message = messages[status] ?? '';
   const isError = status === 'rate-limited' || status === 'failed';
-  const showWait =
-    secondsLeft > 0 && (status === 'sent' || status === 'rate-limited');
+  let waitText = '';
+  if (secondsLeft > 0) {
+    waitText =
+      status === 'rate-limited'
+        ? `Please try again in ${formatWait(secondsLeft)}.`
+        : `You can ask for a new link in ${formatWait(secondsLeft)}.`;
+  }
 
   return (
     // Out of the layout when empty, but still on the page for screen readers.
-    <div className={messages[status] ? 'flex flex-col gap-1' : 'sr-only'}>
+    <div className={message || waitText ? 'flex flex-col gap-1' : 'sr-only'}>
       <p
         role="status"
         className={`text-[14px] leading-[21px] ${isError ? 'text-error' : 'text-ink'}`}
       >
-        {messages[status] ?? ''}
+        {message}
       </p>
-      {showWait && (
-        <p className="text-[14px] leading-[21px] text-ink-muted">
-          {status === 'sent'
-            ? `You can ask for another in ${formatWait(secondsLeft)}.`
-            : `Please try again in ${formatWait(secondsLeft)}.`}
-        </p>
+      {waitText && (
+        <p className="text-[14px] leading-[21px] text-ink-muted">{waitText}</p>
       )}
     </div>
   );

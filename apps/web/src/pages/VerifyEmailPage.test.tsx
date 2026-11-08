@@ -180,3 +180,39 @@ test('screen readers hear each result', async () => {
   await screen.findByRole('heading', { name: 'Email verified' });
   expect(live).toHaveTextContent('Email verified. You can now log in.');
 });
+
+test('a check that fails after leaving the page is retried on the next visit', async () => {
+  const token = newToken();
+  let fail: (value: unknown) => void = () => {};
+  const fetchMock = vi
+    .fn()
+    .mockImplementationOnce(() => new Promise((resolve) => (fail = resolve)))
+    .mockResolvedValueOnce(jsonResponse(200, {}));
+  vi.stubGlobal('fetch', fetchMock);
+  const path = `/verify-email?token=${encodeURIComponent(token)}`;
+  const make = () =>
+    createMemoryRouter(
+      [
+        {
+          path: '*',
+          element: (
+            <AuthProvider>
+              <VerifyEmailPage />
+            </AuthProvider>
+          ),
+        },
+      ],
+      { initialEntries: [path] },
+    );
+
+  render(<RouterProvider router={make()} />);
+  cleanup(); // left the page while checking
+  fail(jsonResponse(500, { error: 'x' }));
+  await new Promise((r) => setTimeout(r, 0));
+
+  render(<RouterProvider router={make()} />);
+  expect(
+    await screen.findByRole('heading', { name: 'Email verified' }),
+  ).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});

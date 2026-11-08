@@ -220,3 +220,68 @@ test('three clicks before the page re-renders still send one request', async () 
   await screen.findByText(/check email page/);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+test('passes when the link was sent, for the resend cooldown', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(201, {})));
+  let seen: unknown;
+  function Probe() {
+    seen = useLocation().state;
+    return <p>check email page</p>;
+  }
+  renderWithAuth(
+    <Routes>
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/check-email" element={<Probe />} />
+    </Routes>,
+    ['/register'],
+  );
+  const before = Date.now();
+  fill();
+  submit();
+  await screen.findByText('check email page');
+  const state = seen as { email: string; sentAt: number };
+  expect(state.email).toBe('jane@example.com');
+  expect(state.sentAt).toBeGreaterThanOrEqual(before);
+  expect(state.sentAt).toBeLessThanOrEqual(Date.now());
+});
+
+test('the "already exists" message goes away once the email is changed', async () => {
+  renderRegister([
+    jsonResponse(409, { error: 'Email address already registered.' }),
+  ]);
+  fill();
+  submit();
+  await screen.findByText(/An account with this email already exists/);
+  fireEvent.change(input('Email address'), {
+    target: { value: 'new@example.com' },
+  });
+  expect(
+    screen.queryByText(/An account with this email already exists/),
+  ).toBeNull();
+  expect(input('Email address')).not.toHaveAttribute('aria-invalid');
+});
+
+test('a field’s message clears as soon as it is edited', () => {
+  renderRegister();
+  submit();
+  expect(screen.getByText('Enter your last name.')).toBeInTheDocument();
+  fireEvent.change(input('Last name'), { target: { value: 'D' } });
+  expect(screen.queryByText('Enter your last name.')).toBeNull();
+  expect(screen.getByText('Enter your first name.')).toBeInTheDocument();
+});
+
+test('the sign-up limit (429) disables the button and says how long', async () => {
+  const fetchMock = renderRegister([
+    jsonResponse(429, { error: 'Too many login attempts. Try again later.' }),
+  ]);
+  fill();
+  submit();
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Too many sign-up attempts. Please try again in 15 minutes.',
+  );
+  expect(
+    screen.getByRole('button', { name: 'Create account →' }),
+  ).toBeDisabled();
+  submit();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});

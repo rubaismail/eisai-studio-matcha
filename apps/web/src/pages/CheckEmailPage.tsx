@@ -5,42 +5,22 @@ import ResendStatusMessage from '../components/ResendStatusMessage';
 import ResendVerificationForm from '../components/ResendVerificationForm';
 import { primaryButton, secondaryButton } from '../components/styles';
 
-// Shown after sign-up. The address comes from the register page; without it
-// (e.g. opened directly) the page asks for it before resending.
+export interface CheckEmailState {
+  email?: unknown;
+  // When sign-up sent the link, for the API's one-minute resend cooldown.
+  sentAt?: unknown;
+}
+
+// Shown after sign-up. Without an address (e.g. opened directly) it asks for one.
 export default function CheckEmailPage() {
-  const state = useLocation().state as { email?: unknown } | null;
+  const state = useLocation().state as CheckEmailState | null;
   const email = typeof state?.email === 'string' ? state.email : null;
-  const { status, secondsLeft, send } = useResendVerification();
+  const sentAt = typeof state?.sentAt === 'number' ? state.sentAt : null;
 
   return (
     <AccountLayout title="Check your inbox" size="md">
       {email ? (
-        <>
-          <div className="flex flex-col items-start gap-4">
-            <p className="text-[17px]">We sent a verification email to</p>
-            <p className="bg-lavender px-1.5 py-0.5 text-[17px] break-all">
-              {email}
-            </p>
-            <p className="text-[17px] leading-[27px] text-ink-muted">
-              Open the link in your email to verify your address. Once your
-              email is verified, come back here and log in.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => void send(email)}
-              disabled={status === 'sending' || secondsLeft > 0}
-              className={primaryButton}
-            >
-              {status === 'sending' ? 'Sending…' : 'Resend email'}
-            </button>
-            <Link to="/login" className={secondaryButton}>
-              ← Back to login
-            </Link>
-          </div>
-          <ResendStatusMessage status={status} secondsLeft={secondsLeft} />
-        </>
+        <KnownAddress email={email} sentAt={sentAt} />
       ) : (
         <>
           <p className="text-[17px] leading-[27px] text-ink-muted">
@@ -57,5 +37,49 @@ export default function CheckEmailPage() {
         Can’t find it? Check your spam or junk folder.
       </p>
     </AccountLayout>
+  );
+}
+
+function KnownAddress({
+  email,
+  sentAt,
+}: {
+  email: string;
+  sentAt: number | null;
+}) {
+  const resend = useResendVerification(
+    sentAt === null ? undefined : { email, at: sentAt },
+  );
+
+  return (
+    <>
+      <div className="flex flex-col items-start gap-4">
+        <p className="text-[17px]">We sent a verification email to</p>
+        <p className="bg-lavender px-1.5 py-0.5 text-[17px] break-all">
+          {email}
+        </p>
+        <p className="text-[17px] leading-[27px] text-ink-muted">
+          Open the link in your email to verify your address. Once your email is
+          verified, come back here and log in.
+        </p>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => void resend.send(email)}
+          disabled={resend.blocked(email)}
+          className={primaryButton}
+        >
+          {resend.status(email) === 'sending' ? 'Sending…' : 'Resend email'}
+        </button>
+        <Link to="/login" className={secondaryButton}>
+          ← Back to login
+        </Link>
+      </div>
+      <ResendStatusMessage
+        status={resend.status(email)}
+        secondsLeft={resend.secondsLeft(email)}
+      />
+    </>
   );
 }
