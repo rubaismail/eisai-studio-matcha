@@ -16,7 +16,7 @@ const footerLink = `text-[17px] leading-6 text-white underline underline-offset-
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-ink text-white">
+    <footer className="relative overflow-clip bg-ink text-white">
       <div className="flex flex-col gap-9 px-4 pt-12 pb-10 lg:flex-row lg:gap-12 lg:px-[43px] lg:pt-[72px] lg:pb-12">
         <div className="flex flex-col gap-4 lg:flex-1 lg:gap-5">
           <img
@@ -88,7 +88,7 @@ export default function Footer() {
       </div>
 
       {/* Phone: right padding keeps the text clear of the illustration. */}
-      <div className="flex flex-col gap-1.5 border-t border-white/35 pt-[18px] pb-6 pl-4 pr-[120px] font-mono text-[11px] tracking-[0.08em] uppercase lg:flex-row lg:justify-between lg:px-[43px] lg:pt-5 lg:pb-7 lg:text-[12px]">
+      <div className="flex flex-col gap-1.5 border-t border-white/35 pt-[18px] pb-6 pl-4 pr-[120px] font-mono text-[11px] leading-none tracking-[0.08em] uppercase lg:flex-row lg:justify-between lg:px-[43px] lg:pt-5 lg:pb-7 lg:text-[12px]">
         <p>Copyright © Eisai Studio LLC</p>
         <p>Eisai Studio LLC · Orlando, Florida</p>
       </div>
