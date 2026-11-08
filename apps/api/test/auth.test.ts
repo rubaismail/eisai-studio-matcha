@@ -522,35 +522,12 @@ test('registration hash verifies with the shared login comparison', async () => 
 });
 // ---- Invalid email/link configuration ---------------------------------------
 
-test('production with blank APP_URL returns 500 before creating an account', async () => {
-  const create = mockCreateSuccess();
-  mockRegisterFindOneNone();
-
-  const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
-  env.isProduction = true;
-  env.appUrl = '';
-  try {
-    const res = await request(createApp()).post('/api/auth/register').send(validBody);
-
-    assert.equal(res.status, 500);
-    assert.deepEqual(res.body, { error: MSG_INTERNAL });
-    assert.equal(create.mock.callCount(), 0);
-    assert.equal(emailCalls.length, 0);
-  } finally {
-    env.isProduction = originalProd;
-    env.appUrl = originalUrl;
-  }
-});
-
-test('production with a valid example APP_URL allows registration', async () => {
+test('production registration works without APP_URL (links use WEB_ORIGIN)', async () => {
   mockRegisterFindOneNone();
   const create = mockCreateSuccess();
 
   const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
   env.isProduction = true;
-  env.appUrl = 'https://api.example.com';
   try {
     const res = await request(createApp()).post('/api/auth/register').send(validBody);
 
@@ -559,7 +536,6 @@ test('production with a valid example APP_URL allows registration', async () => 
     assert.equal(emailCalls.length, 1);
   } finally {
     env.isProduction = originalProd;
-    env.appUrl = originalUrl;
   }
 });
 
@@ -633,28 +609,6 @@ test('resend with invalid config replaces no token and sends no email', async ()
     assert.equal(emailCalls.length, 0);
   } finally {
     env.emailFrom = original;
-  }
-});
-
-test('resend with blank APP_URL in production replaces no token and sends no email', async () => {
-  const update = mockUpdateOne(1);
-
-  const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
-  env.isProduction = true;
-  env.appUrl = '';
-  try {
-    const res = await request(createApp())
-      .post('/api/auth/resend-verification')
-      .send({ email: 'jane@example.com' });
-
-    assert.equal(res.status, 500);
-    assert.deepEqual(res.body, { error: MSG_INTERNAL });
-    assert.equal(update.mock.callCount(), 0);
-    assert.equal(emailCalls.length, 0);
-  } finally {
-    env.isProduction = originalProd;
-    env.appUrl = originalUrl;
   }
 });
 

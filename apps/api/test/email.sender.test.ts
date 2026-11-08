@@ -26,7 +26,6 @@ const ENV_KEYS = [
   'emailFrom',
   'mailtrapUseSandbox',
   'mailtrapInboxId',
-  'appUrl',
   'webOrigin',
 ] as const;
 const originalEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, env[k]])) as Record<
@@ -53,24 +52,11 @@ function firstUrl(body: string): string {
   return m[0].replace(/[).,;]+$/, '');
 }
 
-async function withAppUrl(url: string, fn: () => Promise<void>): Promise<void> {
-  const prev = env.appUrl;
-  env.appUrl = url;
-  try {
-    await fn();
-  } finally {
-    env.appUrl = prev;
-  }
-}
-
 test('sendVerificationEmail emits the website verify URL with the raw token', async () => {
   setValidEmailEnv();
   env.webOrigin = 'https://shop.example.com';
   const raw = 'a b+c/d&=?';
-  // APP_URL (the API origin) must not leak into the link.
-  await withAppUrl('https://api.example.com', () =>
-    sendVerificationEmail('jane@example.com', raw),
-  );
+  await sendVerificationEmail('jane@example.com', raw);
 
   assert.equal(sent.length, 1);
   for (const body of [sent[0].text, sent[0].html]) {
@@ -85,9 +71,7 @@ test('sendResetPasswordEmail emits the reset URL with the raw token', async () =
   setValidEmailEnv();
   env.webOrigin = 'https://shop.example.com/';
   const raw = 'r a+b/c&=?';
-  await withAppUrl('https://api.example.com', () =>
-    sendResetPasswordEmail('jane@example.com', raw),
-  );
+  await sendResetPasswordEmail('jane@example.com', raw);
 
   assert.equal(sent.length, 1);
   for (const body of [sent[0].text, sent[0].html]) {

@@ -1,14 +1,14 @@
 // Validate deployment settings without contacting external services or printing secrets.
 export function validateProductionConfig(config: NodeJS.ProcessEnv): void {
   if (config.NODE_ENV !== 'production') return;
-  const required = ['MONGODB_URI', 'JWT_SECRET', 'WEB_ORIGIN', 'APP_URL', 'MAILTRAP_TOKEN',
+  const required = ['MONGODB_URI', 'JWT_SECRET', 'WEB_ORIGIN', 'MAILTRAP_TOKEN',
     'EMAIL_FROM', 'AWS_REGION', 'AWS_S3_BUCKET', 'AWS_S3_PUBLIC_URL'];
   for (const key of required) {
     if (!config[key]?.trim()) throw new Error(`${key} is required in production.`);
   }
   if (config.JWT_SECRET!.trim().length < 32) throw new Error('JWT_SECRET must be at least 32 characters.');
   if (!/^mongodb(?:\+srv)?:\/\//.test(config.MONGODB_URI!)) throw new Error('MONGODB_URI must be a MongoDB connection string.');
-  for (const key of ['WEB_ORIGIN', 'APP_URL', 'AWS_S3_PUBLIC_URL']) {
+  for (const key of ['WEB_ORIGIN', 'AWS_S3_PUBLIC_URL']) {
     let url: URL;
     try { url = new URL(config[key]!); } catch { throw new Error(`${key} must be an HTTPS URL.`); }
     if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||

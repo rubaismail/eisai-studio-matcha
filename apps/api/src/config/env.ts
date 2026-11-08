@@ -20,7 +20,6 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET ?? '',
   mailtrapToken: process.env.MAILTRAP_TOKEN ?? '',
   emailFrom: process.env.EMAIL_FROM ?? '',
-  appUrl: process.env.APP_URL ?? '',
   mailtrapInboxId: process.env.MAILTRAP_INBOX_ID ?? '',
   mailtrapUseSandbox: process.env.MAILTRAP_USE_SANDBOX ?? '',
   awsS3Bucket: process.env.AWS_S3_BUCKET ?? 'eisai-menu-images',
@@ -55,11 +54,8 @@ export function requireEmailConfig(): {
   from: string;
   sandbox: boolean;
   inboxId?: number;
-  appUrl: string;
 } {
-  const mail = requireMailConfig();
-  const appUrl = requireAppUrl();
-  return { ...mail, appUrl };
+  return requireMailConfig();
 }
 
 function requireMailConfig(): {
@@ -95,31 +91,6 @@ function requireMailConfig(): {
   }
 
   return { token, from, sandbox, inboxId };
-}
-
-// Base URL used to build links in emails. Explicit in production; localhost fallback in dev.
-function requireAppUrl(): string {
-  const raw = env.appUrl.trim();
-
-  if (!raw) {
-    if (env.isProduction) {
-      throw new Error('APP_URL must be set in production.');
-    }
-    return `http://localhost:${env.port}`;
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error('APP_URL must be a valid absolute URL.');
-  }
-
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('APP_URL must use http or https.');
-  }
-
-  return parsed.origin + parsed.pathname.replace(/\/+$/, '');
 }
 
 // Verification and password-reset emails open website pages, which call the API.

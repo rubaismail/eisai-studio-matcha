@@ -164,7 +164,7 @@ Changing `JWT_SECRET` logs out every user. To avoid that, copy the old `JWT_SECR
 
 ## Readiness and scope
 
-PR #71 implements `POST /api/auth/forgot-password` and `POST /api/auth/reset-password?token=...`; all 14 baseline API operations now have implementations. Reset links open `WEB_ORIGIN/reset-password`; the website form is a separate dependency (#50). Do not describe the customer reset experience as ready until that page is deployed and tested. Admin pages and other frontend work remain separate. `/api/health` only checks MongoDB connectivity, not email or S3.
+PR #71 implements `POST /api/auth/forgot-password` and `POST /api/auth/reset-password?token=...`; all 14 baseline API operations now have implementations. Verification links open `WEB_ORIGIN/verify-email` and reset links open `WEB_ORIGIN/reset-password`, so the website must be deployed before customers can verify or reset; the reset form is a separate dependency (#50). Do not describe the customer reset experience as ready until that page is deployed and tested. Admin pages and other frontend work remain separate. `/api/health` only checks MongoDB connectivity, not email or S3.
 
 ## Server prerequisites
 
@@ -180,7 +180,7 @@ Copy [deploy/.env.example](../deploy/.env.example) to `/etc/eisai/api.env`, root
 
 - `MONGODB_URI` to the authenticated local AWS database, e.g. `mongodb://USER:ENCODED_PASSWORD@127.0.0.1:27017/eisai_staging?authSource=eisai_staging`. Percent-encode credentials. Do not put it in command-line arguments or logs.
 - A separate random `JWT_SECRET` of at least 32 characters; generate it privately with a cryptographic random generator.
-- `WEB_ORIGIN` to the website's HTTPS origin (no trailing slash, to match browser CORS origins) and `APP_URL` to the API's HTTPS origin. Both are the staging hostname for this topology. Reset links use the former; verification links use the latter.
+- `WEB_ORIGIN` to the website's HTTPS origin (no trailing slash, to match browser CORS origins). Verification and password-reset email links open website pages on this origin. (`APP_URL` is no longer used; an old value in `api.env` is ignored and can be deleted.)
 - Live Mailtrap credentials, a verified sender/domain and `MAILTRAP_USE_SANDBOX=false`. Sandbox captures messages and does not prove delivery to customers.
 - `AWS_REGION`, `AWS_S3_BUCKET` and `AWS_S3_PUBLIC_URL` for the actual image bucket/distribution. Public image reads must work without a login. Keep a private S3 bucket behind CloudFront with origin access control, or document the approved public-read configuration. Never grant public write access.
 - A dedicated least-privilege credential identity for uploads on Lightsail. Permit `s3:PutObject` only on `arn:aws:s3:::YOUR_IMAGE_BUCKET/menu/*`; add KMS permissions only if your chosen encryption requires them. Store and rotate credentials securely. Do not assume EC2 instance-profile roles are attached to Lightsail. For temporary credentials, arrange renewal and set `AWS_SESSION_TOKEN`.

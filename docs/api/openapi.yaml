@@ -36,14 +36,14 @@ x-email-configuration:
       description: Mailtrap API token for the selected mode.
     - name: EMAIL_FROM
       description: Sender address shown in the verification email; must be verified.
-    - name: APP_URL
-      description: >-
-        Public base URL used to build absolute verification links. Required in production; a blank
-        value is rejected. Development defaults to http://localhost:4000 (or the configured PORT).
     - name: WEB_ORIGIN
-      description: Website origin for password-reset forms; defaults to http://localhost:5173 locally. Set to the public website origin in production.
+      description: >-
+        Website origin used to build verification and password-reset links; defaults to
+        http://localhost:5173 locally. Set to the public website origin in production.
   verification-link:
-    pattern: '<APP_URL origin>/api/auth/verify?token=<raw-token>'
+    pattern: '<WEB_ORIGIN>/verify-email?token=<raw-token>'
+    description: >-
+      Opens the website's Verify email page, which calls GET /api/auth/verify?token=<raw-token>.
   verification-token:
     ttl-minutes: 15
     single-use: true

@@ -19,8 +19,6 @@ mock.module('nodemailer', {
 // Configure before importing the real service: it captures configuration at startup.
 env.mailtrapToken = '  test-token  ';
 env.emailFrom = '  sender@example.com  ';
-// APP_URL is the API origin; verification links must use the website origin instead.
-env.appUrl = 'https://api.example.com/base?ignored=true';
 env.webOrigin = 'https://www.example.com';
 const { sendVerificationEmail } = await import('../src/services/email.js');
 
