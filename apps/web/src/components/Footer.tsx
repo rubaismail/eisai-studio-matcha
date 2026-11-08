@@ -87,15 +87,17 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t border-white/35 px-4 pt-[18px] pb-6 font-mono text-[11px] tracking-[0.08em] uppercase lg:flex-row lg:justify-between lg:px-[43px] lg:pt-5 lg:pb-7 lg:text-[12px]">
+      {/* Phone: right padding keeps the text clear of the illustration. */}
+      <div className="flex flex-col gap-1.5 border-t border-white/35 pt-[18px] pb-6 pl-4 pr-[120px] font-mono text-[11px] tracking-[0.08em] uppercase lg:flex-row lg:justify-between lg:px-[43px] lg:pt-5 lg:pb-7 lg:text-[12px]">
         <p>Copyright © Eisai Studio LLC</p>
         <p>Eisai Studio LLC · Orlando, Florida</p>
       </div>
 
+      {/* Desktop: sits just left of the address so it never covers it. */}
       <img
         src={matchaMan}
         alt=""
-        className="pointer-events-none absolute right-4 -bottom-[45px] h-[115px] w-24 object-contain opacity-90 lg:right-[115px] lg:-bottom-[70px] lg:h-[180px] lg:w-[150px]"
+        className="pointer-events-none absolute right-4 -bottom-[45px] h-[115px] w-24 object-contain opacity-90 lg:right-[340px] lg:-bottom-[70px] lg:h-[180px] lg:w-[150px]"
       />
     </footer>
   );
