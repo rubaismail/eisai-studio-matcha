@@ -401,6 +401,16 @@ export default function AdminPage() {
     }
   }
 
+  // Puts a drink saved from the form into the list, new or edited. This runs even
+  // if the user has already left that form, so the list matches the server.
+  function saveToList(saved: MenuItem) {
+    setItems((current) =>
+      current.some((item) => item._id === saved._id)
+        ? current.map((item) => (item._id === saved._id ? saved : item))
+        : [...current, saved],
+    );
+  }
+
   function updateItem(updated: MenuItem) {
     setItems((current) =>
       current.map((item) => (item._id === updated._id ? updated : item)),
@@ -528,7 +538,11 @@ export default function AdminPage() {
           className="bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24 xl:w-[440px] xl:shrink-0 xl:border-l xl:border-[#1a1a1a] xl:bg-[#f4f4f4] xl:px-9"
         >
           {isNew ? (
-            <MenuItemForm key="new" onClose={closePanel} />
+            <MenuItemForm
+              key="new"
+              onClose={closePanel}
+              runSave={(save) => save().then(saveToList)}
+            />
           ) : status === 'loading' ? (
             <p className="text-[#1a1a1a]">Loading drink…</p>
           ) : editItem ? (
@@ -537,9 +551,9 @@ export default function AdminPage() {
               item={editItem}
               onClose={closePanel}
               // Saving shares the drink's pending state with its row, so the two
-              // can't overlap. The list reloads when the panel closes.
+              // can't overlap, and the saved drink goes into the list.
               pending={pendingIds.has(editItem._id)}
-              runSave={(save) => mutate(editItem._id, save, () => {})}
+              runSave={(save) => mutate(editItem._id, save, saveToList)}
             />
           ) : (
             <div className="flex flex-col gap-4">

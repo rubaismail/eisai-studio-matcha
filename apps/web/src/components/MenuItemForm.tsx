@@ -2,20 +2,21 @@
 // /admin/:id/edit.
 import { useEffect, useId, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useBlocker } from 'react-router';
 import { ApiError } from '../api/client';
 import { createMenuItem, updateMenuItem, uploadMenuImage } from '../api/menu';
 import type { MenuItemInput } from '../api/menu';
 import type { MenuItem } from '../types/menu';
 
 type Base = '' | 'matcha' | 'hojicha' | 'both';
-type FieldName = 'name' | 'price' | 'imageAlt';
+type FieldName = 'name' | 'category' | 'price' | 'imageAlt';
 // After a photo is replaced, its old description has to be reviewed before saving.
 type AltReview = 'none' | 'needed' | 'confirmed';
 
 interface FormValues {
   name: string;
   inspiredBy: string;
+  category: string;
   base: Base;
   price: string;
   description: string;
@@ -36,8 +37,12 @@ const PHOTO_SIZE_ERROR =
 const PHOTO_UPLOAD_ERROR =
   'Couldn’t upload that photo. Please try again. Everything else you entered is still here.';
 
+const DEFAULT_CATEGORY = 'Drinks';
+const LEAVE_MESSAGE = 'You have unsaved changes. Leave without saving them?';
+
 const FIELD_LABELS: Record<FieldName, string> = {
   name: 'Drink name',
+  category: 'Category',
   price: 'Price',
   imageAlt: 'Describe the photo',
 };
@@ -60,6 +65,7 @@ function toValues(item?: MenuItem): FormValues {
     return {
       name: '',
       inspiredBy: '',
+      category: DEFAULT_CATEGORY,
       base: '',
       price: '',
       description: '',
@@ -76,6 +82,7 @@ function toValues(item?: MenuItem): FormValues {
   return {
     name: item.name,
     inspiredBy: item.inspiredBy,
+    category: item.category,
     base:
       matcha && hojicha ? 'both' : matcha ? 'matcha' : hojicha ? 'hojicha' : '',
     price: String(item.price),
@@ -98,6 +105,7 @@ function toInput(values: FormValues): MenuItemInput {
   return {
     name: values.name.trim(),
     inspiredBy: values.inspiredBy.trim(),
+    category: values.category.trim(),
     teaBases: teaBasesFor(values.base),
     price: Number(values.price.trim()),
     description: values.description.trim(),
@@ -139,6 +147,9 @@ function validate(
   if (!values.name.trim()) {
     errors.name = 'Give the drink a name so customers can order it.';
   }
+  if (!values.category.trim()) {
+    errors.category = 'Enter a category, like Drinks.';
+  }
   const price = values.price.trim();
   if (!price) {
     errors.price = 'Enter a price, like 6.50.';
@@ -164,8 +175,9 @@ export default function MenuItemForm({
   onClose: () => void;
   // True while another save for this drink (e.g. a list checkbox) is in flight.
   pending?: boolean;
-  // Lets the dashboard run the save through its per-drink pending state.
-  runSave?: (save: () => Promise<unknown>) => Promise<unknown>;
+  // Lets the dashboard run the save (pending state, list update). It must keep
+  // working after this form is gone, since the server can still finish the save.
+  runSave?: (save: () => Promise<MenuItem>) => Promise<unknown>;
 }) {
   const [initialValues] = useState(() => toValues(item));
   // The drink as it was when the form opened. Changes are worked out against this,
@@ -184,6 +196,11 @@ export default function MenuItemForm({
   const summaryRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const savingRef = useRef(false);
+  // False once the user has left this form. A save that finishes after that
+  // must not close or change whatever form is showing now.
+  const isOpen = useRef(true);
+  // Set just before this form closes itself, so the leave guard lets it through.
+  const leaveAllowed = useRef(false);
   const latestAlt = useRef(values.imageAlt);
   latestAlt.current = values.imageAlt;
   const id = useId();
@@ -201,6 +218,28 @@ export default function MenuItemForm({
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    isOpen.current = true;
+    return () => {
+      isOpen.current = false;
+    };
+  }, []);
+
+  // One guard for every way of leaving with unsaved changes: links (+ Add a
+  // drink, another drink's Edit, the navbar) and the browser's Back button.
+  // Declining keeps this route and everything typed.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty &&
+      !leaveAllowed.current &&
+      currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return;
+    if (window.confirm(LEAVE_MESSAGE)) blocker.proceed();
+    else blocker.reset();
+  }, [blocker]);
 
   useEffect(() => {
     if (focusSummary > 0) summaryRef.current?.focus();
@@ -226,11 +265,15 @@ export default function MenuItemForm({
     return ids.filter(Boolean).join(' ') || undefined;
   }
 
-  function confirmLeave() {
-    return (
-      !dirty ||
-      window.confirm('You have unsaved changes. Leave without saving them?')
-    );
+  // Closes this form on purpose (save, Cancel, Back to the list), past the guard.
+  function close() {
+    leaveAllowed.current = true;
+    onClose();
+  }
+
+  // Cancel and "Back to the list" ask here, so the guard doesn't ask twice.
+  function cancel() {
+    if (!dirty || window.confirm(LEAVE_MESSAGE)) close();
   }
 
   async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
@@ -289,17 +332,22 @@ export default function MenuItemForm({
     const input = toInput(values);
     const changes = openedItem ? changedFields(input, openedItem) : input;
     if (item && Object.keys(changes).length === 0) {
-      onClose();
+      close();
       return;
     }
 
     savingRef.current = true;
     setSaving(true);
     try {
-      if (item) await runSave(() => updateMenuItem(item._id, changes));
-      else await createMenuItem(input);
-      onClose();
+      await runSave(() =>
+        item ? updateMenuItem(item._id, changes) : createMenuItem(input),
+      );
+      // The user may have left this form while it saved. Then the dashboard
+      // still gets the saved drink (via runSave), but nothing here may react.
+      if (!isOpen.current) return;
+      close();
     } catch {
+      if (!isOpen.current) return;
       savingRef.current = false;
       setSaving(false);
       setSaveError(
@@ -322,7 +370,7 @@ export default function MenuItemForm({
         to="/admin"
         onClick={(e) => {
           e.preventDefault();
-          if (confirmLeave()) onClose();
+          cancel();
         }}
         className={`self-start font-mono text-[12px] tracking-[0.08em] text-[#1a1a1a] uppercase underline md:text-[13px] ${focusRing}`}
       >
@@ -428,6 +476,28 @@ export default function MenuItemForm({
             placeholder="e.g. Banana bread"
             className={textInput(false)}
           />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor={fieldId('category')} className={smallLabel}>
+            Category (required)
+          </label>
+          <input
+            id={fieldId('category')}
+            type="text"
+            value={values.category}
+            onChange={(e) => set('category', e.target.value)}
+            placeholder={`e.g. ${DEFAULT_CATEGORY}`}
+            aria-required="true"
+            aria-invalid={errors.category ? true : undefined}
+            aria-describedby={describedBy('category', false, errors.category)}
+            className={textInput(Boolean(errors.category))}
+          />
+          {errors.category && (
+            <p id={`${fieldId('category')}-error`} className={errorText}>
+              {errors.category}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -657,9 +727,7 @@ export default function MenuItemForm({
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirmLeave()) onClose();
-            }}
+            onClick={cancel}
             className={`${button} border-[#1a1a1a] bg-white text-[#1a1a1a]`}
           >
             Cancel

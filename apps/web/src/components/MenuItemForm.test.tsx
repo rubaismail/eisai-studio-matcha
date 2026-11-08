@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -7,7 +8,13 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import AdminPage from '../pages/AdminPage';
 import type { MenuItem } from '../types/menu';
 
@@ -43,25 +50,43 @@ function CurrentPath() {
   return <p data-testid="path">{useLocation().pathname}</p>;
 }
 
-// Renders the dashboard routes at `path`. The first request is always the
-// dashboard list; `replies` answer the requests after it, in order.
-function renderAt(path: string, items: MenuItem[], ...replies: unknown[]) {
+// The router from the latest renderAt, for tests that use the browser's Back button.
+let router: ReturnType<typeof createMemoryRouter>;
+
+// Renders the dashboard routes at `path` (or a history of paths, ending at the
+// current one). A data router is used, as in main.tsx, so the leave guard works.
+// The first request is always the dashboard list; `replies` answer the requests
+// after it, in order.
+function renderAt(
+  path: string | string[],
+  items: MenuItem[],
+  ...replies: unknown[]
+) {
   const fetchMock = vi
     .fn()
     .mockResolvedValue(success({ items }))
     .mockResolvedValueOnce(success({ items }));
   for (const reply of replies) fetchMock.mockResolvedValueOnce(reply);
   vi.stubGlobal('fetch', fetchMock);
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/new" element={<AdminPage />} />
-        <Route path="/admin/:id/edit" element={<AdminPage />} />
-      </Routes>
-      <CurrentPath />
-    </MemoryRouter>,
+  router = createMemoryRouter(
+    [
+      {
+        path: '*',
+        element: (
+          <>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/new" element={<AdminPage />} />
+              <Route path="/admin/:id/edit" element={<AdminPage />} />
+            </Routes>
+            <CurrentPath />
+          </>
+        ),
+      },
+    ],
+    { initialEntries: Array.isArray(path) ? path : [path] },
   );
+  render(<RouterProvider router={router} />);
   return fetchMock;
 }
 
@@ -374,6 +399,7 @@ test('creates a drink with the defaults, closes the panel and refreshes the list
   expect(bodyOf(formRequests(fetchMock)[0]!)).toEqual({
     name: 'Kyoto Fog',
     inspiredBy: '',
+    category: 'Drinks',
     teaBases: ['matcha', 'hojicha'],
     price: 6.5,
     description: 'Whole milk / Earl grey foam',
@@ -577,4 +603,187 @@ test('the edit form and the drink’s list row never save at the same time', asy
     expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin$/),
   );
   expect(bodyOf(formRequests(fetchMock)[1]!)).toEqual({ name: 'Mango Tango' });
+});
+
+// --- Leave guard (PR #80 review) ---
+
+const kyoto: MenuItem = {
+  ...mango,
+  _id: 'k2',
+  name: 'Kyoto Fog',
+  imageUrl: '',
+  imageAlt: '',
+};
+
+test('switching to another form with unsaved changes asks first; declining keeps everything', async () => {
+  renderAt('/admin/m1/edit', [mango]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  type(/drink name/i, 'Mango Tango');
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+
+  fireEvent.click(screen.getByRole('link', { name: '+ Add a drink' }));
+  await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin\/m1\/edit$/);
+  expect(field(/drink name/i)).toHaveValue('Mango Tango');
+
+  confirmSpy.mockReturnValueOnce(true);
+  fireEvent.click(screen.getByRole('link', { name: '+ Add a drink' }));
+  await waitFor(() =>
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin\/new$/),
+  );
+  expect(
+    inPanel().getByRole('heading', { name: 'Add a drink' }),
+  ).toBeInTheDocument();
+  expect(confirmSpy).toHaveBeenCalledTimes(2);
+});
+
+test('opening another drink’s Edit with unsaved changes asks first', async () => {
+  renderAt('/admin/m1/edit', [mango, kyoto]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  type(/what’s in it/i, 'Mango / Oat milk');
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+
+  fireEvent.click(screen.getByRole('link', { name: 'Edit Kyoto Fog' }));
+  await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin\/m1\/edit$/);
+  expect(field(/what’s in it/i)).toHaveValue('Mango / Oat milk');
+
+  confirmSpy.mockReturnValueOnce(true);
+  fireEvent.click(screen.getByRole('link', { name: 'Edit Kyoto Fog' }));
+  expect(
+    await inPanel().findByRole('heading', { name: 'Editing Kyoto Fog' }),
+  ).toBeInTheDocument();
+});
+
+test('the browser Back button is guarded too', async () => {
+  renderAt(['/admin', '/admin/new'], []);
+  type(/drink name/i, 'Kyoto Fog');
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+
+  await act(() => router.navigate(-1));
+  await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin\/new$/);
+  expect(field(/drink name/i)).toHaveValue('Kyoto Fog');
+
+  confirmSpy.mockReturnValueOnce(true);
+  await act(() => router.navigate(-1));
+  await waitFor(() =>
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin$/),
+  );
+});
+
+test('leaving a form without changes doesn’t ask', async () => {
+  renderAt('/admin/m1/edit', [mango, kyoto]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  const confirmSpy = vi.spyOn(window, 'confirm');
+  fireEvent.click(screen.getByRole('link', { name: 'Edit Kyoto Fog' }));
+  expect(
+    await inPanel().findByRole('heading', { name: 'Editing Kyoto Fog' }),
+  ).toBeInTheDocument();
+  expect(confirmSpy).not.toHaveBeenCalled();
+});
+
+// --- A save that finishes after its form was left (PR #80 review) ---
+
+test('a delayed save can’t close or change a newer form, but still updates the list', async () => {
+  const fetchMock = renderAt('/admin/m1/edit', [mango, kyoto]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  await waitFor(() => expect(listLoads(fetchMock)).toBe(1));
+  let replyToSave!: (response: unknown) => void;
+  fetchMock.mockReturnValueOnce(
+    new Promise((resolve) => {
+      replyToSave = resolve;
+    }),
+  );
+  type(/drink name/i, 'Mango Tango');
+  saveChanges();
+  await waitFor(() =>
+    expect(inPanel().getByRole('button', { name: 'Saving…' })).toBeDisabled(),
+  );
+
+  // Leave while it's saving, then start editing another drink.
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  fireEvent.click(screen.getByRole('link', { name: 'Edit Kyoto Fog' }));
+  await inPanel().findByRole('heading', { name: 'Editing Kyoto Fog' });
+  type(/drink name/i, 'Kyoto Haze');
+
+  // The first save finishes now.
+  replyToSave(success({ item: { ...mango, name: 'Mango Tango' } }));
+  expect(
+    await screen.findByRole('heading', { name: 'Mango Tango' }),
+  ).toBeInTheDocument();
+
+  // The newer form is untouched and nothing navigated.
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin\/k2\/edit$/);
+  expect(
+    inPanel().getByRole('heading', { name: 'Editing Kyoto Fog' }),
+  ).toBeInTheDocument();
+  expect(field(/drink name/i)).toHaveValue('Kyoto Haze');
+  expect(inPanel().queryByRole('alert')).toBeNull();
+  expect(bodyOf(formRequests(fetchMock)[0]!)).toEqual({ name: 'Mango Tango' });
+});
+
+// --- Category ---
+
+test('create sends the category typed in', async () => {
+  const fetchMock = renderAt('/admin/new', [], success({ item: mango }, 201));
+  expect(field(/^category/i)).toHaveValue('Drinks');
+  type(/drink name/i, 'Hojicha Latte');
+  type(/^price/i, '5');
+  type(/^category/i, ' Seasonal specials ');
+  submit();
+
+  await expectBackOnList(fetchMock);
+  expect(bodyOf(formRequests(fetchMock)[0]!)).toMatchObject({
+    name: 'Hojicha Latte',
+    category: 'Seasonal specials',
+  });
+});
+
+test('editing only the category sends only the category', async () => {
+  const fetchMock = renderAt(
+    '/admin/m1/edit',
+    [mango],
+    success({ item: mango }),
+  );
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  expect(field(/^category/i)).toHaveValue('Drinks');
+  type(/^category/i, 'Lattes');
+  saveChanges();
+
+  await expectBackOnList(fetchMock);
+  expect(bodyOf(formRequests(fetchMock)[0]!)).toEqual({ category: 'Lattes' });
+});
+
+test('editing another field doesn’t send the category', async () => {
+  const fetchMock = renderAt(
+    '/admin/m1/edit',
+    [mango],
+    success({ item: mango }),
+  );
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  type(/inspired by/i, 'Mango lassi');
+  saveChanges();
+
+  await expectBackOnList(fetchMock);
+  const body = bodyOf(formRequests(fetchMock)[0]!);
+  expect(body).toEqual({ inspiredBy: 'Mango lassi' });
+  expect(body).not.toHaveProperty('category');
+});
+
+test('an empty category shows an error linked to the field', () => {
+  const fetchMock = renderAt('/admin/new', []);
+  type(/drink name/i, 'Hojicha Latte');
+  type(/^price/i, '5');
+  type(/^category/i, '  ');
+  submit();
+
+  expect(inPanel().getByRole('alert')).toHaveTextContent(
+    'Fix the 1 highlighted field',
+  );
+  expect(field(/^category/i)).toHaveAttribute('aria-invalid', 'true');
+  expect(field(/^category/i)).toHaveAccessibleDescription(
+    'Enter a category, like Drinks.',
+  );
+  expect(formRequests(fetchMock)).toHaveLength(0);
 });

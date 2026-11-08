@@ -35,8 +35,8 @@ export async function deleteMenuItem(id: string): Promise<void> {
   await apiRequest<{ message: string }>(`/menu/${id}`, { method: 'DELETE' });
 }
 
-// What the add/edit form sends. Category is left out so the API uses its default.
-export type MenuItemInput = Omit<MenuItem, '_id' | 'category'>;
+// What the add/edit form sends.
+export type MenuItemInput = Omit<MenuItem, '_id'>;
 
 export async function createMenuItem(input: MenuItemInput): Promise<MenuItem> {
   const data = await apiRequest<{ item: MenuItem }>('/menu', {
