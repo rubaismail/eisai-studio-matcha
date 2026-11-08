@@ -4,14 +4,13 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { login, resendVerification } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { emailError } from '../auth/validation';
 import type { LoginRedirectState } from '../auth/guards';
 import AccountLayout from '../components/AccountLayout';
 import Notice from '../components/Notice';
 import TextField from '../components/TextField';
 import { focusRing, primaryButton, textLink } from '../components/styles';
 
-// Same pattern as the API.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // The API's rate limit window.
 const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
 
@@ -67,9 +66,7 @@ export default function LoginPage() {
 
   function validate() {
     const errors: typeof fieldErrors = {};
-    if (!email.trim()) errors.email = 'Email address is required.';
-    else if (!EMAIL_RE.test(email.trim()))
-      errors.email = 'Enter a valid email address, like you@example.com.';
+    errors.email = emailError(email);
     if (!password) errors.password = 'Password is required.';
     setFieldErrors(errors);
     if (errors.email) emailRef.current?.focus();

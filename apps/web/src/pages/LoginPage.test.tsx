@@ -223,7 +223,7 @@ test('focus goes to the first invalid field', async () => {
   renderLogin();
   fireEvent.click(screen.getByRole('button', { name: 'Log in →' }));
   await waitFor(() => expect(emailField()).toHaveFocus());
-  expect(screen.getByText('Email address is required.')).toBeInTheDocument();
+  expect(screen.getByText('Enter your email address.')).toBeInTheDocument();
 });
 
 test('an old expired token alone does not show the session-expired note', () => {
