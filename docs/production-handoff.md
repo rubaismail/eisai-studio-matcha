@@ -64,11 +64,13 @@ Remaining:
 ### Unfinished production work
 
 - [ ] **Backups:** there are none yet. At minimum, enable Lightsail automatic snapshots. Properly, schedule `mongodump` to a private backup bucket and test a restore ([deployment.md](deployment.md#backups-and-tested-restore)).
-- [ ] **Website:** the React site isn't deployed. Password-reset emails link to `https://eisaistudio.com/reset-password` (`WEB_ORIGIN`), so resets don't work until the site is live. To host it on this server:
+- [ ] **Website:** the React site isn't deployed. Password-reset emails link to `https://eisaistudio.com/reset-password` (`WEB_ORIGIN`), so resets don't work until the site is live. From PR #82 on, verification emails also link to `https://eisaistudio.com/verify-email`: **deploy the website before deploying any API release that includes #82**, or new customers can't verify. To host it on this server:
   1. Build `apps/web` with `VITE_API_URL=https://api.eisaistudio.com/api`.
   2. Add an Nginx server block for `eisaistudio.com` and `www`.
   3. Change the GoDaddy apex `A @` record from "Parked" to `18.189.160.224`.
   4. Run `sudo certbot --nginx -d eisaistudio.com -d www.eisaistudio.com`.
+  5. Redirect `www.eisaistudio.com` to `https://eisaistudio.com`. The API only allows browser requests from exactly `WEB_ORIGIN`, so pages served from `www` can't call it.
+  6. Sign up with a test address and click the verification email through to `Email verified`.
 - [ ] **Mobile app:** point Flutter's API base URL at `https://api.eisaistudio.com/api`.
 - [ ] **Monitoring:** nothing alerts if the server or API goes down. Add Lightsail metric alarms (CPU, status checks) and an uptime check on `/api/health`.
 - [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).

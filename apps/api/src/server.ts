@@ -1,4 +1,4 @@
-import { env, requireEmailConfig, requireResetPasswordOrigin } from './config/env.js';
+import { env, requireEmailConfig, requireWebOrigin } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { validateProductionConfig } from './config/production.js';
 import { createApp } from './app.js';
@@ -7,7 +7,7 @@ try {
   validateProductionConfig(process.env);
   if (env.isProduction) {
     requireEmailConfig();
-    requireResetPasswordOrigin();
+    requireWebOrigin();
   }
   await connectDatabase();
   const server = createApp().listen(env.port, process.env.HOST ?? '0.0.0.0', () => {

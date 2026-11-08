@@ -15,7 +15,6 @@ exec > >(tee -a /var/log/eisai-bootstrap.log) 2>&1
 echo "=== bootstrap start $(date -u)"
 COMMIT=d9d91e0257d4c9780b6e9692d01fc8a0ca02a394
 REPO=https://github.com/rubaismail/eisai-studio-matcha.git
-API_HOST=api.eisaistudio.com
 export DEBIAN_FRONTEND=noninteractive
 
 # MongoDB 8 refuses kernels >= 6.19 (SERVER-121912); fail loudly if so.
@@ -64,7 +63,6 @@ HOST=127.0.0.1
 PORT=4000
 TRUST_PROXY=loopback
 WEB_ORIGIN=https://eisaistudio.com
-APP_URL=https://$API_HOST
 MONGODB_URI=mongodb://eisaiApp:$APP_PW@127.0.0.1:27017/eisai_production?authSource=eisai_production
 JWT_SECRET=$JWT
 MAILTRAP_TOKEN=

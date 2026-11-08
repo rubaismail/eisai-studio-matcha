@@ -20,7 +20,6 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET ?? '',
   mailtrapToken: process.env.MAILTRAP_TOKEN ?? '',
   emailFrom: process.env.EMAIL_FROM ?? '',
-  appUrl: process.env.APP_URL ?? '',
   mailtrapInboxId: process.env.MAILTRAP_INBOX_ID ?? '',
   mailtrapUseSandbox: process.env.MAILTRAP_USE_SANDBOX ?? '',
   awsS3Bucket: process.env.AWS_S3_BUCKET ?? 'eisai-menu-images',
@@ -55,11 +54,8 @@ export function requireEmailConfig(): {
   from: string;
   sandbox: boolean;
   inboxId?: number;
-  appUrl: string;
 } {
-  const mail = requireMailConfig();
-  const appUrl = requireAppUrl();
-  return { ...mail, appUrl };
+  return requireMailConfig();
 }
 
 function requireMailConfig(): {
@@ -97,38 +93,13 @@ function requireMailConfig(): {
   return { token, from, sandbox, inboxId };
 }
 
-// Base URL used to build links in emails. Explicit in production; localhost fallback in dev.
-function requireAppUrl(): string {
-  const raw = env.appUrl.trim();
-
-  if (!raw) {
-    if (env.isProduction) {
-      throw new Error('APP_URL must be set in production.');
-    }
-    return `http://localhost:${env.port}`;
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error('APP_URL must be a valid absolute URL.');
-  }
-
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('APP_URL must use http or https.');
-  }
-
-  return parsed.origin + parsed.pathname.replace(/\/+$/, '');
-}
-
-// Password-reset emails open the website form, which submits to the API.
-export function requireResetPasswordOrigin(): string {
+// Verification and password-reset emails open website pages, which call the API.
+export function requireWebOrigin(): string {
   let url: URL;
   try {
     url = new URL(env.webOrigin.trim());
   } catch {
-    throw new Error('WEB_ORIGIN must be a valid absolute URL for password-reset emails.');
+    throw new Error('WEB_ORIGIN must be a valid absolute URL for email links.');
   }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new Error('WEB_ORIGIN must use http or https without credentials.');
