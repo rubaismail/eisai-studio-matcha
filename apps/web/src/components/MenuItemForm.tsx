@@ -157,11 +157,20 @@ function validate(
 export default function MenuItemForm({
   item,
   onClose,
+  pending = false,
+  runSave = (save) => save(),
 }: {
   item?: MenuItem;
   onClose: () => void;
+  // True while another save for this drink (e.g. a list checkbox) is in flight.
+  pending?: boolean;
+  // Lets the dashboard run the save through its per-drink pending state.
+  runSave?: (save: () => Promise<unknown>) => Promise<unknown>;
 }) {
   const [initialValues] = useState(() => toValues(item));
+  // The drink as it was when the form opened. Changes are worked out against this,
+  // so a list checkbox saved meanwhile isn't undone by this form's older value.
+  const [openedItem] = useState(item);
   const [values, setValues] = useState(initialValues);
   const [submitted, setSubmitted] = useState(false);
   const [summaryFields, setSummaryFields] = useState<FieldName[]>([]);
@@ -266,7 +275,7 @@ export default function MenuItemForm({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (savingRef.current || uploading) return;
+    if (savingRef.current || uploading || pending) return;
     setSubmitted(true);
     setSaveError('');
 
@@ -278,7 +287,7 @@ export default function MenuItemForm({
     }
 
     const input = toInput(values);
-    const changes = item ? changedFields(input, item) : input;
+    const changes = openedItem ? changedFields(input, openedItem) : input;
     if (item && Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -287,7 +296,7 @@ export default function MenuItemForm({
     savingRef.current = true;
     setSaving(true);
     try {
-      if (item) await updateMenuItem(item._id, changes);
+      if (item) await runSave(() => updateMenuItem(item._id, changes));
       else await createMenuItem(input);
       onClose();
     } catch {
@@ -641,7 +650,7 @@ export default function MenuItemForm({
         <div className="flex flex-col gap-2.5 sm:flex-row">
           <button
             type="submit"
-            disabled={saving || uploading}
+            disabled={saving || uploading || pending}
             className={`${button} border-[#1a1a1a] bg-[#1a1a1a] text-white`}
           >
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add to menu'}

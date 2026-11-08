@@ -528,3 +528,53 @@ test('the preview is display-only and adds nothing to the tab order', async () =
   ).toHaveLength(0);
   expect(tile().getByText('Recommended')).toBeInTheDocument();
 });
+
+// --- Shared per-drink pending state with the list ---
+
+test('the edit form and the drink’s list row never save at the same time', async () => {
+  const fetchMock = renderAt('/admin/m1/edit', [mango]);
+  await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+  const rowCheckbox = screen.getByRole('checkbox', {
+    name: 'Recommended: Mango Dango',
+  });
+
+  // A list checkbox save is pending, so the form can't save this drink yet.
+  let replyToToggle!: (response: unknown) => void;
+  fetchMock.mockReturnValueOnce(
+    new Promise((resolve) => {
+      replyToToggle = resolve;
+    }),
+  );
+  fireEvent.click(rowCheckbox);
+  await waitFor(() =>
+    expect(
+      inPanel().getByRole('button', { name: 'Save changes' }),
+    ).toBeDisabled(),
+  );
+  replyToToggle(success({ item: { ...mango, isRecommended: false } }));
+  await waitFor(() =>
+    expect(
+      inPanel().getByRole('button', { name: 'Save changes' }),
+    ).toBeEnabled(),
+  );
+
+  // While the form saves, the drink's row is locked.
+  let replyToSave!: (response: unknown) => void;
+  fetchMock.mockReturnValueOnce(
+    new Promise((resolve) => {
+      replyToSave = resolve;
+    }),
+  );
+  type(/drink name/i, 'Mango Tango');
+  saveChanges();
+  await waitFor(() => expect(rowCheckbox).toBeDisabled());
+  expect(
+    screen.getByRole('button', { name: 'Delete Mango Dango' }),
+  ).toBeDisabled();
+
+  replyToSave(success({ item: { ...mango, name: 'Mango Tango' } }));
+  await waitFor(() =>
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/admin$/),
+  );
+  expect(bodyOf(formRequests(fetchMock)[1]!)).toEqual({ name: 'Mango Tango' });
+});
