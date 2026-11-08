@@ -1,24 +1,27 @@
 import type { ReactNode } from 'react';
 import { label } from './styles';
 
+// Column widths from the designs: forms 440px, Check your inbox 474px,
+// message pages like Staff only 560px.
+const widths = { sm: 'max-w-110', md: 'max-w-[474px]', lg: 'max-w-140' };
+
 export default function AccountLayout({
   eyebrow = 'Your Eisai account',
   title,
   intro,
-  wide = false,
+  size = 'sm',
   children,
 }: {
   eyebrow?: string;
   title: string;
   intro?: ReactNode;
-  // 560px instead of 440px.
-  wide?: boolean;
+  size?: keyof typeof widths;
   children: ReactNode;
 }) {
   return (
     <section className="px-4 pt-12 pb-18 md:px-15 md:pt-24 md:pb-28">
       <div
-        className={`mx-auto flex w-full flex-col gap-6 md:gap-7 ${wide ? 'max-w-140' : 'max-w-110'}`}
+        className={`mx-auto flex w-full flex-col gap-6 md:gap-7 ${widths[size]}`}
       >
         <div className="flex flex-col gap-2.5 md:gap-3">
           <p className={`${label} text-ink-muted`}>{eyebrow}</p>

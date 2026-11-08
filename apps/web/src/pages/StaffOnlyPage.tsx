@@ -17,7 +17,7 @@ export default function StaffOnlyPage() {
           staff access.
         </>
       }
-      wide
+      size="lg"
     >
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link to="/" className={primaryButton}>

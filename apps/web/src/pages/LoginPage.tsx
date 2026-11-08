@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
-import { login, resendVerification } from '../api/auth';
+import { login } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useResendVerification } from '../auth/useResendVerification';
 import { emailError } from '../auth/validation';
 import type { LoginRedirectState } from '../auth/guards';
 import AccountLayout from '../components/AccountLayout';
 import Notice from '../components/Notice';
+import ResendStatusMessage from '../components/ResendStatusMessage';
 import TextField from '../components/TextField';
-import { focusRing, primaryButton, textLink } from '../components/styles';
+import { primaryButton, switchLink, textLink } from '../components/styles';
 
 // The API's rate limit window.
 const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
@@ -20,8 +22,6 @@ type Problem =
   | { kind: 'unverified'; email: string } // 403
   | { kind: 'rate-limited'; minutes: number } // 429
   | { kind: 'failed' }; // network or server error
-
-type ResendStatus = 'idle' | 'sending' | 'sent' | 'failed';
 
 export default function LoginPage() {
   const { user, signIn } = useAuth();
@@ -40,7 +40,7 @@ export default function LoginPage() {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   // Blocks repeat submits at once; `submitting` only updates on the next render.
   const inFlight = useRef(false);
-  const [resend, setResend] = useState<ResendStatus>('idle');
+  const resend = useResendVerification();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -80,7 +80,6 @@ export default function LoginPage() {
     e.preventDefault();
     if (inFlight.current || lockedUntil !== null) return;
     setProblem({ kind: 'none' });
-    setResend('idle');
     if (!validate()) return;
 
     inFlight.current = true;
@@ -104,18 +103,6 @@ export default function LoginPage() {
       } else setProblem({ kind: 'failed' });
       inFlight.current = false;
       setSubmitting(false);
-    }
-  }
-
-  async function handleResend() {
-    setResend('sending');
-    try {
-      // The address that got the 403, not the edited field.
-      if (problem.kind === 'unverified')
-        await resendVerification(problem.email);
-      setResend('sent');
-    } catch {
-      setResend('failed');
     }
   }
 
@@ -169,32 +156,28 @@ export default function LoginPage() {
           invalid={incorrect}
         />
 
-        {unverified && (
+        {problem.kind === 'unverified' && (
           <div className="flex flex-col gap-2">
             <p className="text-[14px] leading-[21px] text-ink-muted">
               Check your inbox for the verification link.
             </p>
-            {resend === 'sent' ? (
-              <p role="status" className="text-[14px] leading-[21px] text-ink">
-                If this account still needs verifying, a new link is on its way.
-              </p>
-            ) : (
+            {/* Hidden once sent; the status line below takes its place. */}
+            {resend.status(problem.email) !== 'sent' && (
               <button
                 type="button"
-                onClick={() => void handleResend()}
-                disabled={resend === 'sending'}
+                onClick={() => void resend.send(problem.email)}
+                disabled={resend.blocked(problem.email)}
                 className={`self-start text-left disabled:opacity-60 ${textLink}`}
               >
-                {resend === 'sending'
+                {resend.status(problem.email) === 'sending'
                   ? 'Sending a new link…'
                   : 'No email? Request a new verification link →'}
               </button>
             )}
-            {resend === 'failed' && (
-              <p role="alert" className="text-[14px] leading-5 text-error">
-                Couldn’t send a new link. Please try again.
-              </p>
-            )}
+            <ResendStatusMessage
+              status={resend.status(problem.email)}
+              secondsLeft={resend.secondsLeft(problem.email)}
+            />
           </div>
         )}
 
@@ -237,10 +220,7 @@ export default function LoginPage() {
       <div className="flex flex-col gap-2.5 border-t border-ink pt-5 md:gap-3 md:pt-6">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-[16px] md:text-[17px]">New to Eisai?</span>
-          <Link
-            to="/register"
-            className={`font-mono text-[13px] tracking-[0.08em] uppercase underline md:text-[14px] underline-offset-2 hover:no-underline ${focusRing}`}
-          >
+          <Link to="/register" className={switchLink}>
             Create account →
           </Link>
         </p>

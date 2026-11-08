@@ -10,3 +10,5 @@ export const primaryButton = `${buttonBase} bg-ink text-white`;
 export const secondaryButton = `${buttonBase} bg-white text-ink`;
 
 export const textLink = `${label} text-ink underline underline-offset-2 hover:no-underline ${focusRing}`;
+
+export const switchLink = `font-mono text-[13px] tracking-[0.08em] uppercase underline underline-offset-2 hover:no-underline md:text-[14px] ${focusRing}`;
