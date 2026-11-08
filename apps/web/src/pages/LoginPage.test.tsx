@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -249,4 +250,20 @@ test('resending verification uses the address that was refused, not an edited on
   expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
     email: 'first@example.com',
   });
+});
+
+test('three clicks before the page re-renders still send one request', async () => {
+  const fetchMock = renderLogin(undefined, [
+    jsonResponse(200, { token: makeToken(), user: customer }),
+  ]);
+  fireEvent.change(emailField(), { target: { value: 'jane@example.com' } });
+  fireEvent.change(passwordField(), { target: { value: 'secret-pass' } });
+  const button = screen.getByRole('button', { name: 'Log in →' });
+  act(() => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  expect(await screen.findByText('account page')).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });

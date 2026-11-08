@@ -38,6 +38,8 @@ export default function LoginPage() {
   const [problem, setProblem] = useState<Problem>({ kind: 'none' });
   const [submitting, setSubmitting] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  // Blocks repeat submits at once; `submitting` only updates on the next render.
+  const inFlight = useRef(false);
   const [resend, setResend] = useState<ResendStatus>('idle');
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -76,11 +78,12 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting || lockedUntil !== null) return;
+    if (inFlight.current || lockedUntil !== null) return;
     setProblem({ kind: 'none' });
     setResend('idle');
     if (!validate()) return;
 
+    inFlight.current = true;
     setSubmitting(true);
     try {
       const session = await login(email, password);
@@ -99,6 +102,7 @@ export default function LoginPage() {
         setLockedUntil(Date.now() + seconds * 1000);
         setProblem({ kind: 'rate-limited', minutes: Math.ceil(seconds / 60) });
       } else setProblem({ kind: 'failed' });
+      inFlight.current = false;
       setSubmitting(false);
     }
   }
