@@ -19,7 +19,9 @@ mock.module('nodemailer', {
 // Configure before importing the real service: it captures configuration at startup.
 env.mailtrapToken = '  test-token  ';
 env.emailFrom = '  sender@example.com  ';
+// APP_URL is the API origin; verification links must use the website origin instead.
 env.appUrl = 'https://api.example.com/base?ignored=true';
+env.webOrigin = 'https://www.example.com';
 const { sendVerificationEmail } = await import('../src/services/email.js');
 
 test('real email service builds matching absolute HTML/text links with normalized sender', async () => {
@@ -31,8 +33,8 @@ test('real email service builds matching absolute HTML/text links with normalize
   const link = message.text.split('\n').find((line) => line.startsWith('https://'));
   assert.ok(link);
   const url = new URL(link);
-  assert.equal(url.origin, 'https://api.example.com');
-  assert.equal(url.pathname, '/api/auth/verify');
+  assert.equal(url.origin, 'https://www.example.com');
+  assert.equal(url.pathname, '/verify-email');
   assert.deepEqual([...url.searchParams], [['token', 'a b+c/d']]);
   assert.ok(message.html.includes(`href="${link}"`));
   assert.ok(message.text.includes('15 minutes'));

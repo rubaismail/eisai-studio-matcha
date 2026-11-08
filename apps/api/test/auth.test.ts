@@ -465,18 +465,16 @@ test('resend rejects invalid input', async () => {
 
 // ---- Email links and configuration ------------------------------------------
 
-test('buildVerificationLink produces an absolute, encoded verify URL', () => {
+test('buildVerificationLink produces an absolute, encoded website verify URL', () => {
   for (const base of [
-    'https://api.example.com',
-    'https://api.example.com/',
-    'https://api.example.com/base',
-    'https://api.example.com/base/',
+    'https://www.example.com',
+    'https://www.example.com/',
   ]) {
     const link = buildVerificationLink(base, 'a b+c/d');
     const url = new URL(link);
-    assert.equal(url.pathname, '/api/auth/verify');
+    assert.equal(url.pathname, '/verify-email');
     assert.equal(url.searchParams.get('token'), 'a b+c/d');
-    assert.equal(url.origin, 'https://api.example.com');
+    assert.equal(url.origin, 'https://www.example.com');
   }
 });
 
@@ -767,6 +765,39 @@ test('forgot-password returns generic 200 and sends nothing for unknown email', 
   assert.deepEqual(res.body, { message: MSG_FORGOT });
   assert.equal(update.mock.callCount(), 1);
   assert.equal(resetEmailCalls.length, 0);
+});
+
+test('register rejects invalid website configuration before creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+    assert.equal(res.status, 500);
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
+});
+
+test('resend-verification rejects invalid website configuration before replacing a token', async () => {
+  const update = mockUpdateOne(1);
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp())
+      .post('/api/auth/resend-verification')
+      .send({ email: 'jane@example.com' });
+    assert.equal(res.status, 500);
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
 });
 
 test('forgot-password rejects invalid website configuration before storing a token', async () => {

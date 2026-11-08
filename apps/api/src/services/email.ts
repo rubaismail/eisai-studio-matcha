@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { MailtrapTransport } from "mailtrap";
-import { requireEmailConfig, requireResetPasswordOrigin } from "../config/env.js";
+import { requireEmailConfig, requireWebOrigin } from "../config/env.js";
 
 let cached: { transport: ReturnType<typeof nodemailer.createTransport>; mail: ReturnType<typeof requireEmailConfig> } | null = null;
 
@@ -17,9 +17,10 @@ function getTransport() {
   cached = { transport, mail };
   return cached;
 }
-// Pure: builds the absolute verify URL from a base and raw token.
+// Pure: builds the absolute verify URL from the website origin and raw token.
+// The website's /verify-email page reads the token and calls GET /api/auth/verify.
 export function buildVerificationLink(baseUrl: string, rawToken: string): string {
-  const link = new URL("/api/auth/verify", baseUrl);
+  const link = new URL("/verify-email", baseUrl);
   link.searchParams.set("token", rawToken);
   return link.toString();
 }
@@ -30,8 +31,9 @@ export function buildResetLink(baseUrl: string, rawToken: string): string {
 }
 
 export async function sendVerificationEmail(recipient: string, rawToken: string): Promise<void> {
+  const origin = requireWebOrigin();
   const { transport, mail } = getTransport();
-  const link = buildVerificationLink(mail.appUrl, rawToken);
+  const link = buildVerificationLink(origin, rawToken);
 
   await transport.sendMail({
     from: mail.from,
@@ -53,7 +55,7 @@ If you didn't create an account, you can ignore this email.</p>`,
 }
 
 export async function sendResetPasswordEmail(recipient: string, rawToken: string): Promise<void> {
-  const origin = requireResetPasswordOrigin();
+  const origin = requireWebOrigin();
   const { transport, mail } = getTransport();
   const link = buildResetLink(origin, rawToken);
 

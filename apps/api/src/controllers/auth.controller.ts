@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { User } from "../models/User.js";
 import { hashPassword } from "../config/password.js";
-import { requireEmailConfig, requireResetPasswordOrigin } from "../config/env.js";
+import { requireEmailConfig, requireWebOrigin } from "../config/env.js";
 import { sendVerificationEmail, sendResetPasswordEmail } from "../services/email.js";
 import { randomBytes, createHash } from "node:crypto";
 
@@ -77,6 +77,7 @@ function hashTokens(raw: string): string {
 export async function register(req: Request, res: Response) {
   try {
     requireEmailConfig();
+    requireWebOrigin();
 
     const shapeError = validateBodyShape(req.body, REGISTER_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
@@ -178,6 +179,7 @@ export async function verify(req: Request, res: Response) {
 export async function resendVerification(req: Request, res: Response) {
   try {
     requireEmailConfig();
+    requireWebOrigin();
 
     const shapeError = validateBodyShape(req.body, RESEND_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
@@ -272,7 +274,7 @@ export async function resetPassword(req: Request, res: Response) {
 export async function forgotPassword(req: Request, res: Response) {
   try {
     requireEmailConfig();
-    requireResetPasswordOrigin();
+    requireWebOrigin();
 
     const shapeError = validateBodyShape(req.body, FORGOT_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
