@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { resendVerification } from '../api/auth';
 import { ApiError } from '../api/client';
 
@@ -14,6 +14,9 @@ export function useResendVerification() {
   const [status, setStatus] = useState<ResendStatus>('idle');
   const [waitUntil, setWaitUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // Refs block repeat clicks at once; state only updates on the next render.
+  const busy = useRef(false);
+  const blockedUntil = useRef(0);
 
   useEffect(() => {
     if (waitUntil === null) return;
@@ -33,10 +36,12 @@ export function useResendVerification() {
     const current = Date.now();
     setNow(current);
     setWaitUntil(current + seconds * 1000);
+    blockedUntil.current = current + seconds * 1000;
   }
 
   async function send(email: string) {
-    if (status === 'sending' || waitUntil !== null) return;
+    if (busy.current || Date.now() < blockedUntil.current) return;
+    busy.current = true;
     setStatus('sending');
     try {
       await resendVerification(email);
@@ -49,6 +54,8 @@ export function useResendVerification() {
       } else {
         setStatus('failed');
       }
+    } finally {
+      busy.current = false;
     }
   }
 

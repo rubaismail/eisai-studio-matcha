@@ -1,5 +1,11 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  within,
+} from '@testing-library/react';
 import { Route, Routes, useLocation } from 'react-router';
 import { admin, jsonResponse, renderWithAuth, signInAs } from '../test-utils';
 import RegisterPage from './RegisterPage';
@@ -200,4 +206,17 @@ test('links back to log in', () => {
     'href',
     '/login',
   );
+});
+
+test('three clicks before the page re-renders still send one request', async () => {
+  const fetchMock = renderRegister([jsonResponse(201, {})]);
+  fill();
+  const button = screen.getByRole('button', { name: 'Create account →' });
+  act(() => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await screen.findByText(/check email page/);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });

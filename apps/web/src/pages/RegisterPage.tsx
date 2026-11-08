@@ -38,6 +38,8 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [problem, setProblem] = useState<Problem>('none');
   const [submitting, setSubmitting] = useState(false);
+  // Blocks repeat submits at once; `submitting` only updates on the next render.
+  const inFlight = useRef(false);
   const refs = useRef<Partial<Record<Field, HTMLInputElement | null>>>({});
 
   if (user && !submitting) {
@@ -75,10 +77,11 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (inFlight.current) return;
     setProblem('none');
     if (!validate()) return;
 
+    inFlight.current = true;
     setSubmitting(true);
     const email = values.email.trim();
     try {
@@ -100,6 +103,7 @@ export default function RegisterPage() {
       } else if (status === 400) setProblem('invalid');
       else if (status === 429) setProblem('rate-limited');
       else setProblem('failed');
+      inFlight.current = false;
       setSubmitting(false);
     }
   }

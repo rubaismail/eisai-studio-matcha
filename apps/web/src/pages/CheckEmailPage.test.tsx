@@ -118,3 +118,20 @@ test('ignores an address that is not a string', () => {
   renderPage({ email: { evil: true } });
   expect(screen.getByLabelText('Email address')).toBeInTheDocument();
 });
+
+test('three quick clicks on Resend send one request', async () => {
+  const fetchMock = renderPage({ email: 'jane@example.com' }, [
+    jsonResponse(200, {}),
+    jsonResponse(200, {}),
+  ]);
+  const button = resendButton();
+  act(() => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  expect(
+    await screen.findByText(/a new link is on its way/),
+  ).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
