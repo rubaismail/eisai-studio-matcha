@@ -13,7 +13,7 @@ export default function CheckEmailPage() {
   const { status, secondsLeft, send } = useResendVerification();
 
   return (
-    <AccountLayout title="Check your inbox">
+    <AccountLayout title="Check your inbox" size="md">
       {email ? (
         <>
           <div className="flex flex-col items-start gap-4">
