@@ -54,6 +54,22 @@ class PausedWriteStore extends MemorySessionStore {
   }
 }
 
+class PausedDeleteStore extends MemorySessionStore {
+  PausedDeleteStore(super.initial);
+
+  final deleteStarted = Completer<void>();
+  final resumeDelete = Completer<void>();
+
+  @override
+  Future<void> delete(String key) async {
+    if (key == tokenKey) {
+      deleteStarted.complete();
+      await resumeDelete.future;
+    }
+    await super.delete(key);
+  }
+}
+
 void main() {
   group('login', () {
     test(
@@ -402,6 +418,47 @@ void main() {
     });
   });
 
+  test('restoration waits for logout to delete stored credentials', () async {
+    final store = PausedDeleteStore({
+      tokenKey: 'old-token',
+      emailKey: 'old@example.com',
+    });
+    final service = serviceWith(
+      MockClient((_) async => http.Response('', 500)),
+      store,
+    );
+    await service.restoreSession();
+    final seen = <String?>[];
+    service.signedInEmailListenable.addListener(
+      () => seen.add(service.currentEmail),
+    );
+
+    final logoutFuture = service.logout();
+    await store.deleteStarted.future;
+    final restoreFuture = service.restoreSession();
+    var restored = false;
+    final observedRestore = restoreFuture.then((email) {
+      restored = true;
+      return email;
+    });
+    // Let an unqueued restoration finish while the old credentials still exist.
+    await Future<void>.delayed(Duration.zero);
+    final completedDuringLogout = restored;
+    final emailDuringLogout = service.currentEmail;
+
+    store.resumeDelete.complete();
+    await logoutFuture;
+    final restoredEmail = await observedRestore;
+
+    expect(completedDuringLogout, isFalse);
+    expect(emailDuringLogout, isNull);
+    expect(restoredEmail, isNull);
+    expect(store.values, isEmpty);
+    expect(service.currentEmail, isNull);
+    expect(seen, [null]);
+    expect(await service.validToken(), isNull);
+  });
+
   test('logout prevents an old session restoration', () async {
     final store = PausedSessionStore({
       tokenKey: 'old-token',
@@ -416,13 +473,14 @@ void main() {
     final restoreFuture = service.restoreSession();
     await store.readStarted.future;
 
-    await service.logout();
-
+    final logoutFuture = service.logout();
     expect(service.currentEmail, isNull);
-    expect(store.values, isEmpty);
 
+    // Logout queues behind the active read, but invalidates it immediately.
     store.resumeRead.complete();
     final restoredEmail = await restoreFuture;
+    await logoutFuture;
+    expect(store.values, isEmpty);
 
     expect(restoredEmail, isNull);
     expect(service.currentEmail, isNull);

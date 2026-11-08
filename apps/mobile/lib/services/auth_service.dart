@@ -209,21 +209,22 @@ class AuthService {
 
   Future<String?> restoreSession() async {
     final revision = _sessionRevision;
-    final token = await _store.read(_tokenKey);
-    if (revision != _sessionRevision) {
-      return null;
-    }
-    if (token == null || token.isEmpty) {
-      _signedInEmail.value = null;
-      return null;
-    }
-    final email = await _store.read(_emailKey);
-    if (revision != _sessionRevision) {
-      return null;
-    }
+    // Reads share the write queue so restoration cannot observe credentials
+    // while logout is deleting them or login is replacing them.
+    return _withStorageLock<String?>(() async {
+      if (revision != _sessionRevision) return null;
+      final token = await _store.read(_tokenKey);
+      if (revision != _sessionRevision) return null;
+      if (token == null || token.isEmpty) {
+        _signedInEmail.value = null;
+        return null;
+      }
+      final email = await _store.read(_emailKey);
+      if (revision != _sessionRevision) return null;
 
-    _signedInEmail.value = email;
-    return email;
+      _signedInEmail.value = email;
+      return email;
+    });
   }
 
   Future<String?> validToken() async {
