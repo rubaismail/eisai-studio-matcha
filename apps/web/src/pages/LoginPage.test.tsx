@@ -231,3 +231,22 @@ test('an old expired token alone does not show the session-expired note', () => 
   renderLogin();
   expect(screen.queryByText(/session expired/i)).toBeNull();
 });
+
+test('resending verification uses the address that was refused, not an edited one', async () => {
+  const fetchMock = renderLogin(undefined, [
+    jsonResponse(403, { error: 'Please verify your email first' }),
+    jsonResponse(200, { message: 'ok' }),
+  ]);
+  fillAndSubmit('first@example.com');
+  await screen.findByText('Please verify your email to log in.');
+  fireEvent.change(emailField(), { target: { value: 'other@example.com' } });
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'No email? Request a new verification link →',
+    }),
+  );
+  await screen.findByRole('status');
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+    email: 'first@example.com',
+  });
+});

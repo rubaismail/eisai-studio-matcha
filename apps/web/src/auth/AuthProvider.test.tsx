@@ -101,3 +101,45 @@ test('signing out clears the saved session without marking it expired', () => {
   expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   expect(localStorage.getItem(USER_KEY)).toBeNull();
 });
+
+test('a slow 401 for an old token does not sign out a newer login', async () => {
+  const oldToken = signInAs(customer);
+  let respond: (value: unknown) => void = () => {};
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => new Promise((resolve) => (respond = resolve))),
+  );
+  renderWithAuth(<Status />);
+  const request = apiRequest('/menu/admin/menu');
+  const newToken = signInAs(customer, 7200);
+  expect(newToken).not.toBe(oldToken);
+  respond(jsonResponse(401, { error: 'Invalid or expired token' }));
+  await expect(request).rejects.toMatchObject({ status: 401 });
+  expect(localStorage.getItem(TOKEN_KEY)).toBe(newToken);
+  expect(screen.getByText('expired: false')).toBeInTheDocument();
+});
+
+test('logging in still works when the browser blocks storage', () => {
+  const setItem = vi
+    .spyOn(Storage.prototype, 'setItem')
+    .mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+  function SignIn() {
+    const { signIn } = useAuth();
+    return (
+      <button onClick={() => signIn({ token: makeToken(), user: customer })}>
+        sign in
+      </button>
+    );
+  }
+  renderWithAuth(
+    <>
+      <SignIn />
+      <Status />
+    </>,
+  );
+  act(() => screen.getByText('sign in').click());
+  expect(screen.getByText('user: jane@example.com')).toBeInTheDocument();
+  setItem.mockRestore();
+});

@@ -33,11 +33,14 @@ export function signInAs(user: AuthUser, secondsFromNow = 3600) {
   return token;
 }
 
-export function renderWithAuth(ui: ReactNode, initialEntries = ['/']) {
+export function renderWithAuth(
+  ui: ReactNode,
+  initialEntries: Parameters<typeof MemoryRouter>[0]['initialEntries'] = ['/'],
+) {
   return render(
-    <AuthProvider>
-      <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-    </AuthProvider>,
+    <MemoryRouter initialEntries={initialEntries}>
+      <AuthProvider>{ui}</AuthProvider>
+    </MemoryRouter>,
   );
 }
 

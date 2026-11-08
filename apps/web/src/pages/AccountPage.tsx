@@ -1,18 +1,12 @@
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import AccountLayout from '../components/AccountLayout';
 import { label, primaryButton, secondaryButton } from '../components/styles';
 
 // Email only: login returns no name and there's no profile endpoint.
 export default function AccountPage() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user, logOut } = useAuth();
   if (!user) return null;
-
-  function handleLogOut() {
-    signOut();
-    navigate('/', { replace: true });
-  }
 
   return (
     <AccountLayout title="My account." intro="Manage your account details.">
@@ -40,7 +34,7 @@ export default function AccountPage() {
       </Link>
       <button
         type="button"
-        onClick={handleLogOut}
+        onClick={logOut}
         className={`w-full ${primaryButton}`}
       >
         Log out

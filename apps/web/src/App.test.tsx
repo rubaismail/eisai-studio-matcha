@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router';
@@ -18,14 +19,20 @@ function renderApp(path: string) {
     'fetch',
     vi.fn().mockResolvedValue(jsonResponse(200, { items: [] })),
   );
-  const router = createMemoryRouter([{ path: '*', element: <App /> }], {
-    initialEntries: [path],
-  });
-  render(
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>,
+  const router = createMemoryRouter(
+    [
+      {
+        path: '*',
+        element: (
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        ),
+      },
+    ],
+    { initialEntries: [path] },
   );
+  render(<RouterProvider router={router} />);
   return router;
 }
 
@@ -91,4 +98,58 @@ test('customers who open the menu editor see Staff only with the footer', async 
     await screen.findByRole('heading', { name: 'Staff only.' }),
   ).toBeInTheDocument();
   expect(screen.getByText('Whisking schedule')).toBeInTheDocument();
+});
+
+test('Log out with unsaved menu edits: Cancel keeps the edits and the login', async () => {
+  signInAs(admin);
+  const router = renderApp('/admin/new');
+  const name = await screen.findByLabelText(/Drink name/);
+  fireEvent.change(name, { target: { value: 'Yuzu Cloud' } });
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
+
+  fireEvent.click(
+    within(desktopNav()).getByRole('button', { name: 'Log out' }),
+  );
+
+  await waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+  expect(router.state.location.pathname).toBe('/admin/new');
+  expect(screen.getByLabelText(/Drink name/)).toHaveValue('Yuzu Cloud');
+  expect(localStorage.getItem(TOKEN_KEY)).not.toBeNull();
+  confirmSpy.mockRestore();
+});
+
+test('Log out with unsaved menu edits: confirming leaves and signs out', async () => {
+  signInAs(admin);
+  const router = renderApp('/admin/new');
+  const name = await screen.findByLabelText(/Drink name/);
+  fireEvent.change(name, { target: { value: 'Yuzu Cloud' } });
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+
+  fireEvent.click(
+    within(desktopNav()).getByRole('button', { name: 'Log out' }),
+  );
+
+  expect(
+    await screen.findByRole('heading', { name: 'Eisai Studio' }),
+  ).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe('/');
+  expect(router.state.location.state).toBeNull();
+  expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+  confirmSpy.mockRestore();
+});
+
+test('Find us on the menu editor goes to the home page footer', async () => {
+  signInAs(admin);
+  renderApp('/admin');
+  await screen.findByText('No drinks yet');
+  expect(
+    within(desktopNav()).getByRole('link', { name: 'Find us' }),
+  ).toHaveAttribute('href', '/#find-us');
+});
+
+test('signed-in admins who open /login go to the menu editor', async () => {
+  signInAs(admin);
+  const router = renderApp('/login');
+  await screen.findByText('No drinks yet');
+  expect(router.state.location.pathname).toBe('/admin');
 });

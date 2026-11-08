@@ -7,12 +7,20 @@ import './index.css';
 
 // A data router is needed for useBlocker, which guards the add/edit form's
 // unsaved changes. App still declares every page's route itself.
-const router = createBrowserRouter([{ path: '*', element: <App /> }]);
+// AuthProvider is inside the router because logOut navigates.
+const router = createBrowserRouter([
+  {
+    path: '*',
+    element: (
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    ),
+  },
+]);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

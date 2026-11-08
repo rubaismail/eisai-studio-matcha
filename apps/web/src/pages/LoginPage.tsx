@@ -18,7 +18,7 @@ const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
 type Problem =
   | { kind: 'none' }
   | { kind: 'incorrect' } // 401
-  | { kind: 'unverified' } // 403
+  | { kind: 'unverified'; email: string } // 403
   | { kind: 'rate-limited'; minutes: number } // 429
   | { kind: 'failed' }; // network or server error
 
@@ -57,7 +57,8 @@ export default function LoginPage() {
 
   // Already signed in.
   if (user && !submitting) {
-    return <Navigate to={redirect.from ?? '/account'} replace />;
+    const home = user.role === 'admin' ? '/admin' : '/account';
+    return <Navigate to={redirect.from ?? home} replace />;
   }
 
   // Only when a guard sent them here.
@@ -92,7 +93,8 @@ export default function LoginPage() {
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       if (status === 401) setProblem({ kind: 'incorrect' });
-      else if (status === 403) setProblem({ kind: 'unverified' });
+      else if (status === 403)
+        setProblem({ kind: 'unverified', email: email.trim() });
       else if (status === 429) {
         const seconds =
           (err instanceof ApiError && err.retryAfterSeconds) ||
@@ -107,7 +109,9 @@ export default function LoginPage() {
   async function handleResend() {
     setResend('sending');
     try {
-      await resendVerification(email);
+      // The address that got the 403, not the edited field.
+      if (problem.kind === 'unverified')
+        await resendVerification(problem.email);
       setResend('sent');
     } catch {
       setResend('failed');

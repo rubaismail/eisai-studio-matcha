@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import closeIcon from '../assets/close-x.svg';
 import logo from '../assets/eisai-logo-purple.png';
@@ -9,12 +9,16 @@ import { focusRing, label } from './styles';
 
 export const INSTAGRAM_URL = 'https://www.instagram.com/eisaistudio/';
 
+// Find us goes to the home page footer on pages without one.
 // Products is hidden until its page exists.
-const siteLinks = [
-  { to: '/menu', label: 'Menu' },
-  { to: '/#our-story', label: 'Our story' },
-  { to: '#find-us', label: 'Find us' },
-];
+function getSiteLinks(hasFooter: boolean) {
+  return [
+    { to: '/menu', label: 'Menu' },
+    { to: '/#our-story', label: 'Our story' },
+    { to: hasFooter ? '#find-us' : '/#find-us', label: 'Find us' },
+  ];
+}
+type SiteLink = ReturnType<typeof getSiteLinks>[number];
 
 type AccountLink =
   { to: string; label: string } | { action: 'logout'; label: string };
@@ -22,9 +26,9 @@ type AccountLink =
 const desktopLink = `${label} text-ink underline-offset-4 hover:underline aria-[current=page]:underline ${focusRing}`;
 const phoneRow = `flex w-full items-center justify-between border-b border-rule py-5 text-left text-[28px] tracking-[-0.01em] text-ink ${focusRing}`;
 
-export default function Navbar() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
+  const { user, logOut } = useAuth();
+  const siteLinks = getSiteLinks(hasFooter);
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
@@ -73,8 +77,7 @@ export default function Navbar() {
 
   function handleLogOut() {
     setOpen(false);
-    signOut();
-    navigate('/');
+    logOut();
   }
 
   // Escape closes; Tab stays inside.
@@ -98,11 +101,7 @@ export default function Navbar() {
     }
   }
 
-  function renderSiteLink(
-    item: (typeof siteLinks)[number],
-    className: string,
-    phone = false,
-  ) {
+  function renderSiteLink(item: SiteLink, className: string, phone = false) {
     const content = phone ? <PhoneRowContent label={item.label} /> : item.label;
     // Plain anchor so the browser scrolls to it.
     if (item.to.startsWith('#')) {

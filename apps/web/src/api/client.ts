@@ -55,7 +55,8 @@ async function send<T>(
 
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   if (!res.ok) {
-    if (res.status === 401 && token) onUnauthorized?.();
+    // Ignore 401s for an old token.
+    if (res.status === 401 && token && getToken() === token) onUnauthorized?.();
     throw await toApiError(res);
   }
   return res.json() as Promise<T>;

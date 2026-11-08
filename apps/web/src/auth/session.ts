@@ -9,7 +9,11 @@ export interface Session {
   user: AuthUser;
 }
 
+// Only used if localStorage fails.
+let memorySession: Session | null = null;
+
 export function getToken(): string | null {
+  if (memorySession) return memorySession.token;
   try {
     return localStorage.getItem(TOKEN_KEY);
   } catch {
@@ -51,12 +55,19 @@ export function readSession(now = Date.now()): Session | null {
   }
 }
 
-export function saveSession({ token, user }: Session) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+export function saveSession(session: Session) {
+  memorySession = null;
+  try {
+    localStorage.setItem(TOKEN_KEY, session.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  } catch {
+    // Storage blocked: keep it in memory.
+    memorySession = session;
+  }
 }
 
 export function clearSession() {
+  memorySession = null;
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
