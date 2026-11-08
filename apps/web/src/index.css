@@ -1,15 +1,30 @@
 @import 'tailwindcss';
 
-/* Brand colors and fonts. Replace these with the client's exact codes from Figma.
-   Use them in classes like bg-matcha, text-ink, border-cream. */
+/* Brand colors and fonts from the style guide. */
 @theme {
+  --color-ink: #1a1a1a;
+  --color-ink-muted: #4a4a4a;
+  --color-placeholder: #595959;
+  --color-rule: #e4e4e4;
+  --color-tile: #f4f4f4;
+  --color-purple: #8c9eff;
+  --color-lavender: #eef0ff;
+  --color-lime: #e3ff23;
+  --color-error: #b42318;
+  --color-error-bg: #fff5f0;
+  --color-peach: #fcd9be;
+  --color-orange: #f06038;
+
+  /* Old colors used by Home and Menu until #24. */
   --color-matcha: #345b40;
   --color-matcha-light: #c5d0c5;
   --color-cream: #f8f8f4;
-  --color-ink: #25352b;
-  --font-sans: system-ui, sans-serif;
+
+  --font-sans: 'Questrial', system-ui, sans-serif;
+  /* Anonymous Pro has no → glyph; system-ui's is closer to the design. */
+  --font-mono: 'Anonymous Pro', system-ui, ui-monospace, monospace;
 }
 
 body {
-  @apply bg-cream text-ink font-sans;
+  @apply bg-white font-sans text-ink;
 }
