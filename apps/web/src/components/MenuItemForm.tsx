@@ -447,6 +447,7 @@ export default function MenuItemForm({
             Drink name (required)
           </label>
           <input
+            disabled={saving}
             id={fieldId('name')}
             type="text"
             value={values.name}
@@ -469,6 +470,7 @@ export default function MenuItemForm({
             Inspired by (optional)
           </label>
           <input
+            disabled={saving}
             id={fieldId('inspiredBy')}
             type="text"
             value={values.inspiredBy}
@@ -483,6 +485,7 @@ export default function MenuItemForm({
             Category (required)
           </label>
           <input
+            disabled={saving}
             id={fieldId('category')}
             type="text"
             value={values.category}
@@ -505,6 +508,7 @@ export default function MenuItemForm({
             Base
           </label>
           <select
+            disabled={saving}
             id={fieldId('base')}
             value={values.base}
             onChange={(e) => set('base', e.target.value as Base)}
@@ -528,6 +532,7 @@ export default function MenuItemForm({
               $
             </span>
             <input
+              disabled={saving}
               id={fieldId('price')}
               type="text"
               inputMode="decimal"
@@ -555,6 +560,7 @@ export default function MenuItemForm({
             What’s in it
           </label>
           <textarea
+            disabled={saving}
             id={fieldId('description')}
             value={values.description}
             onChange={(e) => set('description', e.target.value)}
@@ -585,7 +591,7 @@ export default function MenuItemForm({
             id={fieldId('photo')}
             type="file"
             accept={PHOTO_TYPES.join(',')}
-            disabled={uploading}
+            disabled={saving || uploading}
             onChange={(e) => void handlePhoto(e)}
             aria-invalid={photoError ? true : undefined}
             aria-describedby={describedBy('photo', true, photoError)}
@@ -619,6 +625,7 @@ export default function MenuItemForm({
             Describe the photo (required if there’s a photo)
           </label>
           <textarea
+            disabled={saving}
             id={fieldId('imageAlt')}
             value={values.imageAlt}
             onChange={(e) => {
@@ -640,6 +647,7 @@ export default function MenuItemForm({
           {altReview !== 'none' && (
             <label className="flex min-h-11 items-center gap-2.5 text-[14px] leading-5 text-[#1a1a1a]">
               <input
+                disabled={saving}
                 type="checkbox"
                 checked={altReview === 'confirmed'}
                 onChange={(e) =>
@@ -666,6 +674,7 @@ export default function MenuItemForm({
               className="flex min-h-11 items-center gap-2.5 font-mono text-[12px] tracking-[0.06em] text-[#1a1a1a] uppercase md:text-[13px]"
             >
               <input
+                disabled={saving}
                 type="checkbox"
                 checked={values[key] as boolean}
                 onChange={(e) => set(key, e.target.checked)}

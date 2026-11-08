@@ -764,7 +764,9 @@ test('a list reload that started before a save finished can’t restore the old 
 
   // The outdated reply is ignored and the list is fetched again.
   await waitFor(() => expect(listLoads(fetchMock)).toBe(3));
-  expect(screen.getByRole('heading', { name: 'Mango Tango' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Mango Tango' }),
+  ).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Mango Dango' })).toBeNull();
 
   replyToRefetch(success({ items: [saved] }));
@@ -873,3 +875,54 @@ test('an empty category shows an error linked to the field', () => {
   );
   expect(formRequests(fetchMock)).toHaveLength(0);
 });
+
+// Saving submits a snapshot; further edits must wait for that request to finish.
+test.each(['create', 'edit'])(
+  '%s locks editable fields while saving and restores them on failure',
+  async (mode) => {
+    const fetchMock = renderAt(
+      mode === 'edit' ? '/admin/m1/edit' : '/admin/new',
+      [mango],
+    );
+    if (mode === 'edit') {
+      await inPanel().findByRole('heading', { name: 'Editing Mango Dango' });
+    } else {
+      await waitFor(() => expect(listLoads(fetchMock)).toBe(1));
+    }
+    type(/drink name/i, 'Mango Tango');
+    type(/^price/i, '7');
+    const replyToSave = delayNextReply(fetchMock);
+    if (mode === 'edit') saveChanges();
+    else submit();
+
+    await waitFor(() =>
+      expect(inPanel().getByRole('button', { name: 'Saving…' })).toBeDisabled(),
+    );
+    const controls = panel().querySelectorAll('input, textarea, select');
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) expect(control).toBeDisabled();
+    expect(inPanel().getByRole('button', { name: 'Cancel' })).toBeEnabled();
+
+    await act(async () => replyToSave(failure()));
+    expect(inPanel().getByRole('alert')).toHaveTextContent(
+      'Couldn’t save the drink',
+    );
+    for (const control of controls) expect(control).toBeEnabled();
+    expect(field(/drink name/i)).toHaveValue('Mango Tango');
+    type(/drink name/i, 'Mango Retry');
+    const replyToRetry = delayNextReply(fetchMock);
+    if (mode === 'edit') saveChanges();
+    else submit();
+    const saved = { ...mango, name: 'Mango Retry', price: 7 };
+    fetchMock.mockResolvedValue(success({ items: [saved] }));
+    await act(async () => replyToRetry(success({ item: saved })));
+    await expectBackOnList(fetchMock);
+    expect(
+      screen.getByRole('heading', { name: 'Mango Retry' }),
+    ).toBeInTheDocument();
+    expect(bodyOf(formRequests(fetchMock)[1]!)).toMatchObject({
+      name: 'Mango Retry',
+      price: 7,
+    });
+  },
+);
