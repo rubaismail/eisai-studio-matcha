@@ -21,7 +21,8 @@
   --color-cream: #f8f8f4;
 
   --font-sans: 'Questrial', system-ui, sans-serif;
-  --font-mono: 'Anonymous Pro', ui-monospace, monospace;
+  /* Anonymous Pro has no → glyph; system-ui's is closer to the design. */
+  --font-mono: 'Anonymous Pro', system-ui, ui-monospace, monospace;
 }
 
 body {

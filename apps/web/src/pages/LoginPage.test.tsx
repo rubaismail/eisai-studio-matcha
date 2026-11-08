@@ -225,3 +225,9 @@ test('focus goes to the first invalid field', async () => {
   await waitFor(() => expect(emailField()).toHaveFocus());
   expect(screen.getByText('Email address is required.')).toBeInTheDocument();
 });
+
+test('an old expired token alone does not show the session-expired note', () => {
+  signInAs(customer, -60);
+  renderLogin();
+  expect(screen.queryByText(/session expired/i)).toBeNull();
+});

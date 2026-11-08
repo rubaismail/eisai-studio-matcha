@@ -98,3 +98,12 @@ test('Instagram links say they open a new tab', () => {
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
+
+test('the phone menu closes when a link to the current page is tapped', () => {
+  renderWithAuth(<Navbar />, ['/menu']);
+  fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+  const dialog = screen.getByRole('dialog', { name: 'Site menu' });
+  fireEvent.click(within(dialog).getByRole('link', { name: /^Menu/ }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.body.style.overflow).toBe('');
+});

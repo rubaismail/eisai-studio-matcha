@@ -1,6 +1,7 @@
 // Every page of the website is listed here. Add a <Route> when you add a page.
 import type { ReactNode } from 'react';
 import { Route, Routes, useMatch } from 'react-router';
+import { useAuth } from './auth/AuthContext';
 import { RequireAdmin, RequireAuth } from './auth/guards';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
@@ -23,7 +24,10 @@ export default function App() {
     useMatch('/admin/new'),
     useMatch('/admin/:id/edit'),
   ];
-  const isAdmin = adminMatches.some((match) => match !== null);
+  const isAdminRoute = adminMatches.some((match) => match !== null);
+  const { user } = useAuth();
+  // Customers on admin URLs see Staff only, which has a footer.
+  const isAdmin = isAdminRoute && user?.role === 'admin';
 
   return (
     <div className="flex min-h-screen flex-col bg-white">

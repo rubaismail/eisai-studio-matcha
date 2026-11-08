@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import { setUnauthorizedHandler } from '../api/client';
 import { AuthContext } from './AuthContext';
@@ -32,10 +38,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setSessionExpired(false);
   }, []);
 
+  // Transition so it renders together with the page change.
   const signOut = useCallback(() => {
     clearSession();
-    setSession(null);
-    setSessionExpired(false);
+    startTransition(() => {
+      setSession(null);
+      setSessionExpired(false);
+    });
   }, []);
 
   useEffect(() => {

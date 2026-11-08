@@ -43,6 +43,18 @@ export default function Navbar() {
 
   useEffect(() => setOpen(false), [location.pathname, location.hash]);
 
+  // Close if resized to desktop, or the page stays locked.
+  useEffect(() => {
+    if (!open || !window.matchMedia) return;
+    const desktop = window.matchMedia('(min-width: 64rem)');
+    const handleChange = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    handleChange();
+    desktop.addEventListener('change', handleChange);
+    return () => desktop.removeEventListener('change', handleChange);
+  }, [open]);
+
   // Focus the close button and lock page scroll.
   useEffect(() => {
     if (!open) return;
@@ -204,6 +216,10 @@ export default function Navbar() {
           aria-modal="true"
           aria-label="Site menu"
           onKeyDown={handlePanelKeyDown}
+          // Close on any link, even to the current page.
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('a')) setOpen(false);
+          }}
           className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white lg:hidden"
         >
           <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink px-4">

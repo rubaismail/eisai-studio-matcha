@@ -25,7 +25,7 @@ type Problem =
 type ResendStatus = 'idle' | 'sending' | 'sent' | 'failed';
 
 export default function LoginPage() {
-  const { user, sessionExpired, signIn } = useAuth();
+  const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirect = (location.state ?? {}) as LoginRedirectState;
@@ -60,8 +60,8 @@ export default function LoginPage() {
     return <Navigate to={redirect.from ?? '/account'} replace />;
   }
 
-  const showExpired =
-    (redirect.expired || sessionExpired) && problem.kind === 'none';
+  // Only when a guard sent them here.
+  const showExpired = redirect.expired && problem.kind === 'none';
   const fromAdmin = redirect.from?.startsWith('/admin');
 
   function validate() {
@@ -143,7 +143,11 @@ export default function LoginPage() {
         </Notice>
       )}
 
-      <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form
+        noValidate
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-[18px] md:gap-5"
+      >
         <TextField
           ref={emailRef}
           label="Email address"
@@ -225,12 +229,12 @@ export default function LoginPage() {
         )}
       </form>
 
-      <div className="flex flex-col gap-3 border-t border-ink pt-6">
+      <div className="flex flex-col gap-2.5 border-t border-ink pt-5 md:gap-3 md:pt-6">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[17px]">New to Eisai?</span>
+          <span className="text-[16px] md:text-[17px]">New to Eisai?</span>
           <Link
             to="/register"
-            className={`font-mono text-[14px] tracking-[0.08em] uppercase underline underline-offset-2 hover:no-underline ${focusRing}`}
+            className={`font-mono text-[13px] tracking-[0.08em] uppercase underline md:text-[14px] underline-offset-2 hover:no-underline ${focusRing}`}
           >
             Create account →
           </Link>
