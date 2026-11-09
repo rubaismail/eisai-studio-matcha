@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/eisai_footer.dart';
 import '../widgets/eisai_navigation_overlay.dart';
+import '../widgets/eisai_home_video_card.dart';
 import '../models/menu_item.dart';
 import '../services/menu_service.dart' as menu_service;
 
@@ -101,6 +102,31 @@ class HomeScreenState extends State<HomeScreen> {
 
   late Future<List<_FeaturedDrink>> _drinks = _loadFeatured();
   final GlobalKey _footerKey = GlobalKey();
+  final ScrollController _popupScrollController = ScrollController();
+  int _activePopupCard = 0;
+  double _popupCardExtent = 304;
+
+  @override
+  void initState() {
+    super.initState();
+    _popupScrollController.addListener(_onPopupScroll);
+  }
+
+  void _onPopupScroll() {
+    if (!_popupScrollController.hasClients) return;
+    final cardIndex = (_popupScrollController.offset / _popupCardExtent)
+        .round()
+        .clamp(0, 4);
+    if (cardIndex != _activePopupCard && mounted) {
+      setState(() => _activePopupCard = cardIndex);
+    }
+  }
+
+  @override
+  void dispose() {
+    _popupScrollController.dispose();
+    super.dispose();
+  }
 
   void scrollToStory() {
     final target = _storyKey.currentContext;
@@ -512,96 +538,122 @@ class HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Widget _popup(double s) => Padding(
-    padding: EdgeInsets.only(top: 0, bottom: 65 * s),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24 * s),
-          child: Text('AT THE POP-UP', style: _a(12 * s)),
-        ),
-        SizedBox(height: 24 * s),
-        SizedBox(
-          height: 473 * s,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.only(left: 24 * s),
-            children: [
-              _popupCard(s, 'VIDEO', null, '[Video caption from Eisai]'),
-              _popupCard(
-                s,
-                'PHOTO',
-                'popup_photo.jpg',
-                '[Photo caption from Eisai]',
-              ),
-              _popupCard(s, 'VIDEO', null, '[Video caption from Eisai]'),
-              _popupCard(
-                s,
-                'PHOTO',
-                'home_hero.png',
-                '[Photo caption from Eisai]',
-              ),
-              _popupCard(s, 'VIDEO', null, '[Video caption from Eisai]'),
-            ],
+  Widget _popup(double s) {
+    _popupCardExtent = 304 * s; // 292-wide card plus its 12-wide gap.
+    return Padding(
+      padding: EdgeInsets.only(top: 0, bottom: 65 * s),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24 * s),
+            child: Text('AT THE POP-UP', style: _a(12 * s)),
           ),
-        ),
-        SizedBox(height: 20 * s),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24 * s),
-          child: Text('Swipe to explore  →', style: _a(12 * s, color: gray)),
-        ),
-      ],
+          SizedBox(height: 24 * s),
+          SizedBox(
+            height: 473 * s,
+            child: ListView(
+              controller: _popupScrollController,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.only(left: 24 * s, right: 12 * s),
+              children: [
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'Eisai at the pop-up · Video 1',
+                  video: 'assets/videos/eisai_video_1.mp4',
+                  active: _activePopupCard == 0,
+                ),
+                _popupCard(
+                  s,
+                  'PHOTO',
+                  'popup_photo.jpg',
+                  'Eisai at the pop-up',
+                ),
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'Eisai at the pop-up · Video 2',
+                  video: 'assets/videos/eisai_video_2.mp4',
+                  active: _activePopupCard == 2,
+                ),
+                _popupCard(s, 'PHOTO', 'home_hero.png', 'Eisai matcha'),
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'Eisai at the pop-up · Video 3',
+                  video: 'assets/videos/eisai_video_3.mp4',
+                  active: _activePopupCard == 4,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20 * s),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24 * s),
+            child: Text('Swipe to explore  →', style: _a(12 * s, color: gray)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _popupCard(
+    double s,
+    String tag,
+    String? image,
+    String caption, {
+    String? video,
+    bool active = false,
+  }) => Padding(
+    padding: EdgeInsets.only(right: 12 * s),
+    child: SizedBox(
+      width: 292 * s,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 429 * s,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (video != null)
+                  EisaiHomeVideoCard(
+                    key: ValueKey(video),
+                    assetPath: video,
+                    active: active,
+                    semanticLabel: caption,
+                  )
+                else if (image != null)
+                  _image(image, fit: BoxFit.cover)
+                else
+                  const ColoredBox(color: ink),
+                Positioned(
+                  top: 10 * s,
+                  left: 10 * s,
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6 * s,
+                        vertical: 3 * s,
+                      ),
+                      child: Text(tag, style: _a(10 * s)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 11 * s),
+          Text(caption, style: _a(11 * s, color: gray)),
+        ],
+      ),
     ),
   );
-
-  Widget _popupCard(double s, String tag, String? image, String caption) =>
-      Padding(
-        padding: EdgeInsets.only(right: 12 * s),
-        child: SizedBox(
-          width: 292 * s,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 429 * s,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    image == null
-                        ? const ColoredBox(color: ink)
-                        : _image(image, fit: BoxFit.cover),
-                    if (image == null)
-                      Center(
-                        child: Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white,
-                          size: 52 * s,
-                        ),
-                      ),
-                    Positioned(
-                      top: 10 * s,
-                      left: 10 * s,
-                      child: ColoredBox(
-                        color: Colors.white,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6 * s,
-                            vertical: 3 * s,
-                          ),
-                          child: Text(tag, style: _a(10 * s)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 11 * s),
-              Text(caption, style: _a(11 * s, color: gray)),
-            ],
-          ),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
