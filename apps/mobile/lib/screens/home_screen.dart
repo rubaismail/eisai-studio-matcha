@@ -631,25 +631,9 @@ class HomeScreenState extends State<HomeScreen> {
                   _image(image, fit: BoxFit.cover)
                 else
                   const ColoredBox(color: ink),
-                Positioned(
-                  top: 10 * s,
-                  left: 10 * s,
-                  child: ColoredBox(
-                    color: Colors.white,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6 * s,
-                        vertical: 3 * s,
-                      ),
-                      child: Text(tag, style: _a(10 * s)),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
-          SizedBox(height: 11 * s),
-          Text(caption, style: _a(11 * s, color: gray)),
         ],
       ),
     ),

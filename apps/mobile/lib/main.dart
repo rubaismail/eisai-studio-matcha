@@ -4,6 +4,7 @@ import 'screens/menu_screen.dart';
 import 'screens/our_story_screen.dart';
 import 'screens/our_location_screen.dart';
 import 'screens/account_screen.dart';
+import 'services/auth_service.dart';
 
 void main() {
   runApp(const EisaiApp());
@@ -45,9 +46,14 @@ class EisaiApp extends StatelessWidget {
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key, this.initialIndex = 0});
+  const MainNavigation({
+    super.key,
+    this.initialIndex = 0,
+    this.returnToStaff = false,
+  });
 
   final int initialIndex;
+  final bool returnToStaff;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -69,6 +75,11 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _openAccount() {
+    if (widget.returnToStaff && AuthService.instance.isAdmin) {
+      Navigator.of(context).pop();
+      return;
+    }
+
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const AccountScreen()));

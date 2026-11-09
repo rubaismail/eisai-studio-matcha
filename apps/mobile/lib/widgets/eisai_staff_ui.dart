@@ -1,3 +1,4 @@
+import '../main.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,6 +32,16 @@ Future<bool> openEisaiWebsite(Uri? url) async {
   return launchUrl(url, mode: LaunchMode.externalApplication);
 }
 
+void openStaffLiveMenu(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: '/staff/live-menu'),
+      builder: (_) =>
+          const MainNavigation(initialIndex: 1, returnToStaff: true),
+    ),
+  );
+}
+
 class StaffChrome extends StatelessWidget {
   const StaffChrome({
     super.key,
@@ -45,7 +56,6 @@ class StaffChrome extends StatelessWidget {
   final VoidCallback onLogout, onMenu;
   final Uri? publicMenuUrl;
 
-  /// Pass the path of the EXISTING official white Eisai logo in your Flutter pubspec.
   final String? logoAsset;
   final bool showFooter;
   @override
@@ -65,17 +75,15 @@ class StaffChrome extends StatelessWidget {
                   top: 12,
                   width: 80,
                   height: 21,
-                  child: logoAsset == null
-                      ? Text('Eisai', style: staffText(22, color: Colors.white))
-                      : Image.asset(
-                          logoAsset!,
-                          fit: BoxFit.contain,
-                          alignment: Alignment.centerLeft,
-                          errorBuilder: (_, __, ___) => Text(
-                            'Eisai',
-                            style: staffText(22, color: Colors.white),
-                          ),
-                        ),
+                  child: Image.asset(
+                    logoAsset ?? 'assets/images/eisai_logo_white.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerLeft,
+                    errorBuilder: (_, __, ___) => Text(
+                      'Eisai',
+                      style: staffText(22, color: Colors.white),
+                    ),
+                  ),
                 ),
                 Positioned(
                   left: 16,
@@ -92,32 +100,36 @@ class StaffChrome extends StatelessWidget {
                 Positioned(
                   right: 16,
                   top: 12,
-                  child: Semantics(
-                    label: 'Open staff navigation',
-                    button: true,
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: InkWell(
-                        onTap: onMenu,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            for (int i = 0; i < 3; i++)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 3,
-                                ),
-                                child: Container(
-                                  width: 23,
-                                  height: 2,
-                                  color: Colors.white,
-                                ),
-                              ),
-                          ],
-                        ),
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Open staff navigation',
+                    icon: const Icon(Icons.menu, color: Colors.white, size: 27),
+                    onSelected: (selection) {
+                      switch (selection) {
+                        case 'menu':
+                          onMenu();
+                          break;
+                        case 'live':
+                          openStaffLiveMenu(context);
+                          break;
+                        case 'logout':
+                          onLogout();
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'menu',
+                        child: Text('Staff menu'),
                       ),
-                    ),
+                      const PopupMenuItem<String>(
+                        value: 'live',
+                        child: Text('View live menu'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Text('Log out'),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -138,9 +150,7 @@ class StaffChrome extends StatelessWidget {
                 children: [
                   Expanded(
                     child: TextButton(
-                      onPressed: publicMenuUrl == null
-                          ? null
-                          : () => openEisaiWebsite(publicMenuUrl),
+                      onPressed: () => openStaffLiveMenu(context),
                       style: TextButton.styleFrom(
                         foregroundColor: StaffColors.ink,
                         alignment: Alignment.centerLeft,

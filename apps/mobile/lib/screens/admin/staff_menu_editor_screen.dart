@@ -347,8 +347,6 @@ class _DrinkRow extends StatelessWidget {
           outline: true,
           onPressed: busy ? null : onEdit,
         ),
-
-        StaffPrimaryButton(label: 'Edit', outline: true, onPressed: onEdit),
       ],
     ),
   );
