@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { getMenu } from '../api/menu';
 import hero from '../assets/home/hero.jpg';
+import heroWide from '../assets/home/hero-wide.jpg';
 import matchaMan from '../assets/home/matcha-man.png';
 import DrinkTile from '../components/DrinkTile';
 import PopUpCarousel from '../components/PopUpCarousel';
@@ -61,11 +62,16 @@ export default function HomePage() {
   return (
     <>
       <section className="relative h-[640px] overflow-clip bg-ink lg:h-[760px]">
-        <img
-          src={hero}
-          alt=""
-          className="absolute inset-0 size-full object-cover object-[center_60%] lg:object-[center_80%]"
-        />
+        {/* Desktop uses a copy squashed to the design's proportions, which
+            fits more of the scenery like the design does. */}
+        <picture>
+          <source media="(min-width: 64rem)" srcSet={heroWide} />
+          <img
+            src={hero}
+            alt=""
+            className="absolute inset-0 size-full object-cover object-[center_60%] lg:object-[center_70%]"
+          />
+        </picture>
         <div className="absolute inset-0 bg-linear-to-b from-transparent from-25% via-ink/35 via-55% to-ink/80" />
         <div className="absolute inset-x-4 bottom-8 flex flex-col gap-3.5 lg:inset-x-[58px] lg:bottom-16 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-3.5 text-white lg:gap-[18px]">
