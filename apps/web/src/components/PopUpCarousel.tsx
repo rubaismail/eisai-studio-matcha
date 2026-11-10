@@ -144,7 +144,8 @@ export default function PopUpCarousel() {
                   slides.slice(0, i + 1).filter((s) => s.kind === 'video')
                     .length
                 }
-                active={i === active && onScreen}
+                active={i === active}
+                onScreen={onScreen}
               />
             ) : (
               <>
@@ -171,21 +172,29 @@ function VideoSlide({
   slide,
   number,
   active,
+  onScreen,
 }: {
   slide: Extract<Slide, { kind: 'video' }>;
   number: number;
   active: boolean;
+  onScreen: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // null: follow the carousel; true/false: the visitor played or paused it.
   const [choice, setChoice] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
-  const playing = !failed && (choice ?? (active && !prefersReducedMotion()));
+  const playing =
+    !failed && onScreen && (choice ?? (active && !prefersReducedMotion()));
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (playing) video.play()?.catch(() => setChoice(false));
+    if (playing)
+      video.play()?.catch((err: unknown) => {
+        // A pause cuts off a pending play; only a refusal (e.g. autoplay
+        // blocked) should leave it paused.
+        if ((err as Error)?.name !== 'AbortError') setChoice(false);
+      });
     else video.pause();
   }, [playing]);
 

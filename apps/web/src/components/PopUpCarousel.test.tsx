@@ -97,6 +97,37 @@ test('a video the browser refuses to play shows its play button', async () => {
   ).toBeInTheDocument();
 });
 
+test('a play cut short by a pause still autoplays later', async () => {
+  play.mockRejectedValueOnce(new DOMException('interrupted', 'AbortError'));
+  render(<PopUpCarousel />);
+  await act(async () => {});
+  // Still following the carousel, so it shows as playing.
+  expect(playing()).toEqual(['Pause video 1: Making a drink']);
+});
+
+test('videos pause off screen, even one the visitor started', () => {
+  let report!: (entries: { isIntersecting: boolean }[]) => void;
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(callback: typeof report) {
+        report = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  render(<PopUpCarousel />);
+  fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
+  act(() => report([{ isIntersecting: false }]));
+  expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
+  act(() => report([{ isIntersecting: true }]));
+  expect(playing()).toEqual([
+    'Pause video 1: Making a drink',
+    'Pause video 3: The pop-up table',
+  ]);
+});
+
 test('a video that fails to load says so', () => {
   render(<PopUpCarousel />);
   fireEvent.error(videoOf(/video 2/));
