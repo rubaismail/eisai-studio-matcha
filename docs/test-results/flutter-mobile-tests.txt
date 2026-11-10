@@ -1,0 +1,70 @@
+00:00 +0: loading C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart
+00:00 +0: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +1: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +2: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +3: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +4: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +5: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +6: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +7: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +8: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +9: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +10: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +11: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +12: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +13: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +14: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +15: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +16: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +17: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +18: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +19: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +20: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +21: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +22: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +23: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +24: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:00 +25: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:01 +26: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:01 +27: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:01 +28: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin login opens staff menu without requiring Manage Menu tap
+00:01 +29: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/home_navigation_test.dart: Hamburger Our Location navigates to location destination
+00:01 +30: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/home_navigation_test.dart: Hamburger Our Location navigates to location destination
+00:01 +31: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +32: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +33: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +34: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +35: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +36: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: drink details show the API description for a known drink
+00:01 +37: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/auth_screens_test.dart: LoginScreen 401 shows invalid credentials message
+00:01 +38: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/auth_screens_test.dart: LoginScreen 401 shows invalid credentials message
+00:01 +39: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin logout clears credentials and returns to login
+00:01 +40: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/admin_auth_navigation_test.dart: admin logout clears credentials and returns to login
+00:02 +41: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: Home can retry a failed shared-menu load
+00:02 +42: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: Home can retry a failed shared-menu load
+00:02 +43: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/regression_test.dart: Home can retry a failed shared-menu load
+00:02 +44: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/menu_screen_test.dart: no matches can be cleared without losing menu data
+00:02 +45: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/menu_screen_test.dart: no matches can be cleared without losing menu data
+00:02 +46: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/menu_screen_test.dart: no matches can be cleared without losing menu data
+00:02 +47: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/menu_screen_test.dart: no matches can be cleared without losing menu data
+00:02 +48: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/auth_screens_test.dart: RegisterScreen successful registration opens the check-email screen
+00:02 +49: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:02 +50: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:02 +51: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:02 +52: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:02 +53: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:02 +54: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:03 +55: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_admin_screens_test.dart: Staff menu editor shows Figma labels and full list
+00:03 +56: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +57: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +58: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +59: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +60: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +61: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +62: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +63: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +64: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_partial_update_test.dart: failed checkbox update rolls back and shows error
+00:03 +65: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_unsaved_changes_test.dart: Editing a drink prompts before discarding changes
+00:03 +66: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_unsaved_changes_test.dart: Editing a drink prompts before discarding changes
+00:03 +67: C:/Users/Titan/eisai/eisai-studio-matcha/apps/mobile/test/staff_unsaved_changes_test.dart: Editing a drink prompts before discarding changes
+00:04 +68: All tests passed!
