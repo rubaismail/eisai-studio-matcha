@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import AuthProvider from './auth/AuthProvider';
 import { saveSession } from './auth/session';
 import type { AuthUser } from './types/auth';
+import type { MenuItem } from './types/menu';
 
 export const customer: AuthUser = {
   _id: 'u1',
@@ -49,3 +50,22 @@ export const jsonResponse = (status: number, body: unknown) => ({
   status,
   json: async () => body,
 });
+
+export function makeDrink(overrides: Partial<MenuItem> = {}): MenuItem {
+  return {
+    _id: overrides.name ?? 'drink',
+    name: 'Drink',
+    description: '',
+    price: 6,
+    category: 'Drinks',
+    imageUrl: '',
+    imageAlt: '',
+    inspiredBy: '',
+    teaBases: ['matcha'],
+    isSeasonal: false,
+    isAvailable: true,
+    isRecommended: false,
+    isFeatured: false,
+    ...overrides,
+  };
+}

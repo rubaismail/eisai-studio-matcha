@@ -70,8 +70,8 @@ export default function App() {
         <Routes>
           <Route element={<Narrow />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/menu" element={<MenuPage />} />
           </Route>
+          <Route path="/menu" element={<MenuPage />} />
           <Route path="/our-story" element={<OurStoryPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="*" element={<NotFoundPage />} />
