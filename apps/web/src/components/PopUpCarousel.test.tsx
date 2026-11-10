@@ -59,18 +59,17 @@ test('has all eight slides, with photos between the videos', () => {
   }
 });
 
-test('only the first video plays until the row is scrolled', () => {
+test('every video in view plays by itself', () => {
   render(<PopUpCarousel />);
-  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
-  expect(play).toHaveBeenCalledTimes(1);
-
-  const track = screen.getAllByRole('list')[0];
-  track.scrollLeft = 912; // three cards along: video 3
-  fireEvent.scroll(track);
   expect(playing()).toEqual([
+    'Pause video 1: Making a Mango Dango',
+    'Pause video 2: Making a Midnight Mori',
     'Pause video 3: Pouring a layered drink at the stand',
+    'Pause video 4: Whisking at the stand',
+    'Pause video 5: Our first pop-up',
+    'Pause video 6: The pop-up table',
   ]);
-  expect(pause).toHaveBeenCalled();
+  expect(play).toHaveBeenCalledTimes(6);
 });
 
 test('tapping a video pauses it, and tapping again plays it', () => {
@@ -81,29 +80,17 @@ test('tapping a video pauses it, and tapping again plays it', () => {
   ).toBeInTheDocument();
   expect(pause).toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: /^Play video 1/ }));
-  expect(
-    screen.getByRole('button', { name: /^Pause video 1/ }),
-  ).toBeInTheDocument();
-
-  // A video that isn't in front can still be played.
-  fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
-  expect(playing()).toContain(
-    'Pause video 3: Pouring a layered drink at the stand',
-  );
+  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
 });
 
 test('pausing one video stops autoplay for the whole row', () => {
   render(<PopUpCarousel />);
-  const pause = screen.getByRole('button', { name: /^Pause video 1/ });
+  const pauseButton = screen.getByRole('button', { name: /^Pause video 2/ });
   // The pause control is visible while it plays, not only on hover.
-  expect(pause.querySelector('svg')).toBeInTheDocument();
-  fireEvent.click(pause);
-
-  const track = screen.getAllByRole('list')[0];
-  track.scrollLeft = 912; // video 3 comes into view
-  fireEvent.scroll(track);
+  expect(pauseButton.querySelector('svg')).toBeInTheDocument();
+  fireEvent.click(pauseButton);
   expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
-  // It can still be played on purpose.
+  // Any of them can still be played on purpose.
   fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
   expect(playing()).toEqual([
     'Pause video 3: Pouring a layered drink at the stand',
@@ -141,31 +128,42 @@ test('a play cut short by a pause still autoplays later', async () => {
   play.mockRejectedValueOnce(new DOMException('interrupted', 'AbortError'));
   render(<PopUpCarousel />);
   await act(async () => {});
-  // Still following the carousel, so it shows as playing.
-  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
+  // Still following autoplay, so it shows as playing.
+  expect(playing()).toContain('Pause video 1: Making a Mango Dango');
 });
 
 test('videos pause off screen, even one the visitor started', () => {
-  let report!: (entries: { isIntersecting: boolean }[]) => void;
+  const observers = new Map<
+    Element,
+    (e: { isIntersecting: boolean }[]) => void
+  >();
   vi.stubGlobal(
     'IntersectionObserver',
     class {
-      constructor(callback: typeof report) {
-        report = callback;
+      callback: (e: { isIntersecting: boolean }[]) => void;
+      constructor(callback: (e: { isIntersecting: boolean }[]) => void) {
+        this.callback = callback;
       }
-      observe() {}
+      observe(el: Element) {
+        observers.set(el, this.callback);
+      }
       disconnect() {}
     },
   );
   render(<PopUpCarousel />);
-  fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
-  act(() => report([{ isIntersecting: false }]));
+  const report = (n: RegExp, isIntersecting: boolean) =>
+    act(() => observers.get(videoOf(n))!([{ isIntersecting }]));
+
+  report(/video 6/, false);
+  expect(playing()).not.toContain('Pause video 6: The pop-up table');
+  expect(playing()).toHaveLength(5);
+
+  fireEvent.click(screen.getByRole('button', { name: /^Pause video 1/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Play video 1/ }));
+  report(/video 1/, false);
   expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
-  act(() => report([{ isIntersecting: true }]));
-  expect(playing()).toEqual([
-    'Pause video 1: Making a Mango Dango',
-    'Pause video 3: Pouring a layered drink at the stand',
-  ]);
+  report(/video 1/, true);
+  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
 });
 
 test('a video that fails to load says so', () => {

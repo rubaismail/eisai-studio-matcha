@@ -104,35 +104,19 @@ function prefersReducedMotion() {
 
 export default function PopUpCarousel() {
   const trackRef = useRef<HTMLUListElement>(null);
-  const [active, setActive] = useState(0);
-  const [onScreen, setOnScreen] = useState(true);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
   // Pausing any video stops autoplay for the whole row.
   const [autoplay, setAutoplay] = useState(() => !prefersReducedMotion());
-
-  // Videos only play while the section is on screen.
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(([entry]) =>
-      setOnScreen(entry.isIntersecting),
-    );
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, []);
 
   function step() {
     const first = trackRef.current?.firstElementChild as HTMLElement | null;
     return (first?.offsetWidth ?? 0) + GAP;
   }
 
-  // The card scrolled to the left edge is the active one, as in the app.
   function handleScroll() {
     const track = trackRef.current;
     if (!track) return;
-    const size = step();
-    if (size > GAP) setActive(Math.round(track.scrollLeft / size));
     setAtStart(track.scrollLeft <= 1);
     setAtEnd(track.scrollLeft + track.clientWidth >= track.scrollWidth - 1);
   }
@@ -198,8 +182,7 @@ export default function PopUpCarousel() {
                   slides.slice(0, i + 1).filter((s) => s.kind === 'video')
                     .length
                 }
-                active={i === active && autoplay}
-                onScreen={onScreen}
+                autoplay={autoplay}
                 onPause={() => setAutoplay(false)}
               />
             ) : (
@@ -226,21 +209,31 @@ export default function PopUpCarousel() {
 function VideoSlide({
   slide,
   number,
-  active,
-  onScreen,
+  autoplay,
   onPause,
 }: {
   slide: Extract<Slide, { kind: 'video' }>;
   number: number;
-  active: boolean;
-  onScreen: boolean;
+  autoplay: boolean;
   onPause: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // null: follow the carousel; true/false: the visitor played or paused it.
   const [choice, setChoice] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
-  const playing = !failed && onScreen && (choice ?? active);
+  const [visible, setVisible] = useState(true);
+  const playing = !failed && visible && (choice ?? autoplay);
+
+  // Every video in view plays; ones scrolled out of view (either way) pause.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setVisible(entry.isIntersecting),
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
