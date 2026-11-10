@@ -10,7 +10,7 @@ import video2 from '../assets/home/popup-video-2.mp4';
 import poster3 from '../assets/home/popup-video-3.jpg';
 import video3 from '../assets/home/popup-video-3.mp4';
 import playIcon from '../assets/play-button.svg';
-import { INSTAGRAM_URL } from './Navbar';
+import { INSTAGRAM_URL } from './links';
 import { focusRing, label } from './styles';
 
 type Slide =

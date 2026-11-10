@@ -7,8 +7,6 @@ import logo from '../assets/eisai-logo-purple.png';
 import menuIcon from '../assets/menu-icon.svg';
 import { focusRing, label } from './styles';
 
-export const INSTAGRAM_URL = 'https://www.instagram.com/eisaistudio/';
-
 const siteLinks = [
   { to: '/menu', label: 'Menu' },
   { to: '/our-story', label: 'Our story' },
@@ -135,18 +133,6 @@ export default function Navbar() {
     );
   }
 
-  const instagram = (className: string, phone = false) => (
-    <a
-      href={INSTAGRAM_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={className}
-    >
-      {phone ? <PhoneRowContent label="Instagram" /> : 'Instagram'}
-      <span className="sr-only"> (opens in a new tab)</span>
-    </a>
-  );
-
   return (
     <header className="border-b border-ink bg-white">
       {/* Desktop */}
@@ -167,7 +153,6 @@ export default function Navbar() {
           />
         </Link>
         <ul className="flex justify-end gap-8">
-          <li>{instagram(desktopLink)}</li>
           {accountLinks.map((item) => (
             <li key={item.label}>{renderAccountLink(item, desktopLink)}</li>
           ))}
@@ -233,7 +218,6 @@ export default function Navbar() {
               {siteLinks.map((item) => (
                 <li key={item.label}>{renderSiteLink(item, phoneRow, true)}</li>
               ))}
-              <li>{instagram(phoneRow, true)}</li>
               {accountLinks.map((item) => (
                 <li key={item.label}>
                   {renderAccountLink(item, phoneRow, true)}

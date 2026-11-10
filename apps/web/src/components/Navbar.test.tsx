@@ -125,13 +125,11 @@ test('the Menu link is marked current on the menu page', () => {
   ).toHaveAttribute('aria-current', 'page');
 });
 
-test('Instagram links say they open a new tab', () => {
+test('Instagram is in the footer, not the navbar', () => {
   renderWithAuth(<Navbar />);
-  const link = within(desktopNav()).getByRole('link', {
-    name: /^Instagram\s*\(opens in a new tab\)$/,
-  });
-  expect(link).toHaveAttribute('target', '_blank');
-  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  expect(screen.queryByRole('link', { name: /Instagram/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+  expect(screen.queryByRole('link', { name: /Instagram/ })).toBeNull();
 });
 
 test('the phone menu closes when a link to the current page is tapped', () => {

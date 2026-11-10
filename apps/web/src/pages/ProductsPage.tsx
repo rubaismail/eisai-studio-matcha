@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { INSTAGRAM_URL } from '../components/Navbar';
+import { INSTAGRAM_URL } from '../components/links';
 import { label, primaryButton, secondaryButton } from '../components/styles';
 
 export default function ProductsPage() {
