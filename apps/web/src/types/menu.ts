@@ -6,5 +6,11 @@ export interface MenuItem {
   price: number;
   category: string;
   imageUrl: string;
+  imageAlt: string;
+  inspiredBy: string;
+  teaBases: string[];
   isSeasonal: boolean;
+  isAvailable: boolean;
+  isRecommended: boolean;
+  isFeatured: boolean;
 }

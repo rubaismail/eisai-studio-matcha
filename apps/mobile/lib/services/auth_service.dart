@@ -214,27 +214,32 @@ class AuthService {
         'If an account exists for this email, a password-reset link has been sent.';
   }
 
-  Future<String?> restoreSession() async {
+    Future<String?> restoreSession() async {
     final revision = _sessionRevision;
-    final token = await _store.read(_tokenKey);
-    if (revision != _sessionRevision) {
-      return null;
-    }
-    if (token == null || token.isEmpty) {
-      _signedInRole.value = null;
-      _signedInEmail.value = null;
-      return null;
-    }
-    final email = await _store.read(_emailKey);
-    if (revision != _sessionRevision) {
-      return null;
-    }
 
-    final role = await _store.read(_roleKey);
-    if (revision != _sessionRevision) return null;
-    _signedInRole.value = role;
-    _signedInEmail.value = email;
-    return email;
+    return _withStorageLock<String?>(() async {
+      if (revision != _sessionRevision) return null;
+
+      final token = await _store.read(_tokenKey);
+      if (revision != _sessionRevision) return null;
+
+      if (token == null || token.isEmpty) {
+        _signedInRole.value = null;
+        _signedInEmail.value = null;
+        return null;
+      }
+
+      final email = await _store.read(_emailKey);
+      if (revision != _sessionRevision) return null;
+
+      final role = await _store.read(_roleKey);
+      if (revision != _sessionRevision) return null;
+
+      _signedInRole.value = role;
+      _signedInEmail.value = email;
+
+      return email;
+    });
   }
 
   Future<String?> validToken() async {

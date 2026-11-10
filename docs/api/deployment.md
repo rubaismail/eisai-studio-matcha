@@ -1,6 +1,6 @@
 # API proxy configuration for AWS
 
-For the planned single Lightsail or EC2 server, run one Node API process behind Nginx on the same host. Keep MongoDB on AWS; these settings do not depend on Atlas. This document covers proxy trust and login throttling, not the complete deployment procedure.
+For the planned single Lightsail or EC2 server, run one Node API process behind Nginx on the same host. Keep MongoDB on AWS; these settings do not depend on Atlas. See [the Lightsail deployment runbook](../deployment.md) for installation, backups, smoke tests and rollback. This document covers proxy trust and login throttling.
 
 ## API environment
 
@@ -13,6 +13,8 @@ The API also accepts a comma-separated list of exact proxy IP addresses or CIDR 
 Inside the HTTPS server block, forward `/api/` to the local API and overwrite forwarding headers with values from Nginx's connection:
 
 ```nginx
+client_max_body_size 6m;
+
 location /api/ {
     proxy_pass http://127.0.0.1:4000;
     proxy_set_header Host $host;

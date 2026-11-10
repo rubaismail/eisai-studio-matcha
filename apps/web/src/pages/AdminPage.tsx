@@ -1,0 +1,600 @@
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Link, useMatch, useNavigate, useParams } from 'react-router';
+import {
+  deleteMenuItem,
+  getAdminMenu,
+  setMenuFlag,
+  setOnMenu,
+} from '../api/menu';
+import type { MenuFlag } from '../api/menu';
+import MenuItemForm from '../components/MenuItemForm';
+import type { MenuItem } from '../types/menu';
+
+const focusRing =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]';
+const button = `inline-flex min-h-12 items-center justify-center border text-center font-mono text-[13px] tracking-[0.08em] uppercase disabled:cursor-not-allowed disabled:opacity-60 md:text-[14px] ${focusRing}`;
+const blackButton = `${button} border-[#1a1a1a] bg-[#1a1a1a] text-white`;
+const whiteButton = `${button} border-[#1a1a1a] bg-white text-[#1a1a1a]`;
+const redButton = `${button} border-[#b42318] bg-[#b42318] text-white`;
+const smallLabel = 'font-mono text-[13px] tracking-[0.08em] uppercase';
+
+const toggles: { flag: MenuFlag; label: string }[] = [
+  { flag: 'isAvailable', label: 'On menu' },
+  { flag: 'isRecommended', label: 'Recommended' },
+  { flag: 'isFeatured', label: 'On home' },
+];
+
+function DrinkRow({
+  item,
+  pending,
+  onToggle,
+  onDeleteClick,
+}: {
+  item: MenuItem;
+  // True while any save for this drink is in flight, from this row or the dialog.
+  pending: boolean;
+  onToggle: (flag: MenuFlag, value: boolean) => Promise<void>;
+  onDeleteClick: (item: MenuItem, trigger: HTMLButtonElement) => void;
+}) {
+  const [error, setError] = useState('');
+  const checkboxes = useRef<Partial<Record<MenuFlag, HTMLInputElement | null>>>(
+    {},
+  );
+  const refocus = useRef<MenuFlag | null>(null);
+  const hidden = !item.isAvailable;
+
+  // A disabled checkbox loses keyboard focus, so give it back when it re-enables.
+  useEffect(() => {
+    if (!pending && refocus.current) {
+      checkboxes.current[refocus.current]?.focus();
+      refocus.current = null;
+    }
+  }, [pending]);
+
+  async function handleToggle(flag: MenuFlag, value: boolean) {
+    refocus.current =
+      document.activeElement === checkboxes.current[flag] ? flag : null;
+    setError('');
+    try {
+      await onToggle(flag, value);
+    } catch {
+      setError(`Couldn't update ${item.name}. Please try again.`);
+    }
+  }
+
+  return (
+    <li className="border-b border-[#e4e4e4] py-4 @2xl:py-4.5">
+      {/* Sized by the list's width (it shrinks when the form panel is open).
+          Narrow: photo and name, then checkboxes, then actions, each full width.
+          Medium: checkboxes sit under the name, with actions on the right.
+          Wide: everything on one line, like the Figma frame. */}
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2.5 @2xl:grid-cols-[4.5rem_minmax(0,1fr)_auto] @2xl:gap-x-7 @2xl:gap-y-1 @4xl:grid-cols-[4.5rem_minmax(0,1fr)_auto_auto] @4xl:gap-y-0">
+        <div className="flex h-17.5 w-14 items-center justify-center bg-[#f4f4f4] @2xl:row-span-2 @2xl:h-22.5 @2xl:w-18 @4xl:row-span-1">
+          {item.imageUrl && (
+            <img
+              src={item.imageUrl}
+              alt=""
+              className={`size-full object-contain p-1 ${hidden ? 'opacity-55' : ''}`}
+            />
+          )}
+        </div>
+        <div className="flex min-w-0 flex-col gap-1 @2xl:gap-1.5 @2xl:self-end @4xl:self-center">
+          <div className="flex flex-wrap items-center gap-2 @2xl:gap-2.5">
+            {/* Hidden rows use a lighter gray that still passes AA contrast. */}
+            <h2
+              className={`text-[22px] font-normal @2xl:text-[28px] @2xl:leading-7 @2xl:tracking-[-0.02em] ${hidden ? 'text-[#6b6b6b]' : 'text-[#1a1a1a]'}`}
+            >
+              {item.name}
+            </h2>
+            {hidden && (
+              <span className="border border-dashed border-[#1a1a1a] px-1.5 py-0.5 font-mono text-[11px] tracking-[0.08em] text-[#1a1a1a] uppercase @2xl:px-2 @2xl:py-0.75">
+                Hidden
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p
+              className={`text-[13px] leading-4.5 @2xl:text-[14px] @2xl:leading-5 ${hidden ? 'text-[#6b6b6b]' : 'text-[#4a4a4a]'}`}
+            >
+              {item.description}
+            </p>
+          )}
+        </div>
+
+        <div className="col-span-2 flex flex-wrap gap-x-3.5 @2xl:col-span-1 @2xl:col-start-2 @2xl:gap-x-5 @4xl:col-start-3 @4xl:row-start-1 @4xl:flex-nowrap">
+          {toggles.map(({ flag, label }) => (
+            <label
+              key={flag}
+              className={`flex min-h-11 items-center gap-2.5 text-[#1a1a1a] ${smallLabel}`}
+            >
+              <input
+                ref={(el) => {
+                  checkboxes.current[flag] = el;
+                }}
+                type="checkbox"
+                checked={item[flag]}
+                disabled={pending}
+                onChange={(e) => void handleToggle(flag, e.target.checked)}
+                className={`size-5 shrink-0 accent-[#1a1a1a] disabled:cursor-not-allowed ${focusRing}`}
+              />
+              <span>
+                {label}
+                <span className="sr-only">: {item.name}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="col-span-2 flex flex-col gap-2.5 @2xl:col-span-1 @2xl:col-start-3 @2xl:row-span-2 @2xl:row-start-1 @2xl:flex-row @2xl:items-center @2xl:gap-5 @4xl:col-start-4 @4xl:row-span-1">
+          {/* Links can't be disabled, so while saving it's marked aria-disabled
+              and clicks are ignored. It stays focusable so focus isn't lost. */}
+          <Link
+            to={`/admin/${item._id}/edit`}
+            aria-disabled={pending || undefined}
+            onClick={(e) => {
+              if (pending) e.preventDefault();
+            }}
+            className={`${whiteButton} w-full px-4 @2xl:w-auto @2xl:px-7 ${pending ? 'cursor-not-allowed opacity-60' : ''}`}
+          >
+            Edit <span className="sr-only">{item.name}</span>
+          </Link>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={(e) => onDeleteClick(item, e.currentTarget)}
+            className={`min-h-11 text-[#b42318] underline disabled:cursor-not-allowed disabled:opacity-60 ${smallLabel} ${focusRing}`}
+          >
+            Delete <span className="sr-only">{item.name}</span>
+          </button>
+        </div>
+      </div>
+      {error && (
+        <p
+          role="alert"
+          className="mt-2 text-[14px] text-[#b42318] @2xl:text-right"
+        >
+          {error}
+        </p>
+      )}
+    </li>
+  );
+}
+
+function DeleteDialog({
+  item,
+  busy,
+  onCancel,
+  onDelete,
+  onHide,
+}: {
+  item: MenuItem;
+  // Shared with the drink's row: true while any save for this drink is in flight.
+  busy: boolean;
+  onCancel: () => void;
+  onDelete: () => Promise<void>;
+  onHide: () => Promise<void>;
+}) {
+  const [error, setError] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  // Start on Cancel, the safe choice. Also runs after a failed request, because
+  // the buttons were disabled while it was pending and focus was lost.
+  useEffect(() => {
+    if (!busy) cancelRef.current?.focus();
+  }, [busy]);
+
+  // Listens on the document so these keys still work after a click on the scrim.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        if (!busy) onCancel();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      // Keep Tab inside the dialog, since everything behind it is off limits.
+      const buttons =
+        dialogRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        ) ?? [];
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      const active = document.activeElement;
+      const outside = !dialogRef.current?.contains(active);
+      if (!first || !last) {
+        e.preventDefault();
+      } else if (e.shiftKey && (active === first || outside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || outside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [busy, onCancel]);
+
+  async function handleDelete() {
+    setError('');
+    try {
+      await onDelete();
+    } catch {
+      setError(`Couldn't delete ${item.name}. Please try again.`);
+    }
+  }
+
+  async function handleHide() {
+    setError('');
+    try {
+      await onHide();
+    } catch {
+      setError(`Couldn't hide ${item.name}. Please try again.`);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#1a1a1a]/55 sm:items-center sm:p-6">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+        className="flex max-h-full w-full flex-col gap-4 overflow-y-auto bg-white px-5 py-7 sm:w-130 sm:max-w-full sm:gap-5 sm:border sm:border-[#1a1a1a] sm:p-9"
+      >
+        <p className={`text-[#b42318] ${smallLabel}`}>Delete drink</p>
+        <h2
+          id={titleId}
+          className="text-[30px] leading-8.5 font-normal text-[#1a1a1a] sm:text-[36px] sm:leading-10 sm:tracking-[-0.02em]"
+        >
+          Delete {item.name}?
+        </h2>
+        <p
+          id={descriptionId}
+          className="text-[16px] leading-6 text-[#4a4a4a] sm:text-[17px] sm:leading-6.5"
+        >
+          Deleting can’t be undone. To take a drink off the menu for now, turn
+          off “On menu” instead.
+        </p>
+        {error && (
+          <p role="alert" className="text-[14px] text-[#b42318]">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-2.5">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleDelete()}
+            className={`${redButton} px-4`}
+          >
+            Delete for good
+          </button>
+          {item.isAvailable && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleHide()}
+              className={`${whiteButton} px-4`}
+            >
+              Hide instead
+            </button>
+          )}
+          <button
+            ref={cancelRef}
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className={`${whiteButton} px-4`}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  // Drinks with a save in flight. Shared by each row and the delete dialog.
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // The latest request number per drink, so overtaken replies can be ignored.
+  const requestVersions = useRef(new Map<string, number>());
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const returnFocusTo = useRef<HTMLElement | null>(null);
+  const focusAfterPanel = useRef(false);
+  const navigate = useNavigate();
+
+  // /admin/new and /admin/:id/edit open the add/edit form beside the list.
+  const isNew = useMatch('/admin/new') !== null;
+  const { id: editId } = useParams();
+  const panelOpen = isNew || editId !== undefined;
+  const editItem = editId
+    ? items.find((item) => item._id === editId)
+    : undefined;
+
+  const deleteTarget = items.find((item) => item._id === deleteId);
+  const onMenuCount = items.filter((item) => item.isAvailable).length;
+  // A hidden drink can't appear on the home page, so it doesn't count.
+  const onHomeCount = items.filter(
+    (item) => item.isAvailable && item.isFeatured,
+  ).length;
+
+  // A list reply must never undo a save it doesn't include. Each load gets a
+  // number, and every confirmed save bumps `changes`. A reply that a newer load
+  // overtook is ignored. A reply that started before a save finished is ignored
+  // too, and the list is fetched again, so it reflects that save.
+  const latestLoad = useRef(0);
+  const changes = useRef(0);
+
+  const loadMenu = useCallback(() => {
+    const load = ++latestLoad.current;
+    const changesAtStart = changes.current;
+    getAdminMenu()
+      .then((menu) => {
+        if (load !== latestLoad.current) return;
+        if (changesAtStart !== changes.current) {
+          loadMenu();
+          return;
+        }
+        setItems(menu);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (load === latestLoad.current) setStatus('error');
+      });
+  }, []);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
+
+  // Saving or cancelling closes the panel and reloads the list.
+  function closePanel() {
+    focusAfterPanel.current = true;
+    navigate('/admin');
+    loadMenu();
+  }
+
+  // Once the panel is gone, focus goes back to the top of the list.
+  useEffect(() => {
+    if (!panelOpen && focusAfterPanel.current) {
+      focusAfterPanel.current = false;
+      headingRef.current?.focus();
+    }
+  }, [panelOpen]);
+
+  // Runs once the dialog is gone, so focus isn't lost along with it.
+  useEffect(() => {
+    if (deleteId === null && returnFocusTo.current) {
+      returnFocusTo.current.focus();
+      returnFocusTo.current = null;
+    }
+  }, [deleteId]);
+
+  function setPending(id: string, isPending: boolean) {
+    setPendingIds((current) => {
+      const next = new Set(current);
+      if (isPending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  // Every save for a drink goes through here, from its row or the delete dialog.
+  // The drink's actions stay disabled until the save finishes, and a reply that a
+  // newer request for the same drink has overtaken is ignored, so an old reply
+  // can never overwrite newer data. Errors are rethrown for the caller to show.
+  async function mutate<T>(
+    id: string,
+    request: () => Promise<T>,
+    onSuccess: (result: T) => void,
+  ) {
+    const version = (requestVersions.current.get(id) ?? 0) + 1;
+    requestVersions.current.set(id, version);
+    const isLatest = () => requestVersions.current.get(id) === version;
+    setPending(id, true);
+    try {
+      const result = await request();
+      // Even an overtaken save changed the server, so list loads already in flight are out of date.
+      changes.current += 1;
+      if (isLatest()) onSuccess(result);
+    } catch (err) {
+      if (isLatest()) throw err;
+    } finally {
+      if (isLatest()) setPending(id, false);
+    }
+  }
+
+  // Puts a drink saved from the form into the list, new or edited. This runs even
+  // if the user has already left that form, so the list matches the server.
+  function saveToList(saved: MenuItem) {
+    setItems((current) =>
+      current.some((item) => item._id === saved._id)
+        ? current.map((item) => (item._id === saved._id ? saved : item))
+        : [...current, saved],
+    );
+  }
+
+  function updateItem(updated: MenuItem) {
+    setItems((current) =>
+      current.map((item) => (item._id === updated._id ? updated : item)),
+    );
+  }
+
+  function handleDeleted(id: string) {
+    // The row's Delete button is gone now, so focus moves to the page heading.
+    returnFocusTo.current = headingRef.current;
+    setAnnouncement(`${deleteTarget?.name ?? 'Drink'} deleted.`);
+    setItems((current) => current.filter((item) => item._id !== id));
+    setDeleteId(null);
+  }
+
+  function handleHidden(updated: MenuItem) {
+    setAnnouncement(`${updated.name} hidden.`);
+    updateItem(updated);
+    setDeleteId(null);
+  }
+
+  return (
+    // Wide screens: list on the left, form panel on the right.
+    // Narrower: while the form is open it takes the whole page.
+    <div className="xl:flex xl:items-stretch">
+      <section
+        className={`min-w-0 flex-1 bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24 ${panelOpen ? 'hidden xl:block' : ''}`}
+      >
+        <div className="flex flex-col gap-5 pb-5 md:flex-row md:items-end md:justify-between md:pb-6">
+          <div className="flex flex-col gap-2 md:gap-2.5">
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-[44px] font-normal tracking-[-0.02em] text-[#1a1a1a] outline-none md:text-[56px] md:leading-14"
+            >
+              Menu
+            </h1>
+            {status === 'ready' && (
+              <p className="font-mono text-[12px] tracking-[0.08em] text-[#4a4a4a] uppercase md:text-[13px]">
+                {items.length} {items.length === 1 ? 'drink' : 'drinks'} ·{' '}
+                {onMenuCount} on the menu · {onHomeCount} on home
+              </p>
+            )}
+          </div>
+          <Link
+            to="/admin/new"
+            className={`${blackButton} w-full px-4 md:w-auto md:px-7`}
+          >
+            + Add a drink
+          </Link>
+        </div>
+
+        <p role="status" className="sr-only">
+          {announcement}
+        </p>
+
+        {status === 'loading' && (
+          <p className="text-[#1a1a1a]">Loading drinks…</p>
+        )}
+        {status === 'error' && (
+          <p role="alert" className="text-[#b42318]">
+            Couldn't load the menu. Check that you're signed in and the API is
+            running.
+          </p>
+        )}
+        {status === 'ready' && items.length === 0 && (
+          <p className="border-t border-[#1a1a1a] pt-5 text-[#1a1a1a]">
+            No drinks yet
+          </p>
+        )}
+        {items.length > 0 && (
+          <>
+            <ul className="@container border-t border-[#1a1a1a]">
+              {items.map((item) => (
+                <DrinkRow
+                  key={item._id}
+                  item={item}
+                  pending={pendingIds.has(item._id)}
+                  onToggle={(flag, value) =>
+                    mutate(
+                      item._id,
+                      () => setMenuFlag(item._id, flag, value),
+                      updateItem,
+                    )
+                  }
+                  onDeleteClick={(target, trigger) => {
+                    returnFocusTo.current = trigger;
+                    setDeleteId(target._id);
+                  }}
+                />
+              ))}
+            </ul>
+            <p className="mt-4 text-[14px] leading-5 text-[#4a4a4a]">
+              Hiding a drink takes it off the public menu without deleting it,
+              so it’s easy to bring back next season.
+            </p>
+          </>
+        )}
+
+        {deleteTarget && (
+          <DeleteDialog
+            item={deleteTarget}
+            busy={pendingIds.has(deleteTarget._id)}
+            onCancel={() => setDeleteId(null)}
+            onDelete={() =>
+              mutate(
+                deleteTarget._id,
+                () => deleteMenuItem(deleteTarget._id),
+                () => handleDeleted(deleteTarget._id),
+              )
+            }
+            onHide={() =>
+              mutate(
+                deleteTarget._id,
+                () => setOnMenu(deleteTarget._id, false),
+                handleHidden,
+              )
+            }
+          />
+        )}
+      </section>
+
+      {panelOpen && (
+        <section
+          aria-label={isNew ? 'Add a drink' : 'Edit drink'}
+          className="bg-white px-4 pt-7 pb-14 md:px-[43px] md:pt-12 md:pb-24 xl:w-[440px] xl:shrink-0 xl:border-l xl:border-[#1a1a1a] xl:bg-[#f4f4f4] xl:px-9"
+        >
+          {isNew ? (
+            <MenuItemForm
+              key="new"
+              onClose={closePanel}
+              runSave={(save) =>
+                save().then((saved) => {
+                  changes.current += 1;
+                  saveToList(saved);
+                })
+              }
+            />
+          ) : status === 'loading' ? (
+            <p className="text-[#1a1a1a]">Loading drink…</p>
+          ) : editItem ? (
+            <MenuItemForm
+              key={editItem._id}
+              item={editItem}
+              onClose={closePanel}
+              // Saving shares the drink's pending state with its row, so the two
+              // can't overlap, and the saved drink goes into the list.
+              pending={pendingIds.has(editItem._id)}
+              runSave={(save) => mutate(editItem._id, save, saveToList)}
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <p role="alert" className="text-[#b42318]">
+                {status === 'error'
+                  ? 'Couldn’t load the drink. Check that you’re signed in and the API is running.'
+                  : 'We couldn’t find that drink. It may have been deleted.'}
+              </p>
+              <Link
+                to="/admin"
+                className={`self-start text-[#1a1a1a] underline ${smallLabel} ${focusRing}`}
+              >
+                ← Back to the list
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}

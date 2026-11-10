@@ -15,4 +15,3 @@ process.env.MAILTRAP_TOKEN = "test-token";
 process.env.MAILTRAP_USE_SANDBOX = "true";
 process.env.MAILTRAP_INBOX_ID = "1";
 process.env.EMAIL_FROM = "test@example.com";
-process.env.APP_URL = "http://localhost:4000";

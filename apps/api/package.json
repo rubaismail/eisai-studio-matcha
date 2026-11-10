@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks test/*.test.ts",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "preflight": "node dist/scripts/preflight.js"
   },
   "dependencies": {
     "bcrypt": "6.0.0",

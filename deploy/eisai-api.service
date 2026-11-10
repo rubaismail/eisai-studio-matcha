@@ -1,0 +1,25 @@
+[Unit]
+Description=Eisai Studio API
+Wants=network-online.target
+After=network-online.target mongod.service
+
+[Service]
+Type=simple
+User=eisai
+Group=eisai
+WorkingDirectory=/srv/eisai/current
+EnvironmentFile=/etc/eisai/api.env
+ExecStartPre=/usr/bin/node apps/api/dist/scripts/preflight.js
+ExecStart=/usr/bin/node apps/api/dist/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

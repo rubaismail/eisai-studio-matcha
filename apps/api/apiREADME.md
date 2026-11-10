@@ -7,8 +7,7 @@ The Express API accepts JSON requests and returns JSON responses. It connects to
 Start the API and website from the repository root with `npm run dev`. Set `MONGODB_URI` in `apps/api/.env` to the Atlas development connection string. Docker is not required. See the [project setup guide](../../README.md).
 
 **Shared contract:** [OpenAPI YAML](../../docs/api/openapi.yaml) · [contract decisions and SwaggerHub publication](../../docs/api/README.md). The YAML is the machine-readable source of truth; this README is the companion guide.
-This guide documents the target API contract alongside implemented behavior. The menu listing, seasonal listing, admin menu management, authentication flows (except password reset), image uploads, and health endpoints are implemented. Forgot-password and reset-password operations remain planned. See `x-implementation-status` in the OpenAPI contract for endpoint-level status.
-
+This guide documents the target API contract alongside implemented behavior. The menu listing, seasonal listing, admin menu management, authentication flows (including forgot-password and reset-password), image uploads, and health endpoints are implemented. See `x-implementation-status` in the OpenAPI contract for endpoint-level status.
 
 ## Quick navigation
 
@@ -177,13 +176,14 @@ Returns HTTP `200` with the same response whether or not the email is registered
 }
 ```
 
-### 6. POST /api/auth/reset-password
+### 6. POST /api/auth/reset-password?token=<password-reset-token>
 
 Sets a new password using the token from the reset email. No login JWT required.
 
+The reset token is sent as the `token` query parameter (taken from the emailed link), not in the JSON body. The request body contains only the new password:
+
 ```json
 {
-  "token": "<password-reset-token>",
   "password": "new-example-password"
 }
 ```
@@ -196,7 +196,8 @@ Returns HTTP `200`:
 }
 ```
 
-The new password is hashed and the reset token is consumed. Invalid input and expired, invalid or reused tokens return `400`.
+The new password is hashed and the reset token is consumed. A missing, expired, invalid or reused token returns `400`; a missing or invalid `password` in the body also returns `400`. Unknown body fields, including `token` in the body, are rejected with `400`.
+
 
 ### 7. GET /api/menu
 
@@ -214,6 +215,8 @@ Returns HTTP `200`:
       "price": 6.5,
       "category": "Drinks",
       "imageUrl": "https://example.com/images/matcha-latte.webp",
+      "inspiredBy": "Japanese tea traditions",
+      "imageAlt": "Green matcha latte in a clear glass",
       "teaBases": ["matcha"],
       "isRecommended": true,
       "isFeatured": true,
@@ -254,6 +257,8 @@ Creates a menu item. Requires an admin JWT.
   "price": 6.5,
   "category": "Drinks",
   "imageUrl": "https://example.com/images/matcha-latte.webp",
+  "inspiredBy": "Japanese tea traditions",
+  "imageAlt": "Green matcha latte in a clear glass",
   "teaBases": ["matcha"],
   "isRecommended": true,
   "isFeatured": true,
@@ -265,7 +270,7 @@ Creates a menu item. Requires an admin JWT.
 
 `name` and `price` are required; the name must not be blank and the price must be a nonnegative finite number.
 
-Optional defaults are an empty description and image URL, category `Drinks`, `teaBases: []`, `isRecommended: false`, `isFeatured: false`, `isSeasonal: false`, and `isAvailable: true`.
+Optional defaults are empty `description`, `imageUrl`, `inspiredBy` and `imageAlt` strings, category `Drinks`, `teaBases: []`, `isRecommended: false`, `isFeatured: false`, `isSeasonal: false`, and `isAvailable: true`.
 
 `teaBases` accepts an array containing `matcha`, `hojicha`, or both. Duplicate values and unsupported values are rejected. The `isRecommended`, `isFeatured`, `isSeasonal`, and `isAvailable` fields must be booleans. Invalid types, explicit nulls, and unknown fields return HTTP `400`.
 
@@ -372,6 +377,38 @@ Returns HTTP `503` when disconnected:
 ```json
 {
   "status": "database disconnected"
+}
+```
+
+## Inspiration and accessible photo descriptions
+
+The existing menu create/update endpoints accept `inspiredBy` and `imageAlt`; all menu responses (including seasonal and admin aliases) return both strings. Both default to `""` on new items and on reads of legacy records without the fields. No data migration is required.
+
+| UI label | API field |
+| --- | --- |
+| Inspired by | `inspiredBy` |
+| Describe the photo | `imageAlt` |
+| What’s in it | `description` |
+| Recommended | `isRecommended` |
+| Feature on home | `isFeatured` |
+
+`inspiredBy` and `imageAlt` must be strings: null, numbers, booleans, arrays and objects return HTTP 400 without saving other supplied changes. Leading/trailing whitespace is trimmed; internal whitespace and text are preserved. Omitted fields remain unchanged on PUT; `""` (or whitespace-only text) explicitly clears a value. Unknown fields still return 400. All writes remain admin-only.
+
+Handoff for [#51](https://github.com/rubaismail/eisai-studio-matcha/issues/51) and [#27](https://github.com/rubaismail/eisai-studio-matcha/issues/27):
+
+- The staff form should collect meaningful photo alt text when a photo is supplied. These fields remain optional at the API boundary for existing clients and legacy items.
+- Public web/mobile clients should use nonempty `imageAlt` as the image’s accessible description, falling back to the item’s `name` for legacy items. If there is no image, do not expose stale alt text as a photo description. Hide an empty inspiration label.
+- Treat both strings as plain text, never HTML. Use normal escaped text rendering and an `alt` attribute or the platform’s accessibility label; never inject them as markup.
+- Replacing a photo: submit the new `imageUrl` and reviewed `imageAlt` together. Removing a photo: send `{ "imageUrl": "", "imageAlt": "" }`. The API deliberately preserves omitted alt text even when the URL changes; it does not infer whether a replacement depicts the same drink. Changing a photo never changes `inspiredBy`.
+- Uploading a file only returns its URL; save its description in the subsequent menu create/update. This change implements the API contract, not the frontend controls.
+
+Example partial update:
+
+```json
+{
+  "inspiredBy": "Banana bread",
+  "imageUrl": "https://example.com/images/golden-hour.webp",
+  "imageAlt": "Green matcha layered over banana milk in a clear cup"
 }
 ```
 

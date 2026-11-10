@@ -12,6 +12,8 @@ import { env, requireEmailConfig } from '../src/config/env.js';
 type EmailCall = { to: string; rawToken: string };
 let emailCalls: EmailCall[] = [];
 let emailImpl: (to: string, rawToken: string) => Promise<void> = async () => {};
+type ResetEmailCall = { to: string; rawToken: string };
+let resetEmailCalls: ResetEmailCall[] = [];
 
 mock.module('../src/services/email.js', {
   namedExports: {
@@ -21,14 +23,20 @@ mock.module('../src/services/email.js', {
       emailCalls.push({ to, rawToken });
       return emailImpl(to, rawToken);
     },
+    sendResetPasswordEmail: async (to: string, rawToken: string) => {
+      resetEmailCalls.push({ to, rawToken });
+      return emailImpl(to, rawToken);
+    },
   },
 });
 
+process.env.RATE_LIMIT_DISABLED = '1';
 const { createApp } = await import('../src/app.js');
 
 afterEach(() => {
   mock.restoreAll();
   emailCalls = [];
+  resetEmailCalls = [];  
   emailImpl = async () => {};
 });
 
@@ -40,6 +48,8 @@ const MSG_INTERNAL =
   'Unexpected server, database, email or storage error. Do not expose internal details.';
 const MSG_RESEND =
   'If this account needs verification, a verification email has been sent.';
+const MSG_FORGOT =
+  'If an account exists for this email, a password-reset link has been sent.';
 
 const validBody = {
   firstName: 'Jane',
@@ -65,6 +75,28 @@ function mockUpdateOne(modifiedCount: number) {
 }
 function mockFindOneAndUpdate(result: unknown) {
   return mock.method(User, 'findOneAndUpdate', async () => result);
+}
+function mockFindOneResetUser(doc: unknown = { id: 'u1', email: 'jane@example.com' }) {
+  return mock.method(User, 'findOne', async () => doc);
+}
+function mockResetUpdate(matchedCount: number) {
+  return mock.method(User, 'updateOne', async () => ({
+    matchedCount,
+    modifiedCount: matchedCount,
+  }));
+}
+// A 500 must log its cause server-side (for operators) but never send it to the client.
+function assertLoggedNotLeaked(
+  logged: ReturnType<typeof mock.method>,
+  label: string,
+  cause: string,
+  body: unknown,
+) {
+  assert.equal(logged.mock.callCount(), 1);
+  const [loggedLabel, err] = logged.mock.calls[0].arguments as [string, Error];
+  assert.equal(loggedLabel, label);
+  assert.equal(err.message, cause);
+  assert.ok(!JSON.stringify(body).includes(cause));
 }
 
 // ---- Registration: success and normalization --------------------------------
@@ -292,6 +324,21 @@ test('verify marks the user verified atomically', async () => {
   assert.equal(update.$unset?.verificationTokenExpires, '');
 });
 
+test('verify returns a generic 500 and logs the cause when the database fails', async () => {
+  mock.method(User, 'findOneAndUpdate', async () => {
+    throw new Error('db down');
+  });
+  const logged = mock.method(console, 'error', () => {});
+
+  const res = await request(createApp())
+    .get('/api/auth/verify')
+    .query({ token: 'raw-token' });
+
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'verify failed:', 'db down', res.body);
+});
+
 test('verify rejects missing and empty tokens', async () => {
   const app = createApp();
   const missing = await request(app).get('/api/auth/verify');
@@ -388,7 +435,7 @@ test('resend returns 500 when email delivery fails', async () => {
   emailImpl = async () => {
     throw new Error('mailtrap down');
   };
-  mock.method(console, 'error', () => {});
+  const logged = mock.method(console, 'error', () => {});
 
   const res = await request(createApp())
     .post('/api/auth/resend-verification')
@@ -396,6 +443,7 @@ test('resend returns 500 when email delivery fails', async () => {
 
   assert.equal(res.status, 500);
   assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'resend-verification failed:', 'mailtrap down', res.body);
 });
 
 test('resend rejects invalid input', async () => {
@@ -417,18 +465,16 @@ test('resend rejects invalid input', async () => {
 
 // ---- Email links and configuration ------------------------------------------
 
-test('buildVerificationLink produces an absolute, encoded verify URL', () => {
+test('buildVerificationLink produces an absolute, encoded website verify URL', () => {
   for (const base of [
-    'https://api.example.com',
-    'https://api.example.com/',
-    'https://api.example.com/base',
-    'https://api.example.com/base/',
+    'https://www.example.com',
+    'https://www.example.com/',
   ]) {
     const link = buildVerificationLink(base, 'a b+c/d');
     const url = new URL(link);
-    assert.equal(url.pathname, '/api/auth/verify');
+    assert.equal(url.pathname, '/verify-email');
     assert.equal(url.searchParams.get('token'), 'a b+c/d');
-    assert.equal(url.origin, 'https://api.example.com');
+    assert.equal(url.origin, 'https://www.example.com');
   }
 });
 
@@ -476,35 +522,12 @@ test('registration hash verifies with the shared login comparison', async () => 
 });
 // ---- Invalid email/link configuration ---------------------------------------
 
-test('production with blank APP_URL returns 500 before creating an account', async () => {
-  const create = mockCreateSuccess();
-  mockRegisterFindOneNone();
-
-  const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
-  env.isProduction = true;
-  env.appUrl = '';
-  try {
-    const res = await request(createApp()).post('/api/auth/register').send(validBody);
-
-    assert.equal(res.status, 500);
-    assert.deepEqual(res.body, { error: MSG_INTERNAL });
-    assert.equal(create.mock.callCount(), 0);
-    assert.equal(emailCalls.length, 0);
-  } finally {
-    env.isProduction = originalProd;
-    env.appUrl = originalUrl;
-  }
-});
-
-test('production with a valid example APP_URL allows registration', async () => {
+test('production registration works without APP_URL (links use WEB_ORIGIN)', async () => {
   mockRegisterFindOneNone();
   const create = mockCreateSuccess();
 
   const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
   env.isProduction = true;
-  env.appUrl = 'https://api.example.com';
   try {
     const res = await request(createApp()).post('/api/auth/register').send(validBody);
 
@@ -513,7 +536,6 @@ test('production with a valid example APP_URL allows registration', async () => 
     assert.equal(emailCalls.length, 1);
   } finally {
     env.isProduction = originalProd;
-    env.appUrl = originalUrl;
   }
 });
 
@@ -587,28 +609,6 @@ test('resend with invalid config replaces no token and sends no email', async ()
     assert.equal(emailCalls.length, 0);
   } finally {
     env.emailFrom = original;
-  }
-});
-
-test('resend with blank APP_URL in production replaces no token and sends no email', async () => {
-  const update = mockUpdateOne(1);
-
-  const originalProd = env.isProduction;
-  const originalUrl = env.appUrl;
-  env.isProduction = true;
-  env.appUrl = '';
-  try {
-    const res = await request(createApp())
-      .post('/api/auth/resend-verification')
-      .send({ email: 'jane@example.com' });
-
-    assert.equal(res.status, 500);
-    assert.deepEqual(res.body, { error: MSG_INTERNAL });
-    assert.equal(update.mock.callCount(), 0);
-    assert.equal(emailCalls.length, 0);
-  } finally {
-    env.isProduction = originalProd;
-    env.appUrl = originalUrl;
   }
 });
 
@@ -706,4 +706,292 @@ test('registered customer can log in only after consuming the emailed token', as
   assert.deepEqual(login.body.user, {
     _id: '507f1f77bcf86cd799439011', email: validBody.email, role: 'customer',
   });
+});
+// ---- Forgot password --------------------------------------------------------
+
+test('forgot-password returns generic 200 and sends nothing for unknown email', async () => {
+  const update = mockResetUpdate(0);
+  const res = await request(createApp())
+    .post('/api/auth/forgot-password')
+    .send({ email: 'nobody@example.com' });
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { message: MSG_FORGOT });
+  assert.equal(update.mock.callCount(), 1);
+  assert.equal(resetEmailCalls.length, 0);
+});
+
+test('register rejects invalid website configuration before creating an account', async () => {
+  mockRegisterFindOneNone();
+  const create = mockCreateSuccess();
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp()).post('/api/auth/register').send(validBody);
+    assert.equal(res.status, 500);
+    assert.equal(create.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
+});
+
+test('resend-verification rejects invalid website configuration before replacing a token', async () => {
+  const update = mockUpdateOne(1);
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp())
+      .post('/api/auth/resend-verification')
+      .send({ email: 'jane@example.com' });
+    assert.equal(res.status, 500);
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(emailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
+});
+
+test('forgot-password rejects invalid website configuration before storing a token', async () => {
+  const update = mockResetUpdate(1);
+  const previous = env.webOrigin;
+  mock.method(console, 'error', () => {});
+  try {
+    env.webOrigin = 'not-a-url';
+    const res = await request(createApp())
+      .post('/api/auth/forgot-password')
+      .send({ email: 'jane@example.com' });
+    assert.equal(res.status, 500);
+    assert.equal(update.mock.callCount(), 0);
+    assert.equal(resetEmailCalls.length, 0);
+  } finally {
+    env.webOrigin = previous;
+  }
+});
+
+test('forgot-password writes a hashed token and emails the raw token', async () => {
+  const update = mockResetUpdate(1);
+  const res = await request(createApp())
+    .post('/api/auth/forgot-password')
+    .send({ email: '  Jane@Example.COM  ' });
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { message: MSG_FORGOT });
+  assert.equal(resetEmailCalls.length, 1);
+  assert.equal(resetEmailCalls[0].to, 'jane@example.com');
+
+  const [filter, updateDoc] = update.mock.calls[0].arguments as unknown as [
+    Record<string, unknown>,
+    { $set?: Record<string, unknown> },
+  ];
+  assert.equal(filter.email, 'jane@example.com');
+  const set = updateDoc.$set as Record<string, unknown>;
+  assert.equal(typeof set.resetPasswordToken, 'string');
+  assert.ok(set.resetPasswordExpires instanceof Date);
+  assert.equal(
+    set.resetPasswordToken,
+    createHash('sha256').update(resetEmailCalls[0].rawToken).digest('hex'),
+  );
+});
+
+test('forgot-password cooldown filter uses $exists:false and expiry comparison', async () => {
+  const update = mockResetUpdate(0);
+  await request(createApp())
+    .post('/api/auth/forgot-password')
+    .send({ email: 'jane@example.com' });
+
+  const [filter] = update.mock.calls[0].arguments as unknown as [Record<string, unknown>];
+  const or = filter.$or as Array<Record<string, unknown>>;
+  assert.deepEqual(or[0], { resetPasswordExpires: { $exists: false } });
+  assert.ok('resetPasswordExpires' in or[1]);
+});
+
+test('forgot-password rejects invalid input', async () => {
+  const app = createApp();
+  const cases: Array<Record<string, unknown>> = [
+    {},
+    { email: '' },
+    { email: 'not-an-email' },
+    { email: null },
+    { email: 123 },
+    { email: 'jane@example.com', extra: 'x' },
+  ];
+  for (const body of cases) {
+    const res = await request(app).post('/api/auth/forgot-password').send(body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+    assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  }
+});
+
+test('forgot-password returns 500 and writes no token when email delivery fails', async () => {
+  mockResetUpdate(1);
+  emailImpl = async () => {
+    throw new Error('mailtrap down');
+  };
+  const logged = mock.method(console, 'error', () => {});
+
+  const res = await request(createApp())
+    .post('/api/auth/forgot-password')
+    .send({ email: 'jane@example.com' });
+
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'forgot-password failed:', 'mailtrap down', res.body);
+});
+
+// ---- Reset password ---------------------------------------------------------
+
+function resetBody(password = 'NewPassword123') {
+  return { password };
+}
+
+test('reset-password updates the hash and unsets the token atomically', async () => {
+  mockFindOneResetUser();
+  const update = mockResetUpdate(1);
+
+  const res = await request(createApp())
+    .post('/api/auth/reset-password')
+    .query({ token: 'raw-token' })
+    .send(resetBody());
+
+  assert.equal(res.status, 200);
+  assert.equal(typeof res.body.message, 'string');
+
+  const [filter, updateDoc] = update.mock.calls[0].arguments as unknown as [
+    Record<string, unknown>,
+    { $set?: Record<string, unknown>; $unset?: Record<string, unknown> },
+  ];
+  assert.equal(
+    filter.resetPasswordToken,
+    createHash('sha256').update('raw-token').digest('hex'),
+  );
+  assert.ok(filter.resetPasswordExpires);
+  const newHash = (updateDoc.$set as Record<string, unknown>).passwordHash as string;
+  assert.equal(await bcrypt.compare('NewPassword123', newHash), true);
+  assert.equal(updateDoc.$unset?.resetPasswordToken, '');
+  assert.equal(updateDoc.$unset?.resetPasswordExpires, '');
+});
+
+test('reset-password returns a generic 500 and logs the cause when the database fails', async () => {
+  mockFindOneResetUser();
+  mock.method(User, 'updateOne', async () => {
+    throw new Error('db down');
+  });
+  const logged = mock.method(console, 'error', () => {});
+
+  const res = await request(createApp())
+    .post('/api/auth/reset-password')
+    .query({ token: 'raw-token' })
+    .send(resetBody());
+
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'reset-password failed:', 'db down', res.body);
+  // The new password must never end up in the log.
+  assert.ok(!JSON.stringify(logged.mock.calls[0].arguments.map(String)).includes('NewPassword123'));
+});
+
+test('reset-password with an invalid password does not consume the token', async () => {
+  mockFindOneResetUser();
+  const update = mockResetUpdate(1);
+
+  const res = await request(createApp())
+    .post('/api/auth/reset-password')
+    .query({ token: 'raw-token' })
+    .send(resetBody('short'));
+
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  assert.equal(update.mock.callCount(), 0); // token never unset
+});
+
+test('reset-password with a bad body returns 400 without touching the DB', async () => {
+  const find = mockFindOneResetUser();
+  const update = mockResetUpdate(1);
+  const app = createApp();
+
+  for (const body of [{}, { password: null }, { password: 123 }, { password: {} }]) {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .query({ token: 'raw-token' })
+      .send(body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+    assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  }
+  assert.equal(find.mock.callCount(), 0);
+  assert.equal(update.mock.callCount(), 0);
+});
+
+test('reset-password rejects missing, empty, expired and used tokens', async () => {
+  mock.method(User, 'findOne', async () => null);
+  const app = createApp();
+
+  const missing = await request(app).post('/api/auth/reset-password').send(resetBody());
+  assert.equal(missing.status, 400);
+
+  for (const token of ['', 'unknown', 'expired-or-used']) {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .query({ token })
+      .send(resetBody());
+    assert.equal(res.status, 400, token);
+    assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  }
+});
+
+test('concurrent reset-password with the same token yields one 200 and one 400', async () => {
+  let consumed = false;
+  mock.method(User, 'findOne', async () => ({ id: 'u1' }));
+  mock.method(User, 'updateOne', async () => {
+    if (consumed) return { matchedCount: 0 };
+    consumed = true;
+    return { matchedCount: 1 };
+  });
+
+  const app = createApp();
+  const send = () =>
+    request(app).post('/api/auth/reset-password').query({ token: 'raw-token' }).send(resetBody());
+
+  const [a, b] = await Promise.all([send(), send()]);
+  assert.deepEqual([a.status, b.status].sort(), [200, 400]);
+});
+
+test('forgot → reset → login end-to-end with the emailed token', async () => {
+  let stored: Record<string, unknown> | undefined;
+  mock.method(User, 'findOne', async () => stored ?? null);
+  mock.method(User, 'updateOne', async (filter: unknown, change: unknown) => {
+    const f = filter as { email?: string; resetPasswordToken?: string };
+    const c = change as { $set?: Record<string, unknown>; $unset?: Record<string, unknown> };
+    if (f.email) {
+      stored = { ...stored, email: f.email, ...c.$set };
+      return { matchedCount: 1, modifiedCount: 1 };
+    }
+    if (!stored || stored.resetPasswordToken !== f.resetPasswordToken) {
+      return { matchedCount: 0 };
+    }
+    Object.assign(stored, c.$set);
+    for (const k of Object.keys(c.$unset ?? {})) delete stored[k];
+    return { matchedCount: 1 };
+  });
+
+  const app = createApp();
+  assert.equal(
+    (await request(app).post('/api/auth/forgot-password').send({ email: 'jane@example.com' })).status,
+    200,
+  );
+  const raw = resetEmailCalls[0].rawToken;
+
+  const reset = await request(app)
+    .post('/api/auth/reset-password')
+    .query({ token: raw })
+    .send(resetBody('BrandNewPass123'));
+  assert.equal(reset.status, 200);
+
+  // Second use of the same link fails
+  assert.equal(
+    (await request(app).post('/api/auth/reset-password').query({ token: raw }).send(resetBody('AnotherPass123'))).status,
+    400,
+  );
 });

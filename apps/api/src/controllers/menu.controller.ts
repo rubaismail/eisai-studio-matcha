@@ -9,6 +9,8 @@ const editableFields = new Set([
   'price',
   'category',
   'imageUrl',
+  'inspiredBy',
+  'imageAlt',
   'isSeasonal',
   'isAvailable',
   'teaBases',
@@ -96,6 +98,14 @@ function validateMenuPayload(payload: Record<string, unknown>, { allowCreate }: 
     throw error;
   }
 
+  for (const field of ['inspiredBy', 'imageAlt'] as const) {
+    if (payload[field] !== undefined && typeof payload[field] !== 'string') {
+      const error = new Error(`${field} must be a string`) as Error & { status?: number };
+      error.status = 400;
+      throw error;
+    }
+  }
+
   if (payload.isSeasonal !== undefined && typeof payload.isSeasonal !== 'boolean') {
     const error = new Error('isSeasonal must be a boolean') as Error & { status?: number };
     error.status = 400;
@@ -161,6 +171,8 @@ export async function createMenuItem(req: Request, res: Response) {
     price: Number(payload.price),
     category: typeof payload.category === 'string' && payload.category.trim() ? payload.category : 'Drinks',
     imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : '',
+    inspiredBy: typeof payload.inspiredBy === 'string' ? payload.inspiredBy.trim() : '',
+    imageAlt: typeof payload.imageAlt === 'string' ? payload.imageAlt.trim() : '',
     teaBases: Array.isArray(payload.teaBases) ? payload.teaBases : [],
     isRecommended: payload.isRecommended ?? false,
     isFeatured: payload.isFeatured ?? false,
@@ -196,6 +208,8 @@ export async function updateMenuItem(req: Request, res: Response) {
     ...(payload.price !== undefined ? { price: Number(payload.price) } : {}),
     ...(payload.category !== undefined ? { category: String(payload.category).trim() } : {}),
     ...(payload.imageUrl !== undefined ? { imageUrl: String(payload.imageUrl) } : {}),
+    ...(payload.inspiredBy !== undefined ? { inspiredBy: String(payload.inspiredBy).trim() } : {}),
+    ...(payload.imageAlt !== undefined ? { imageAlt: String(payload.imageAlt).trim() } : {}),
     ...(payload.teaBases !== undefined ? { teaBases: payload.teaBases as string[] } : {}),
     ...(payload.isRecommended !== undefined ? { isRecommended: payload.isRecommended as boolean } : {}),
     ...(payload.isFeatured !== undefined ? { isFeatured: payload.isFeatured as boolean } : {}),

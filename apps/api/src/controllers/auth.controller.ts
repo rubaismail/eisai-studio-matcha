@@ -1,44 +1,49 @@
 import type { Request, Response } from "express";
 import { User } from "../models/User.js";
 import { hashPassword } from "../config/password.js";
-import { requireEmailConfig } from "../config/env.js";
-import { sendVerificationEmail } from "../services/email.js";
-import {randomBytes, createHash} from "node:crypto";
+import { requireEmailConfig, requireWebOrigin } from "../config/env.js";
+import { sendVerificationEmail, sendResetPasswordEmail } from "../services/email.js";
+import { randomBytes, createHash } from "node:crypto";
 
 const REGISTER_FIELDS = ["firstName", "lastName", "email", "password"] as const;
 const RESEND_FIELDS = ["email"] as const;
+const FORGOT_FIELDS = ["email"] as const;
+const RESET_FIELDS = ["password"] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Exact contract messages.
 const MSG_CREATED = "Account created. Check your email to verify your account.";
-const MSG_BAD_INPUT = "Missing or invalid input, malformed ID, or invalid, expired or used action token.";
+const MSG_BAD_INPUT =
+  "Missing or invalid input, malformed ID, or invalid, expired or used action token.";
 const MSG_DUPLICATE = "Email address already registered.";
-const MSG_INTERNAL = "Unexpected server, database, email or storage error. Do not expose internal details.";
+const MSG_INTERNAL =
+  "Unexpected server, database, email or storage error. Do not expose internal details.";
 
-//Time limit for token expiration
-const VERIFICATION_TTL_MS = 15 * 60 * 1000 //15 minutes
+// Time limit for token expiration
+const VERIFICATION_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const RESET_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function validateBodyShape(
   body: unknown,
   allowed: readonly string[],
 ): string | null {
-  //Is it a json object?
+  // Is it a JSON object?
   if (body === null || typeof body !== "object" || Array.isArray(body)) {
     return "body must be a JSON object";
   }
   const obj = body as Record<string, unknown>;
-  //Rejecting unknown fields
+  // Rejecting unknown fields
   for (const key of Object.keys(obj)) {
     if (!allowed.includes(key)) return `unknown field: ${key}`;
   }
-  //Checks required fields
+  // Checks required fields
   for (const key of allowed) {
     const v = obj[key];
     if (v === undefined) return `${key} is required`;
     if (v === null) return `${key} must not be null`;
     if (typeof v !== "string") return `${key} must be a string`;
   }
-  //success
+  // success
   return null;
 }
 
@@ -51,27 +56,38 @@ function validateNewPassword(password: string): string | null {
   return null;
 }
 
-function generateVerificationToken(): {raw: string; hash: string; expires: Date}{
+function generateVerificationToken(): { raw: string; hash: string; expires: Date } {
   const raw = randomBytes(32).toString("base64url"); // URL-safe
   const hash = createHash("sha256").update(raw).digest("hex");
-  const expires = new Date(Date.now() + VERIFICATION_TTL_MS); //expires in
-  return {raw, hash, expires};
+  const expires = new Date(Date.now() + VERIFICATION_TTL_MS);
+  return { raw, hash, expires };
 }
 
-function hashVerificationToken(raw:string) : string{
+function generateResetPasswordToken(): { raw: string; hash: string; expires: Date } {
+  const raw = randomBytes(32).toString("base64url"); // URL-safe
+  const hash = createHash("sha256").update(raw).digest("hex");
+  const expires = new Date(Date.now() + RESET_TTL_MS);
+  return { raw, hash, expires };
+}
 
+function hashTokens(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
 export async function register(req: Request, res: Response) {
   try {
-
     requireEmailConfig();
+    requireWebOrigin();
 
     const shapeError = validateBodyShape(req.body, REGISTER_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
 
-    const { firstName, lastName, email: emailRaw, password } = req.body as {
+    const {
+      firstName,
+      lastName,
+      email: emailRaw,
+      password,
+    } = req.body as {
       firstName: string;
       lastName: string;
       email: string;
@@ -95,7 +111,7 @@ export async function register(req: Request, res: Response) {
     if (existing) return res.status(409).json({ error: MSG_DUPLICATE });
 
     const passwordHash = await hashPassword(password);
-    const {raw, hash, expires} = generateVerificationToken();
+    const { raw, hash, expires } = generateVerificationToken();
 
     try {
       await User.create({
@@ -120,7 +136,7 @@ export async function register(req: Request, res: Response) {
       throw err;
     }
 
-    await sendVerificationEmail(email, raw);   
+    await sendVerificationEmail(email, raw);
     return res.status(201).json({ message: MSG_CREATED });
   } catch (err) {
     // Never leak internal details.
@@ -132,33 +148,38 @@ export async function register(req: Request, res: Response) {
 export async function verify(req: Request, res: Response) {
   try {
     const raw = req.query.token;
-    if(typeof raw != "string" || raw.length === 0){
-      return res.status(400).json({error: MSG_BAD_INPUT});
+    if (typeof raw != "string" || raw.length === 0) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
     }
 
-    const hash = hashVerificationToken(raw);
+    const hash = hashTokens(raw);
 
-    const user = await User.findOneAndUpdate({
-      verificationToken: hash,
-      verificationTokenExpires: { $gt: new Date()},
-    }, {
-      $set: { isVerified: true},
-      $unset: { verificationToken: "", verificationTokenExpires: ""},
-    });
-    if(!user){
-      return res.status(400).json({error: MSG_BAD_INPUT});
+    const user = await User.findOneAndUpdate(
+      {
+        verificationToken: hash,
+        verificationTokenExpires: { $gt: new Date() },
+      },
+      {
+        $set: { isVerified: true },
+        $unset: { verificationToken: "", verificationTokenExpires: "" },
+      },
+    );
+    if (!user) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
     } else {
-      return res.status(200).json({message: "Email verified. You can now login."});
+      return res.status(200).json({ message: "Email verified. You can now login." });
     }
-  } catch{
-    return res.status(500).json({error: MSG_INTERNAL});
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("verify failed:", err);
+    return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
-export async function resendVerification(req: Request, res: Response) {
 
+export async function resendVerification(req: Request, res: Response) {
   try {
-    
     requireEmailConfig();
+    requireWebOrigin();
 
     const shapeError = validateBodyShape(req.body, RESEND_FIELDS);
     if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
@@ -167,32 +188,130 @@ export async function resendVerification(req: Request, res: Response) {
     if (!EMAIL_RE.test(email)) {
       return res.status(400).json({ error: MSG_BAD_INPUT });
     }
-    const {raw, hash, expires} = generateVerificationToken();
+    const { raw, hash, expires } = generateVerificationToken();
     const cooldownThreshold = new Date(Date.now() + VERIFICATION_TTL_MS - 60_000);
 
-  const result = await User.updateOne(
-  {
-    email,
-    isVerified: false,
-    $or: [
-      { verificationTokenExpires: { $exists: false } },
-      { verificationTokenExpires: { $lt: cooldownThreshold } },
-    ],
-  },
-  {
-    $set: {
-      verificationToken: hash,
-      verificationTokenExpires: expires,
-    },
-  }
-  );
+    const result = await User.updateOne(
+      {
+        email,
+        isVerified: false,
+        $or: [
+          { verificationTokenExpires: { $exists: false } },
+          { verificationTokenExpires: { $lt: cooldownThreshold } },
+        ],
+      },
+      {
+        $set: {
+          verificationToken: hash,
+          verificationTokenExpires: expires,
+        },
+      },
+    );
 
-  if (result.modifiedCount > 0) {
-    await sendVerificationEmail(email, raw);
-  }
+    if (result.modifiedCount > 0) {
+      await sendVerificationEmail(email, raw);
+    }
 
-  return res.status(200).json({message: "If this account needs verification, a verification email has been sent."});
-  }catch {
+    return res
+      .status(200)
+      .json({ message: "If this account needs verification, a verification email has been sent." });
+  } catch (err) {
+    // Log server-side only (same as register); the client still gets the generic message.
+    console.error("resend-verification failed:", err);
+    return res.status(500).json({ error: MSG_INTERNAL });
+  }
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const raw = req.query.token;
+    if (typeof raw != "string" || raw.length === 0) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    const shapeError = validateBodyShape(req.body, RESET_FIELDS);
+    if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
+
+    const password = (req.body as { password: string }).password;
+    if (validateNewPassword(password)) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    const hash = hashTokens(raw);
+
+    const user = await User.findOne({
+      resetPasswordToken: hash,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+    if (!user) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    const passwordHash = await hashPassword(password);
+    const result = await User.updateOne(
+      {
+        resetPasswordToken: hash,
+        resetPasswordExpires: { $gt: new Date() },
+      },
+      {
+        $set: { passwordHash },
+        $unset: { resetPasswordToken: "", resetPasswordExpires: "" },
+      },
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    return res.status(200).json({ message: "Password reset. Log in with your new password." });
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("reset-password failed:", err);
+    return res.status(500).json({ error: MSG_INTERNAL });
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    requireEmailConfig();
+    requireWebOrigin();
+
+    const shapeError = validateBodyShape(req.body, FORGOT_FIELDS);
+    if (shapeError) return res.status(400).json({ error: MSG_BAD_INPUT });
+
+    const email = (req.body as { email: string }).email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+    const { raw, hash, expires } = generateResetPasswordToken();
+    const cooldownThreshold = new Date(Date.now() + RESET_TTL_MS - 60_000);
+
+    const result = await User.updateOne(
+      {
+        email,
+        $or: [
+          { resetPasswordExpires: { $exists: false } },
+          { resetPasswordExpires: { $lt: cooldownThreshold } },
+        ],
+      },
+      {
+        $set: {
+          resetPasswordToken: hash,
+          resetPasswordExpires: expires,
+        },
+      },
+    );
+
+    if (result.matchedCount === 1 && result.modifiedCount > 0) {
+      await sendResetPasswordEmail(email, raw);
+    }
+
+    return res
+      .status(200)
+      .json({ message: "If an account exists for this email, a password-reset link has been sent." });
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("forgot-password failed:", err);
     return res.status(500).json({ error: MSG_INTERNAL });
   }
 }
