@@ -19,6 +19,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
+import OurStoryPage from './pages/OurStoryPage';
+import ProductsPage from './pages/ProductsPage';
 import RegisterPage from './pages/RegisterPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -69,8 +71,10 @@ export default function App() {
           <Route element={<Narrow />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/menu" element={<MenuPage />} />
-            <Route path="*" element={<NotFoundPage />} />
           </Route>
+          <Route path="/our-story" element={<OurStoryPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/check-email" element={<CheckEmailPage />} />
