@@ -15,11 +15,6 @@
   --color-peach: #fcd9be;
   --color-orange: #f06038;
 
-  /* Old colors used by Home and Menu until #24. */
-  --color-matcha: #345b40;
-  --color-matcha-light: #c5d0c5;
-  --color-cream: #f8f8f4;
-
   --font-sans: 'Questrial', system-ui, sans-serif;
   /* Anonymous Pro has no → glyph; system-ui's is closer to the design. */
   --font-mono: 'Anonymous Pro', system-ui, ui-monospace, monospace;
