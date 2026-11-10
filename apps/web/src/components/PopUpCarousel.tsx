@@ -9,6 +9,12 @@ import poster2 from '../assets/home/popup-video-2.jpg';
 import video2 from '../assets/home/popup-video-2.mp4';
 import poster3 from '../assets/home/popup-video-3.jpg';
 import video3 from '../assets/home/popup-video-3.mp4';
+import poster4 from '../assets/home/popup-video-4.jpg';
+import video4 from '../assets/home/popup-video-4.mp4';
+import poster5 from '../assets/home/popup-video-5.jpg';
+import video5 from '../assets/home/popup-video-5.mp4';
+import poster6 from '../assets/home/popup-video-6.jpg';
+import video6 from '../assets/home/popup-video-6.mp4';
 import playIcon from '../assets/play-button.svg';
 import { INSTAGRAM_URL } from './links';
 import { focusRing, label } from './styles';
@@ -17,13 +23,30 @@ type Slide =
   | { kind: 'video'; src: string; poster: string; label: string }
   | { kind: 'photo'; src: string; alt: string };
 
-// Same slides, in the same order, as the mobile app.
+// Photos are spread out so no more than two videos sit side by side.
 const slides: Slide[] = [
-  { kind: 'video', src: video1, poster: poster1, label: 'Making a drink' },
+  {
+    kind: 'video',
+    src: video4,
+    poster: poster4,
+    label: 'Making a Mango Dango',
+  },
+  {
+    kind: 'video',
+    src: video1,
+    poster: poster1,
+    label: 'Making a Midnight Mori',
+  },
   {
     kind: 'photo',
     src: latte,
     alt: 'Two matcha lattes with leaf latte art on a café table',
+  },
+  {
+    kind: 'video',
+    src: video5,
+    poster: poster5,
+    label: 'Pouring a layered drink at the stand',
   },
   {
     kind: 'video',
@@ -36,6 +59,7 @@ const slides: Slide[] = [
     src: park,
     alt: 'A layered matcha drink held up by a lake in Orlando',
   },
+  { kind: 'video', src: video6, poster: poster6, label: 'Our first pop-up' },
   { kind: 'video', src: video3, poster: poster3, label: 'The pop-up table' },
 ];
 

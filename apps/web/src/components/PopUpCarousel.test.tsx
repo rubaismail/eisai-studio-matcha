@@ -35,12 +35,21 @@ const playing = () =>
 const videoOf = (name: RegExp) =>
   screen.getByRole('button', { name }).parentElement!.querySelector('video')!;
 
-test('has the same five slides as the mobile app, in order', () => {
+test('has all eight slides, with photos between the videos', () => {
   render(<PopUpCarousel />);
   const slides = screen.getAllByRole('listitem');
   expect(
     slides.map((s) => (s.querySelector('video') ? 'video' : 'photo')),
-  ).toEqual(['video', 'photo', 'video', 'photo', 'video']);
+  ).toEqual([
+    'video',
+    'video',
+    'photo',
+    'video',
+    'video',
+    'photo',
+    'video',
+    'video',
+  ]);
   expect(
     screen.getByRole('img', { name: /matcha lattes with leaf latte art/ }),
   ).toBeInTheDocument();
@@ -52,13 +61,15 @@ test('has the same five slides as the mobile app, in order', () => {
 
 test('only the first video plays until the row is scrolled', () => {
   render(<PopUpCarousel />);
-  expect(playing()).toEqual(['Pause video 1: Making a drink']);
+  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
   expect(play).toHaveBeenCalledTimes(1);
 
   const track = screen.getAllByRole('list')[0];
-  track.scrollLeft = 608; // two cards along: video 2
+  track.scrollLeft = 912; // three cards along: video 3
   fireEvent.scroll(track);
-  expect(playing()).toEqual(['Pause video 2: Whisking at the stand']);
+  expect(playing()).toEqual([
+    'Pause video 3: Pouring a layered drink at the stand',
+  ]);
   expect(pause).toHaveBeenCalled();
 });
 
@@ -76,7 +87,9 @@ test('tapping a video pauses it, and tapping again plays it', () => {
 
   // A video that isn't in front can still be played.
   fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
-  expect(playing()).toContain('Pause video 3: The pop-up table');
+  expect(playing()).toContain(
+    'Pause video 3: Pouring a layered drink at the stand',
+  );
 });
 
 test('nothing plays by itself for visitors who prefer less motion', () => {
@@ -102,7 +115,7 @@ test('a play cut short by a pause still autoplays later', async () => {
   render(<PopUpCarousel />);
   await act(async () => {});
   // Still following the carousel, so it shows as playing.
-  expect(playing()).toEqual(['Pause video 1: Making a drink']);
+  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
 });
 
 test('videos pause off screen, even one the visitor started', () => {
@@ -123,8 +136,8 @@ test('videos pause off screen, even one the visitor started', () => {
   expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
   act(() => report([{ isIntersecting: true }]));
   expect(playing()).toEqual([
-    'Pause video 1: Making a drink',
-    'Pause video 3: The pop-up table',
+    'Pause video 1: Making a Mango Dango',
+    'Pause video 3: Pouring a layered drink at the stand',
   ]);
 });
 
