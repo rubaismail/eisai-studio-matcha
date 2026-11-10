@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Play button" clip-path="url(#clip0_0_4)">
+<path id="Vector" d="M32 63.5C49.397 63.5 63.5 49.397 63.5 32C63.5 14.603 49.397 0.5 32 0.5C14.603 0.5 0.5 14.603 0.5 32C0.5 49.397 14.603 63.5 32 63.5Z" fill="black" stroke="white"/>
+<path id="Vector_2" d="M26 22L40 32L26 42V22Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>

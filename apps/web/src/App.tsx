@@ -27,15 +27,6 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 const isAdminPath = (path: string) =>
   path === '/admin' || path.startsWith('/admin/');
 
-// Old narrow layout for Home and Menu until #24.
-function Narrow() {
-  return (
-    <div className="mx-auto max-w-4xl p-6">
-      <Outlet />
-    </div>
-  );
-}
-
 // Scroll to the top on new pages, or to a #section.
 // Skips Back/Forward and moves between admin pages.
 function useScrollOnNavigate() {
@@ -68,9 +59,7 @@ export default function App() {
       <Navbar />
       <main className="flex-1">
         <Routes>
-          <Route element={<Narrow />}>
-            <Route path="/" element={<HomePage />} />
-          </Route>
+          <Route path="/" element={<HomePage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/our-story" element={<OurStoryPage />} />
           <Route path="/products" element={<ProductsPage />} />
