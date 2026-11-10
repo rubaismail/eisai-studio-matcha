@@ -42,8 +42,7 @@ export default function Navbar() {
         { action: 'logout', label: 'Log out' },
       ];
 
-  // key: a repeat click on the same link is a new navigation too.
-  useEffect(() => setOpen(false), [location.key]);
+  useEffect(() => setOpen(false), [location.pathname, location.hash]);
 
   // Close if resized to desktop, or the page stays locked.
   useEffect(() => {
