@@ -15,11 +15,13 @@ import Navbar from './components/Navbar';
 import AccountPage from './pages/AccountPage';
 import AdminPage from './pages/AdminPage';
 import CheckEmailPage from './pages/CheckEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RegisterPage from './pages/RegisterPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
 const isAdminPath = (path: string) =>
@@ -75,6 +77,8 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/check-email" element={<CheckEmailPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/account"
             element={
@@ -94,7 +98,6 @@ export default function App() {
             <Route path="/admin/new" element={<AdminPage />} />
             <Route path="/admin/:id/edit" element={<AdminPage />} />
           </Route>
-          {/* TODO: /forgot-password, /reset-password */}
         </Routes>
       </main>
       {!isAdmin && <Footer />}
