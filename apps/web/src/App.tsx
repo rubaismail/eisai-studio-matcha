@@ -52,7 +52,7 @@ function useScrollOnNavigate() {
     if (navigationType === 'POP' || from === location.pathname) return;
     if (isAdminPath(from) && isAdminPath(location.pathname)) return;
     window.scrollTo(0, 0);
-  }, [location.pathname, location.hash, navigationType]);
+  }, [location.key, location.pathname, location.hash, navigationType]);
 }
 
 export default function App() {
@@ -63,7 +63,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <Navbar hasFooter={!isAdmin} />
+      <Navbar />
       <main className="flex-1">
         <Routes>
           <Route element={<Narrow />}>

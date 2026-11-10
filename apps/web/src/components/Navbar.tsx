@@ -9,16 +9,14 @@ import { focusRing, label } from './styles';
 
 export const INSTAGRAM_URL = 'https://www.instagram.com/eisaistudio/';
 
-// Find us goes to the home page footer on pages without one.
-// Products is hidden until its page exists.
-function getSiteLinks(hasFooter: boolean) {
-  return [
-    { to: '/menu', label: 'Menu' },
-    { to: '/#our-story', label: 'Our story' },
-    { to: hasFooter ? '#find-us' : '/#find-us', label: 'Find us' },
-  ];
-}
-type SiteLink = ReturnType<typeof getSiteLinks>[number];
+const siteLinks = [
+  { to: '/menu', label: 'Menu' },
+  { to: '/our-story', label: 'Our story' },
+  { to: '/products', label: 'Products' },
+  // Always the schedule on the home page.
+  { to: '/#find-us', label: 'Find us' },
+];
+type SiteLink = (typeof siteLinks)[number];
 
 type AccountLink =
   { to: string; label: string } | { action: 'logout'; label: string };
@@ -26,9 +24,8 @@ type AccountLink =
 const desktopLink = `${label} text-ink underline-offset-4 hover:underline aria-[current=page]:underline ${focusRing}`;
 const phoneRow = `flex w-full items-center justify-between border-b border-rule py-5 text-left text-[28px] tracking-[-0.01em] text-ink ${focusRing}`;
 
-export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
+export default function Navbar() {
   const { user, logOut } = useAuth();
-  const siteLinks = getSiteLinks(hasFooter);
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
@@ -45,7 +42,8 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
         { action: 'logout', label: 'Log out' },
       ];
 
-  useEffect(() => setOpen(false), [location.pathname, location.hash]);
+  // key: a repeat click on the same link is a new navigation too.
+  useEffect(() => setOpen(false), [location.key]);
 
   // Close if resized to desktop, or the page stays locked.
   useEffect(() => {
@@ -103,14 +101,6 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
 
   function renderSiteLink(item: SiteLink, className: string, phone = false) {
     const content = phone ? <PhoneRowContent label={item.label} /> : item.label;
-    // Plain anchor so the browser scrolls to it.
-    if (item.to.startsWith('#')) {
-      return (
-        <a href={item.to} className={className} onClick={() => setOpen(false)}>
-          {content}
-        </a>
-      );
-    }
     // Section links shouldn't show as the current page.
     if (item.to.includes('#')) {
       return (
