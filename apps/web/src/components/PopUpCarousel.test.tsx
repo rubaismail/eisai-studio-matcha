@@ -92,6 +92,33 @@ test('tapping a video pauses it, and tapping again plays it', () => {
   );
 });
 
+test('pausing one video stops autoplay for the whole row', () => {
+  render(<PopUpCarousel />);
+  const pause = screen.getByRole('button', { name: /^Pause video 1/ });
+  // The pause control is visible while it plays, not only on hover.
+  expect(pause.querySelector('svg')).toBeInTheDocument();
+  fireEvent.click(pause);
+
+  const track = screen.getAllByRole('list')[0];
+  track.scrollLeft = 912; // video 3 comes into view
+  fireEvent.scroll(track);
+  expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
+  // It can still be played on purpose.
+  fireEvent.click(screen.getByRole('button', { name: /^Play video 3/ }));
+  expect(playing()).toEqual([
+    'Pause video 3: Pouring a layered drink at the stand',
+  ]);
+});
+
+test('each video describes what happens in it, for screen readers', () => {
+  render(<PopUpCarousel />);
+  expect(
+    screen.getByRole('button', { name: /video 1: Making a Mango Dango/ }),
+  ).toHaveAccessibleDescription(/On-screen text: .*Mango Dango!/);
+  for (const button of screen.getAllByRole('button', { name: /video \d/ }))
+    expect(button.getAttribute('aria-describedby')).toBeTruthy();
+});
+
 test('nothing plays by itself for visitors who prefer less motion', () => {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: query.includes('reduce'),

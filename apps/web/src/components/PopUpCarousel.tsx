@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import arrowLeft from '../assets/arrow-left.svg';
 import arrowRight from '../assets/arrow-right.svg';
 import latte from '../assets/home/popup-latte.jpg';
@@ -20,7 +20,14 @@ import { INSTAGRAM_URL } from './links';
 import { focusRing, label } from './styles';
 
 type Slide =
-  | { kind: 'video'; src: string; poster: string; label: string }
+  | {
+      kind: 'video';
+      src: string;
+      poster: string;
+      label: string;
+      // For screen readers: the videos are silent, so describe them.
+      description: string;
+    }
   | { kind: 'photo'; src: string; alt: string };
 
 // Photos are spread out so no more than two videos sit side by side.
@@ -30,12 +37,16 @@ const slides: Slide[] = [
     src: video4,
     poster: poster4,
     label: 'Making a Mango Dango',
+    description:
+      'Mango puree is blended and layered under iced matcha. On-screen text: Eisai’s this week debut: Mango Dango! (Mango sticky rice).',
   },
   {
     kind: 'video',
     src: video1,
     poster: poster1,
     label: 'Making a Midnight Mori',
+    description:
+      'Milk is poured over a purple base, then matcha and a cream topping. On-screen text: Midnight Mori.',
   },
   {
     kind: 'photo',
@@ -47,20 +58,37 @@ const slides: Slide[] = [
     src: video5,
     poster: poster5,
     label: 'Pouring a layered drink at the stand',
+    description:
+      'A gloved hand pours matcha over a layered drink at the pop-up and adds foam. On-screen text: Matcha Blossom Trail, with Montblanc foam.',
   },
   {
     kind: 'video',
     src: video2,
     poster: poster2,
     label: 'Whisking at the stand',
+    description:
+      'Two team members in Eisai shirts whisk and serve matcha under the pop-up tent.',
   },
   {
     kind: 'photo',
     src: park,
     alt: 'A layered matcha drink held up by a lake in Orlando',
   },
-  { kind: 'video', src: video6, poster: poster6, label: 'Our first pop-up' },
-  { kind: 'video', src: video3, poster: poster3, label: 'The pop-up table' },
+  {
+    kind: 'video',
+    src: video6,
+    poster: poster6,
+    label: 'Our first pop-up',
+    description:
+      'The Eisai tent at its first pop-up, with the team and visitors. On-screen text includes: our 1st event, and we will see you again soon!',
+  },
+  {
+    kind: 'video',
+    src: video3,
+    poster: poster3,
+    label: 'The pop-up table',
+    description: 'The pop-up table with menu cards and bowls of matcha.',
+  },
 ];
 
 const card = 'h-[429px] w-[292px] lg:h-[569px] lg:w-80';
@@ -80,6 +108,8 @@ export default function PopUpCarousel() {
   const [onScreen, setOnScreen] = useState(true);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  // Pausing any video stops autoplay for the whole row.
+  const [autoplay, setAutoplay] = useState(() => !prefersReducedMotion());
 
   // Videos only play while the section is on screen.
   useEffect(() => {
@@ -168,8 +198,9 @@ export default function PopUpCarousel() {
                   slides.slice(0, i + 1).filter((s) => s.kind === 'video')
                     .length
                 }
-                active={i === active}
+                active={i === active && autoplay}
                 onScreen={onScreen}
+                onPause={() => setAutoplay(false)}
               />
             ) : (
               <>
@@ -197,18 +228,19 @@ function VideoSlide({
   number,
   active,
   onScreen,
+  onPause,
 }: {
   slide: Extract<Slide, { kind: 'video' }>;
   number: number;
   active: boolean;
   onScreen: boolean;
+  onPause: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // null: follow the carousel; true/false: the visitor played or paused it.
   const [choice, setChoice] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
-  const playing =
-    !failed && onScreen && (choice ?? (active && !prefersReducedMotion()));
+  const playing = !failed && onScreen && (choice ?? active);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -223,6 +255,12 @@ function VideoSlide({
   }, [playing]);
 
   const name = `video ${number}: ${slide.label}`;
+  const descriptionId = useId();
+
+  function toggle() {
+    if (playing) onPause();
+    setChoice(!playing);
+  }
 
   return (
     <>
@@ -245,11 +283,25 @@ function VideoSlide({
       ) : (
         <button
           type="button"
-          onClick={() => setChoice(!playing)}
+          onClick={toggle}
           aria-label={`${playing ? 'Pause' : 'Play'} ${name}`}
+          aria-describedby={descriptionId}
           className={`absolute inset-0 flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white`}
         >
-          {!playing && (
+          {playing ? (
+            // Always visible, so people can see how to stop it.
+            <span className="absolute right-3 bottom-3 flex size-10 items-center justify-center rounded-full bg-ink/70">
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+              >
+                <rect x="2" y="1" width="3.5" height="12" fill="white" />
+                <rect x="8.5" y="1" width="3.5" height="12" fill="white" />
+              </svg>
+            </span>
+          ) : (
             <img
               src={playIcon}
               alt=""
@@ -260,6 +312,9 @@ function VideoSlide({
           )}
         </button>
       )}
+      <p id={descriptionId} className="sr-only">
+        {slide.description}
+      </p>
       <p className={tag}>Video</p>
     </>
   );
