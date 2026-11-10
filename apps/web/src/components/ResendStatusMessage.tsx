@@ -1,7 +1,9 @@
 import type { ResendStatus } from '../auth/useResendVerification';
 import { formatWait } from '../auth/useResendVerification';
 
-const messages: Partial<Record<ResendStatus, string>> = {
+export type ResendMessages = Partial<Record<ResendStatus, string>>;
+
+const verificationMessages: ResendMessages = {
   sent: 'If that address still needs verifying, a new link is on its way.',
   'rate-limited': 'You’ve asked for several links already.',
   failed: 'Couldn’t send a new link. Please try again.',
@@ -12,9 +14,11 @@ const messages: Partial<Record<ResendStatus, string>> = {
 export default function ResendStatusMessage({
   status,
   secondsLeft,
+  messages = verificationMessages,
 }: {
   status: ResendStatus;
   secondsLeft: number;
+  messages?: ResendMessages;
 }) {
   const message = messages[status] ?? '';
   const isError = status === 'rate-limited' || status === 'failed';
