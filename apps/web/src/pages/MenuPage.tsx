@@ -147,9 +147,12 @@ export default function MenuPage() {
       </section>
 
       <section
-        aria-label="All drinks"
+        aria-labelledby="all-drinks-heading"
         className="px-4 pb-18 lg:px-[43px] lg:pb-26"
       >
+        <h2 id="all-drinks-heading" className="sr-only">
+          All drinks
+        </h2>
         {!emptyMenu && (
           <div className="mb-4 flex flex-col gap-4 lg:mb-6 lg:flex-row lg:items-center lg:justify-between">
             <div

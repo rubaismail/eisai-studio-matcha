@@ -14,7 +14,7 @@ const flavors = [
   { name: 'Umami', notes: 'Savory, deep' },
 ];
 
-const heroButton = `inline-flex min-h-12 items-center justify-center border border-white px-6 font-mono text-[14px] tracking-[0.08em] uppercase lg:px-7 ${focusRing} focus-visible:outline-white`;
+const heroButton = `inline-flex min-h-12 items-center justify-center border border-white px-6 font-mono text-[14px] tracking-[0.08em] uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:px-7`;
 const underlinedLink = `font-mono text-[14px] tracking-[0.08em] text-ink uppercase underline underline-offset-2 hover:no-underline ${focusRing}`;
 const sectionTitle =
   'text-[30px] leading-[35px] lg:text-[40px] lg:leading-[46px] lg:tracking-[-0.02em]';
@@ -22,7 +22,8 @@ const sectionText =
   'max-w-140 text-[16px] leading-[25px] text-ink-muted lg:text-[17px] lg:leading-[29px]';
 
 export default function HomePage() {
-  const [featured, setFeatured] = useState<MenuItem[]>([]);
+  // null while loading.
+  const [featured, setFeatured] = useState<MenuItem[] | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -30,8 +31,10 @@ export default function HomePage() {
       .then((items) => {
         if (active) setFeatured(items.filter((item) => item.isFeatured));
       })
-      // The section just stays hidden if the menu can't load.
-      .catch(() => {});
+      // The section is hidden if the menu can't load.
+      .catch(() => {
+        if (active) setFeatured([]);
+      });
     return () => {
       active = false;
     };
@@ -111,7 +114,9 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {featured.length > 0 && (
+      {/* Holds its space while loading, so a jump to the footer schedule
+          isn't pushed down when the drinks arrive. */}
+      {(featured === null || featured.length > 0) && (
         <section
           aria-labelledby="special-heading"
           className="mx-auto max-w-[1126px] px-4 pt-16 pb-18 lg:px-[43px] lg:pt-[88px] lg:pb-24"
@@ -130,13 +135,28 @@ export default function HomePage() {
               See the full menu →
             </Link>
           </div>
-          <ul className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5">
-            {featured.map((item) => (
-              <li key={item._id}>
-                <DrinkTile item={item} variant="home" />
-              </li>
-            ))}
-          </ul>
+          {featured === null ? (
+            <div
+              aria-hidden="true"
+              className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5"
+            >
+              {[0, 1, 2].map((n) => (
+                <div key={n} className="flex flex-col gap-3">
+                  <div className="aspect-[6/5] bg-lavender lg:aspect-square" />
+                  <div className="h-3 w-[55%] bg-rule" />
+                  <div className="h-3 w-[84%] bg-rule" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ul className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5">
+              {featured.map((item) => (
+                <li key={item._id}>
+                  <DrinkTile item={item} variant="home" />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

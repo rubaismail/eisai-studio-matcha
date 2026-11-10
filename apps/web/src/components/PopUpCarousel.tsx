@@ -223,7 +223,7 @@ function VideoSlide({
           type="button"
           onClick={() => setChoice(!playing)}
           aria-label={`${playing ? 'Pause' : 'Play'} ${name}`}
-          className={`absolute inset-0 flex items-center justify-center ${focusRing} focus-visible:outline-offset-[-4px] focus-visible:outline-white`}
+          className={`absolute inset-0 flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white`}
         >
           {!playing && (
             <img
