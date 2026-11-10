@@ -4,18 +4,25 @@ import { label } from './styles';
 // Column widths from the designs: forms 440px, Check your inbox 474px,
 // message pages like Staff only 560px.
 const widths = { sm: 'max-w-110', md: 'max-w-[474px]', lg: 'max-w-140' };
+// Desktop title sizes; the password reset designs use the smaller one.
+const titleSizes = {
+  lg: 'md:text-[64px] md:leading-[66px]',
+  md: 'md:text-[60px] md:leading-[62px]',
+};
 
 export default function AccountLayout({
   eyebrow = 'Your Eisai account',
   title,
   intro,
   size = 'sm',
+  titleSize = 'lg',
   children,
 }: {
   eyebrow?: string;
   title: string;
   intro?: ReactNode;
   size?: keyof typeof widths;
+  titleSize?: keyof typeof titleSizes;
   children: ReactNode;
 }) {
   return (
@@ -25,7 +32,9 @@ export default function AccountLayout({
       >
         <div className="flex flex-col gap-2.5 md:gap-3">
           <p className={`${label} text-ink-muted`}>{eyebrow}</p>
-          <h1 className="text-[44px] leading-[46px] tracking-[-0.02em] md:text-[64px] md:leading-[66px]">
+          <h1
+            className={`text-[44px] leading-[46px] tracking-[-0.02em] ${titleSizes[titleSize]}`}
+          >
             {title}
           </h1>
           {intro && (
