@@ -8,6 +8,15 @@ import PopUpCarousel from '../components/PopUpCarousel';
 import { focusRing, label } from '../components/styles';
 import type { MenuItem } from '../types/menu';
 
+// Same rule as the mobile app's home screen.
+function isSpecial(item: MenuItem) {
+  return (
+    item.isFeatured &&
+    item.isAvailable &&
+    item.category?.trim().toLowerCase() !== 'treats'
+  );
+}
+
 const flavors = [
   { name: 'Nutty', notes: 'Roasted, warm notes' },
   { name: 'Floral', notes: 'Light, aromatic' },
@@ -22,23 +31,32 @@ const sectionText =
   'max-w-140 text-[16px] leading-[25px] text-ink-muted lg:text-[17px] lg:leading-[29px]';
 
 export default function HomePage() {
-  // null while loading.
-  const [featured, setFeatured] = useState<MenuItem[] | null>(null);
+  const [featured, setFeatured] = useState<MenuItem[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     getMenu()
       .then((items) => {
-        if (active) setFeatured(items.filter((item) => item.isFeatured));
+        if (!active) return;
+        setFeatured(items.filter(isSpecial));
+        setStatus('ready');
       })
-      // The section is hidden if the menu can't load.
       .catch(() => {
-        if (active) setFeatured([]);
+        if (active) setStatus('error');
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
+
+  function retry() {
+    setStatus('loading');
+    setAttempt((n) => n + 1);
+  }
 
   return (
     <>
@@ -114,51 +132,65 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {/* Holds its space while loading, so a jump to the footer schedule
-          isn't pushed down when the drinks arrive. */}
-      {(featured === null || featured.length > 0) && (
-        <section
-          aria-labelledby="special-heading"
-          className="mx-auto max-w-[1126px] px-4 pt-16 pb-18 lg:px-[43px] lg:pt-[88px] lg:pb-24"
-        >
-          <div className="flex flex-col items-start gap-2 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-col gap-2 lg:gap-2.5">
-              <p className={`${label} text-ink-muted`}>On the menu now</p>
-              <h2
-                id="special-heading"
-                className="text-[36px] tracking-[-0.02em] lg:text-[44px] lg:leading-[44px]"
-              >
-                Eisai’s Special
-              </h2>
-            </div>
-            <Link to="/menu" className={underlinedLink}>
-              See the full menu →
-            </Link>
-          </div>
-          {featured === null ? (
-            <div
-              aria-hidden="true"
-              className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5"
+      <section
+        aria-labelledby="special-heading"
+        className="mx-auto max-w-[1126px] px-4 pt-16 pb-18 lg:px-[43px] lg:pt-[88px] lg:pb-24"
+      >
+        <div className="flex flex-col items-start gap-2 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-2 lg:gap-2.5">
+            <p className={`${label} text-ink-muted`}>On the menu now</p>
+            <h2
+              id="special-heading"
+              className="text-[36px] tracking-[-0.02em] lg:text-[44px] lg:leading-[44px]"
             >
-              {[0, 1, 2].map((n) => (
-                <div key={n} className="flex flex-col gap-3">
-                  <div className="aspect-[6/5] bg-lavender lg:aspect-square" />
-                  <div className="h-3 w-[55%] bg-rule" />
-                  <div className="h-3 w-[84%] bg-rule" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <ul className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5">
-              {featured.map((item) => (
-                <li key={item._id}>
-                  <DrinkTile item={item} variant="home" />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+              Eisai’s Special
+            </h2>
+          </div>
+          <Link to="/menu" className={underlinedLink}>
+            See the full menu →
+          </Link>
+        </div>
+        {/* Placeholders hold the space, so a jump to the footer schedule
+              isn't pushed down when the drinks arrive. */}
+        {status === 'loading' && (
+          <div
+            aria-hidden="true"
+            className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5"
+          >
+            {[0, 1, 2].map((n) => (
+              <div key={n} className="flex flex-col gap-3">
+                <div className="aspect-[6/5] bg-lavender lg:aspect-square" />
+                <div className="h-3 w-[55%] bg-rule" />
+                <div className="h-3 w-[84%] bg-rule" />
+              </div>
+            ))}
+          </div>
+        )}
+        {status === 'error' && (
+          <div className="mt-6 flex flex-col items-start gap-3 lg:mt-8">
+            <p className="text-[14px] text-ink-muted">
+              Featured drinks could not be loaded.
+            </p>
+            <button type="button" onClick={retry} className={underlinedLink}>
+              Try again
+            </button>
+          </div>
+        )}
+        {status === 'ready' && featured.length === 0 && (
+          <p className="mt-6 text-[14px] text-ink-muted lg:mt-8">
+            No featured drinks right now.
+          </p>
+        )}
+        {featured.length > 0 && (
+          <ul className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-5">
+            {featured.map((item) => (
+              <li key={item._id}>
+                <DrinkTile item={item} variant="home" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <PopUpCarousel />
     </>

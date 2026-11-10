@@ -1,16 +1,27 @@
 import { afterEach, expect, test, vi } from 'vitest';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { jsonResponse, makeDrink, renderWithAuth } from '../test-utils';
 import HomePage from './HomePage';
 
-function renderHome(response: unknown) {
+function renderHome(...responses: unknown[]) {
   const fetchMock = vi.fn();
-  if (response instanceof Error) fetchMock.mockRejectedValue(response);
-  else fetchMock.mockResolvedValue(response);
+  for (const response of responses) {
+    if (response instanceof Error) fetchMock.mockRejectedValueOnce(response);
+    else fetchMock.mockResolvedValueOnce(response);
+  }
   vi.stubGlobal('fetch', fetchMock);
   renderWithAuth(<HomePage />);
   return fetchMock;
 }
+
+const special = () =>
+  screen.getByRole('heading', { name: 'Eisai’s Special' }).closest('section')!;
 
 afterEach(() => {
   cleanup();
@@ -32,40 +43,58 @@ test('the hero links to the menu and the schedule', () => {
   ).toHaveAttribute('href', '/our-story');
 });
 
-test('Eisai’s Special shows only drinks featured on home', async () => {
+test('Eisai’s Special shows drinks featured on home, like the mobile app', async () => {
   const fetchMock = renderHome(
     jsonResponse(200, {
       items: [
         makeDrink({ name: 'Golden Hour', isFeatured: true }),
         makeDrink({ name: 'Kyoto Fog' }),
+        makeDrink({
+          name: 'Matcha Cookie',
+          isFeatured: true,
+          category: 'Treats',
+        }),
         makeDrink({ name: 'Tokyo Rose', isFeatured: true }),
       ],
     }),
   );
-  const section = (
-    await screen.findByRole('heading', { name: 'Eisai’s Special' })
-  ).closest('section')!;
+  await screen.findByRole('heading', { name: 'Golden Hour' });
   expect(
-    within(section)
+    within(special())
       .getAllByRole('heading', { level: 3 })
       .map((h) => h.textContent),
   ).toEqual(['Golden Hour', 'Tokyo Rose']);
   expect(
-    within(section).getByRole('link', { name: 'See the full menu →' }),
+    within(special()).getByRole('link', { name: 'See the full menu →' }),
   ).toHaveAttribute('href', '/menu');
   expect(fetchMock.mock.calls[0][0]).toBe('/api/menu');
 });
 
-test('Eisai’s Special stays hidden with nothing featured or no menu', async () => {
+test('with nothing featured it says so and still links to the menu', async () => {
   renderHome(jsonResponse(200, { items: [makeDrink({ name: 'Kyoto Fog' })] }));
-  await screen.findByRole('heading', { name: 'At the pop-up' });
-  await new Promise((r) => setTimeout(r, 0));
-  expect(screen.queryByRole('heading', { name: 'Eisai’s Special' })).toBeNull();
-  cleanup();
+  expect(
+    await screen.findByText('No featured drinks right now.'),
+  ).toBeInTheDocument();
+  expect(
+    within(special()).getByRole('link', { name: 'See the full menu →' }),
+  ).toBeInTheDocument();
+});
 
-  renderHome(new Error('offline'));
-  await new Promise((r) => setTimeout(r, 0));
-  expect(screen.queryByRole('heading', { name: 'Eisai’s Special' })).toBeNull();
+test('if the menu can’t load it offers to try again', async () => {
+  const fetchMock = renderHome(
+    new Error('offline'),
+    jsonResponse(200, {
+      items: [makeDrink({ name: 'Golden Hour', isFeatured: true })],
+    }),
+  );
+  expect(
+    await screen.findByText('Featured drinks could not be loaded.'),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Golden Hour' }),
+  ).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 test('Eisai’s Special holds its space while the menu loads', async () => {
@@ -75,14 +104,14 @@ test('Eisai’s Special holds its space while the menu loads', async () => {
     vi.fn().mockReturnValue(new Promise((resolve) => (respond = resolve))),
   );
   renderWithAuth(<HomePage />);
-  // Keeps the footer from moving after a jump to the schedule.
-  expect(
-    screen.getByRole('heading', { name: 'Eisai’s Special' }),
-  ).toBeInTheDocument();
+  // Placeholder tiles keep the footer from moving after a jump to it.
+  expect(special().querySelectorAll('[aria-hidden="true"] > div')).toHaveLength(
+    3,
+  );
   respond(jsonResponse(200, { items: [] }));
   await waitFor(() =>
     expect(
-      screen.queryByRole('heading', { name: 'Eisai’s Special' }),
-    ).toBeNull(),
+      screen.getByText('No featured drinks right now.'),
+    ).toBeInTheDocument(),
   );
 });
