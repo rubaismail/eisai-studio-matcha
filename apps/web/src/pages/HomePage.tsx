@@ -69,6 +69,8 @@ export default function HomePage() {
           <img
             src={hero}
             alt=""
+            // The hero is the largest thing on screen; fetch it before other images.
+            fetchPriority="high"
             className="absolute inset-0 size-full object-cover object-[center_60%] lg:object-[center_70%]"
           />
         </picture>
