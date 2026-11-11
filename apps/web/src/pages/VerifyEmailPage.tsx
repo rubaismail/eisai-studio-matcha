@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { verifyEmail } from '../api/auth';
 import { ApiError } from '../api/client';
-import spinner from '../assets/spinner.svg';
 import AccountLayout from '../components/AccountLayout';
 import ResendVerificationForm from '../components/ResendVerificationForm';
+import Spinner from '../components/Spinner';
 import { primaryButton, secondaryButton, textLink } from '../components/styles';
 
 type Result = 'verified' | 'expired';
@@ -90,13 +90,7 @@ export default function VerifyEmailPage() {
       </p>
       {status === 'checking' && (
         <AccountLayout eyebrow="Email verification" title="Checking your email">
-          <img
-            src={spinner}
-            alt=""
-            width={44}
-            height={44}
-            className="animate-spin motion-reduce:animate-none"
-          />
+          <Spinner />
           <div className="flex flex-col gap-2.5 text-[17px] leading-[26px]">
             <p>Your verification link is open.</p>
             <p className="text-ink-muted">
