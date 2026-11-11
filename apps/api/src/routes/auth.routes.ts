@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { register, verify, resendVerification, resetPassword, forgotPassword} from "../controllers/auth.controller.js";
-import { createLoginLimiters } from "../middleware/loginRateLimit.js";
+import { createAccountLimiters, createLoginLimiters } from "../middleware/loginRateLimit.js";
+import { deleteAccount } from "../controllers/account.controller.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 function intEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -33,6 +35,14 @@ const resetLimiters = limiters({
   emailLimit: intEnv("RESET_EMAIL_LIMIT", 10),
   windowMs,
 });
+const deleteAccountLimiters =
+  process.env.RATE_LIMIT_DISABLED === "1"
+    ? []
+    : createAccountLimiters({
+        ipLimit: intEnv("DELETE_ACCOUNT_IP_LIMIT", 20),
+        userLimit: intEnv("DELETE_ACCOUNT_USER_LIMIT", 5),
+        windowMs,
+      });
 const router = Router();
 
 router.get("/verify", verify);
@@ -40,5 +50,7 @@ router.post("/register", ...registerLimiters, register);
 router.post("/resend-verification", ...resendLimiters, resendVerification);
 router.post("/forgot-password", ...forgotLimiters, forgotPassword);
 router.post("/reset-password", ...resetLimiters, resetPassword);
+// Signed-in customers delete their own account (issue #102).
+router.post("/delete-account", requireAuth, ...deleteAccountLimiters, deleteAccount);
 
 export default router;

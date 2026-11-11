@@ -2,8 +2,7 @@
 
 [openapi.yaml](openapi.yaml) is the reviewable source of truth for endpoint paths, request and response schemas, validation, status codes and access rules. [apiREADME](../../apps/api/apiREADME.md) explains the same API with walkthroughs. This formalizes that existing outline so API, React and Flutter developers can build together and import the contract into SwaggerHub or client/mock tools.
 
-
-This is the **target contract**, not a claim that all routes exist. At this revision, registration, email verification, password reset, login, public menu reads, seasonal menu reads, admin menu management, image uploads, and health checks are implemented.
+This is the **target contract**, not a claim that all routes exist. At this revision, registration, email verification, password reset, login, account deletion, public menu reads, seasonal menu reads, admin menu management, image uploads, and health checks are implemented.
 
 Each operation has an `x-implementation-status` marker indicating its implementation status. Update these markers as routes are implemented or changed. Schema validation alone does not prove server conformance.
 
@@ -11,7 +10,7 @@ Each operation has an `x-implementation-status` marker indicating its implementa
 
 React TypeScript website and Flutter app → JSON over HTTP (HTTPS when deployed) → Express/Node API → Mongoose → remote MongoDB Atlas. The API alone accesses the database, sends verification/reset email through an email service, and uploads menu photos to S3. Email and database credentials stay server-side. The clients use one configurable API base URL ending in `/api`; Swagger paths omit that prefix because it is already in `servers.url`.
 
-All 14 operations are covered. Six account operations, public menu and seasonal reads, admin list including hidden items, create/update/delete, image upload and health. Hide/unhide are updates of `isAvailable`. GrubHub is a frontend link; favorites, checkout, loyalty, refresh tokens, logout and single-item reads are outside this baseline.
+All 15 operations are covered. Seven account operations (including deleting your own account), public menu and seasonal reads, admin list including hidden items, create/update/delete, image upload and health. Hide/unhide are updates of `isAvailable`. GrubHub is a frontend link; favorites, checkout, loyalty, refresh tokens, logout and single-item reads are outside this baseline.
 
 ## Initial validation decisions
 
@@ -117,7 +116,7 @@ These fields are supported by the backend API; corresponding web admin controls 
 
 ## Tokens and client behavior
 
-Register → verify in browser → log in. Login issues an expiring JWT; protected operations require `Authorization: Bearer <token>` **and** server-verified admin access. Credentials must be checked before an unverified-account `403` is returned. Do not accept a client-supplied role as authorization.
+Register → verify in browser → log in. Login issues an expiring JWT; protected operations require `Authorization: Bearer <token>`; menu management and uploads also require server-verified admin access. `POST /api/auth/delete-account` accepts any verified user and requires their current password. Credentials must be checked before an unverified-account `403` is returned. Do not accept a client-supplied role as authorization.
 
 The website keeps its token in memory for this baseline (reload requires login); Flutter uses secure storage. Both clear token/user state on logout or a protected request's `401` and prompt for login. A `403` does not mean token expiration: show verification-required or access-denied guidance. No refresh or logout API exists; clearing a token does not revoke other copies, and password reset does not promise revocation of existing JWTs.
 
@@ -176,6 +175,10 @@ Configure `AUTH_RATE_WINDOW_MS`, `REGISTER_IP_LIMIT`, `REGISTER_EMAIL_LIMIT`,
 `RESEND_IP_LIMIT`, and `RESEND_EMAIL_LIMIT` using positive integer values. Excess requests
 return 429 with `Retry-After`; clients should wait before retrying. Resend also enforces
 an atomic 60-second account cooldown and returns a neutral message for ineligible accounts.
+
+Account deletion defaults to 20 requests per IP and 5 per signed-in account per 15 minutes
+(`DELETE_ACCOUNT_IP_LIMIT`, `DELETE_ACCOUNT_USER_LIMIT`). It counts per account rather than
+per email because the request carries a JWT, not an email address.
 
 Automated tests use isolated database/delivery mocks. Real inbox delivery and the deployed
 registration → verification → login flow remain deployment smoke tests.
