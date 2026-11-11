@@ -3,7 +3,7 @@ class StaffDrink {
     required this.id,
     required this.name,
     this.inspiredBy = '',
-    this.base = 'Matcha',
+    this.base = 'None',
     this.ingredients = '',
     this.category = 'Drinks',
     this.price = 0,
@@ -63,9 +63,11 @@ class StaffDrink {
         : <String>[];
     final base = bases.contains('matcha') && bases.contains('hojicha')
         ? 'Matcha or Hojicha'
+        : bases.contains('matcha')
+        ? 'Matcha'
         : bases.contains('hojicha')
         ? 'Hojicha'
-        : 'Matcha';
+        : 'None';
     return StaffDrink(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
