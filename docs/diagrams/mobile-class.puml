@@ -1,8 +1,6 @@
 @startuml
 ' Eisai Studio Flutter mobile class diagram
-' Based on apps/mobile/lib source supplied November 9, 2026.
-' Core public API is a top-level function in menu_service.dart, NOT a MenuService class.
-' Internal widget State classes and presentation-only widgets are omitted for readability.
+
 title Eisai Studio — Flutter Mobile App Class Diagram
 left to right direction
 skinparam backgroundColor #FFFFFF
@@ -37,6 +35,8 @@ package "lib/models" #F3EFFA {
   class StaffDrink {
     +id: String
     +name: String
+    +base: String = "None"
+    +teaBases: List<String> <<derived>>
     +price: double
     +onMenu: bool
     +recommended: bool
@@ -129,8 +129,6 @@ package "lib/screens/admin" #FCEFF4 {
   class StaffAccessDeniedScreen <<StatelessWidget>>
   class StaffSessionExpiredScreen <<StatelessWidget>>
   class StaffSaveSuccessScreen <<StatelessWidget>>
-  class EisaiSetNewPasswordScreen <<StatefulWidget>>
-  class EisaiProductsComingSoonScreen <<StatelessWidget>>
 }
 
 SecureSessionStore ..|> SessionStore
