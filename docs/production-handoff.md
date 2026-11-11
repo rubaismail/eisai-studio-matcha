@@ -1,18 +1,18 @@
 # Production handoff
 
-Status as of November 7, 2026. The production **API** is live at `https://api.eisaistudio.com`. Live email works through the client's Mailtrap account. The website is not deployed yet. Server details and the reasons behind them are in [deployment.md](deployment.md#production-server-as-built-november-2026).
+Status as of November 11, 2026. The production **website** is live at `https://eisaistudio.com` and the **API** at `https://api.eisaistudio.com`. Live email works through the client's Mailtrap account. The mobile app is not released to the public. Server details and the reasons behind them are in [deployment.md](deployment.md#production-server-as-built-november-2026).
 
 This repository is public. Never put secrets, AWS account IDs, or customer data in this file.
 
 ## What is live
 
-| Component     | Where                                             | Notes                                                                                                                                                                                                                                                                                                   |
-| ------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                                                                                  |
-| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`. Empty: nothing seeded.                                                                                                                                                                                                                                                     |
-| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload not yet tested live.                                                                                                                                                                                                                                                        |
-| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                                                                                       |
-| DNS           | GoDaddy                                           | `A api → 18.189.160.224`, plus Mailtrap records `mt29` (client account), `mt98` (old personal account, to delete), `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. The apex `eisaistudio.com` is still GoDaddy "Parked". Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
+| Component     | Where                                             | Notes                                                                                                                                                                                                                                                                                                |
+| ------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                                                                               |
+| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`. Empty: nothing seeded.                                                                                                                                                                                                                                                  |
+| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload not yet tested live.                                                                                                                                                                                                                                                     |
+| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                                                                                    |
+| DNS           | GoDaddy                                           | `A @ → 18.189.160.224` (website), `CNAME www → @`, `A api → 18.189.160.224`, plus Mailtrap records `mt29` (client account), `mt98` (old personal account, to delete), `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
 
 ### Verified on November 7, 2026
 
@@ -25,7 +25,7 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 
 ### Not yet verified
 
-- Forgot/reset password end to end. The email sends, but the link points to the website (`WEB_ORIGIN`), which is not deployed.
+- Sign-up, email verification and forgot/reset password end to end **through the website** (deployed November 11, 2026). Register with a test address, click the email link through to `Email verified`, then reset the password.
 - Admin login, menu create/edit/delete, image upload to the bucket and public image URLs.
 - Reboot recovery, certificate renewal dry run (`sudo certbot renew --dry-run`), backups and restore.
 - The rest of the [live acceptance checklist](deployment.md#live-acceptance-checklist).
@@ -64,18 +64,9 @@ Remaining:
 ### Unfinished production work
 
 - [ ] **Backups:** there are none yet. At minimum, enable Lightsail automatic snapshots. Properly, schedule `mongodump` to a private backup bucket and test a restore ([deployment.md](deployment.md#backups-and-tested-restore)).
-- [ ] **Website:** `https://eisaistudio.com`, served by Nginx on this server from the live release (`/srv/eisai/current/apps/web/dist`). The site calls `/api/` on its own origin, which Nginx proxies to the same API, so `sudo eisai-deploy` updates and rolls back the website and API together. No separate build or `VITE_API_URL` is needed. Config: [deploy/eisai-web.nginx.conf](../deploy/eisai-web.nginx.conf). One-time setup:
-  1. GoDaddy: change the apex `A @` record from "Parked" to `18.189.160.224` (keep `CNAME www → @`).
-  2. `sudo eisai-deploy` to put a release that includes the website live.
-  3. `sudo cp /srv/eisai/current/deploy/eisai-web.nginx.conf /etc/nginx/sites-available/eisai-web`
-  4. `sudo ln -sfn /etc/nginx/sites-available/eisai-web /etc/nginx/sites-enabled/eisai-web && sudo nginx -t && sudo systemctl reload nginx`
-  5. Once `eisaistudio.com` resolves to the server: `sudo certbot --nginx -d eisaistudio.com -d www.eisaistudio.com` (choose redirect). `www` redirects to `https://eisaistudio.com` because the API only allows browser requests from exactly `WEB_ORIGIN`.
-  6. Speed (one-time): `sudo cp /srv/eisai/current/deploy/eisai-gzip.nginx.conf /etc/nginx/conf.d/eisai-gzip.conf`, then `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/' /etc/nginx/sites-available/eisai-web /etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`.
-  7. Sign up with a test address and click the verification email through to `Email verified`; test a password reset.
-- [ ] **Mobile app:** point Flutter's API base URL at `https://api.eisaistudio.com/api`.
 - [ ] **Monitoring:** nothing alerts if the server or API goes down. Add Lightsail metric alarms (CPU, status checks) and an uptime check on `/api/health`.
 - [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
-- [ ] Optional hardening: add `server_tokens off;` to Nginx so it doesn't advertise its version.
+- [ ] Optional hardening: the API still shows its Nginx version (`Server: nginx/1.18.0 (Ubuntu)`). Add `server_tokens off;` to the `server` blocks in `/etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`. The website already hides it.
 
 ## Privacy and legal
 
@@ -110,6 +101,7 @@ All commands run in Lightsail browser SSH (**Lightsail console → eisai-prod �
 
 | Task                     | Command                                                                                                                                      |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Website                  | `https://eisaistudio.com` (`www` redirects)                                                                                                  | Built from the same release as the API and served by Nginx; `/api/` is proxied to the API. `sudo eisai-deploy` updates both. Let's Encrypt TLS, auto-renewed (first certificate expires 2027-02-09). Config: [deploy/eisai-web.nginx.conf](../deploy/eisai-web.nginx.conf), gzip in [deploy/eisai-gzip.nginx.conf](../deploy/eisai-gzip.nginx.conf), HTTP/2 on. |
 | API status / logs        | `sudo systemctl status eisai-api` / `sudo journalctl -u eisai-api -n 100 --no-pager`                                                         |
 | Restart API              | `sudo systemctl restart eisai-api`                                                                                                           |
 | Set or rotate secrets    | `sudo eisai-set-secrets` (blank answer keeps the current value)                                                                              |
@@ -147,4 +139,6 @@ Secrets live only in `/etc/eisai/` on the server. Nothing in this repository con
 2. Attach the static IP `eisai-prod-ip`. Set the firewall to 80/443 open and SSH from Lightsail browser SSH only.
 3. Watch `sudo tail -f /var/log/eisai-bootstrap.log` until `=== bootstrap done` (about 15 minutes).
 4. Run `sudo eisai-set-secrets`, then `sudo certbot --nginx -d api.eisaistudio.com`.
-5. Restore the database from the latest backup (see the backups item above; there is nothing to restore from yet).
+5. Website: `sudo cp /srv/eisai/current/deploy/eisai-web.nginx.conf /etc/nginx/sites-available/eisai-web`, `sudo ln -sfn /etc/nginx/sites-available/eisai-web /etc/nginx/sites-enabled/eisai-web`, `sudo cp /srv/eisai/current/deploy/eisai-gzip.nginx.conf /etc/nginx/conf.d/eisai-gzip.conf`, `sudo nginx -t && sudo systemctl reload nginx`, then `sudo certbot --nginx -d eisaistudio.com -d www.eisaistudio.com` (choose redirect).
+6. Turn on HTTP/2: `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/' /etc/nginx/sites-available/eisai-web /etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`.
+7. Restore the database from the latest backup (see the backups item above; there is nothing to restore from yet).
