@@ -5,3 +5,4 @@ planning
 *.pdf
 coverage
 dist
+docs/test-results/lighthouse/*.json
