@@ -223,7 +223,7 @@ export default function RegisterPage() {
           our{' '}
           <Link
             to="/privacy"
-            className={`underline underline-offset-2 hover:no-underline ${focusRing}`}
+            className={`text-ink underline underline-offset-2 hover:no-underline ${focusRing}`}
           >
             privacy policy
           </Link>{' '}
