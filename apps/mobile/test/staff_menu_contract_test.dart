@@ -79,4 +79,104 @@ void main() {
       ),
     );
   });
+
+  test('editing a drink with no tea base preserves empty teaBases', () async {
+    final client = MockClient((request) async {
+      if (request.method == 'GET') {
+        expect(request.url.path, '/api/menu/admin/menu');
+
+        return http.Response(
+          jsonEncode({
+            'items': [
+              {
+                '_id': 'treat123',
+                'name': 'Strawberry Treat',
+                'description': 'Strawberry cream',
+                'price': 6.50,
+                'category': 'Treats',
+                'teaBases': <String>[],
+                'isAvailable': true,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+
+      if (request.method == 'PUT') {
+        expect(request.url.path, '/api/menu/treat123');
+
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+
+        expect(body['teaBases'], isEmpty);
+        expect(body['category'], 'Treats');
+
+        return http.Response(
+          jsonEncode({
+            'item': {'_id': 'treat123', ...body},
+          }),
+          200,
+        );
+      }
+
+      fail('Unexpected request: ${request.method} ${request.url}');
+    });
+
+    final repo = HttpStaffMenuRepository(
+      baseUrl: 'https://api.eisaistudio.com/api',
+      getToken: () async => 'secure-token',
+      client: client,
+    );
+
+    final drinks = await repo.listDrinks();
+    final original = drinks.single;
+
+    expect(original.base, 'None');
+    expect(original.teaBases, isEmpty);
+
+    final saved = await repo.saveDrink(original, isNew: false);
+
+    expect(saved.base, 'None');
+    expect(saved.teaBases, isEmpty);
+  });
+
+  test('hiding a drink updates only isAvailable', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'PUT');
+      expect(request.url.path, '/api/menu/treat123');
+      expect(request.headers['Authorization'], 'Bearer secure-token');
+
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+
+      expect(body, {'isAvailable': false});
+
+      return http.Response(
+        jsonEncode({
+          'item': {
+            '_id': 'treat123',
+            'name': 'Strawberry Treat',
+            'description': 'Strawberry cream',
+            'price': 6.50,
+            'category': 'Treats',
+            'teaBases': <String>[],
+            'isAvailable': false,
+          },
+        }),
+        200,
+      );
+    });
+
+    final repo = HttpStaffMenuRepository(
+      baseUrl: 'https://api.eisaistudio.com/api',
+      getToken: () async => 'secure-token',
+      client: client,
+    );
+
+    final updated = await repo.updateDrinkFields('treat123', {
+      'isAvailable': false,
+    });
+
+    expect(updated.onMenu, false);
+    expect(updated.teaBases, isEmpty);
+  });
 }

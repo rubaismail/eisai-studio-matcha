@@ -60,7 +60,7 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
       text: d?.price == null || d!.price == 0 ? '' : d.price.toStringAsFixed(2),
     );
     altText = TextEditingController(text: d?.altText ?? '');
-    base = d?.base ?? 'Matcha';
+    base = d?.base ?? 'None';
     onMenu = d?.onMenu ?? true;
     recommended = d?.recommended ?? false;
     onHome = d?.onHome ?? false;
@@ -117,7 +117,7 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
       p = await widget.onPickPhoto!();
     } catch (error) {
       if (!mounted) return;
-      setState(() => uploadError = 'Could not select photo: $error');
+      setState(() => uploadError = 'Could not select photo. Please try again.');
       return;
     }
     if (p == null || !mounted) return;
@@ -153,10 +153,7 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
           );
         } catch (e) {
           if (mounted) {
-            setState(
-              () => uploadError =
-                  'Photo upload failed. Retry or choose another photo. ($e)',
-            );
+            setState(() => uploadError = 'Retry or choose another photo.');
           }
           return;
         }
@@ -216,10 +213,7 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
         await widget.repository.deleteDrink(d.id);
       }
       if (action == StaffDeleteAction.hide) {
-        await widget.repository.saveDrink(
-          d.copyWith(onMenu: false),
-          isNew: false,
-        );
+        await widget.repository.updateDrinkFields(d.id, {'isAvailable': false});
       }
       if (mounted) {
         setState(() => _allowExit = true);
@@ -370,7 +364,7 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
                   borderSide: BorderSide(color: StaffColors.ink),
                 ),
               ),
-              items: ['Matcha', 'Hojicha', 'Matcha or Hojicha']
+              items: ['None', 'Matcha', 'Hojicha', 'Matcha or Hojicha']
                   .map(
                     (v) => DropdownMenuItem(
                       value: v,
