@@ -70,7 +70,8 @@ Remaining:
   3. `sudo cp /srv/eisai/current/deploy/eisai-web.nginx.conf /etc/nginx/sites-available/eisai-web`
   4. `sudo ln -sfn /etc/nginx/sites-available/eisai-web /etc/nginx/sites-enabled/eisai-web && sudo nginx -t && sudo systemctl reload nginx`
   5. Once `eisaistudio.com` resolves to the server: `sudo certbot --nginx -d eisaistudio.com -d www.eisaistudio.com` (choose redirect). `www` redirects to `https://eisaistudio.com` because the API only allows browser requests from exactly `WEB_ORIGIN`.
-  6. Sign up with a test address and click the verification email through to `Email verified`; test a password reset.
+  6. Speed (one-time): `sudo cp /srv/eisai/current/deploy/eisai-gzip.nginx.conf /etc/nginx/conf.d/eisai-gzip.conf`, then `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/' /etc/nginx/sites-available/eisai-web /etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`.
+  7. Sign up with a test address and click the verification email through to `Email verified`; test a password reset.
 - [ ] **Mobile app:** point Flutter's API base URL at `https://api.eisaistudio.com/api`.
 - [ ] **Monitoring:** nothing alerts if the server or API goes down. Add Lightsail metric alarms (CPU, status checks) and an uptime check on `/api/health`.
 - [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
