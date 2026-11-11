@@ -49,9 +49,9 @@ Common status codes:
 | `201`  | Account, menu item or uploaded image created                                 |
 | `400`  | Missing or invalid input, malformed ID, or invalid/expired/used action token |
 | `401`  | Missing, invalid or expired login JWT, or incorrect login credentials        |
-| `403`  | Email verification required or user lacks admin access                       |
+| `403`  | Email verification required, user lacks admin access, or wrong current password when deleting an account |
 | `404`  | Menu item or route not found                                                 |
-| `409`  | Email address already registered                                             |
+| `409`  | Email address already registered, or deleting the only admin account         |
 | `413`  | Uploaded image exceeds the size limit                                        |
 | `415`  | Unsupported upload file type                                                 |
 | `500`  | Unexpected server or database error                                          |
@@ -73,7 +73,7 @@ Verification and password-reset tokens are expiring, single-use action tokens, s
 
 ## Endpoints
 
-There are **14 endpoints**: six account endpoints, six menu endpoints, one upload endpoint and one health endpoint. Each HTTP method/path combination counts as one endpoint.
+There are **15 endpoints**: seven account endpoints, six menu endpoints, one upload endpoint and one health endpoint. Each HTTP method/path combination counts as one endpoint.
 
 ### 1. POST /api/auth/register
 
@@ -198,8 +198,31 @@ Returns HTTP `200`:
 
 The new password is hashed and the reset token is consumed. A missing, expired, invalid or reused token returns `400`; a missing or invalid `password` in the body also returns `400`. Unknown body fields, including `token` in the body, are rejected with `400`.
 
+### 7. POST /api/auth/delete-account
 
-### 7. GET /api/menu
+Permanently deletes the signed-in user's own account. Requires a login JWT (customer or admin). The body contains only the current password, so an account can't be deleted from a session someone left open:
+
+```json
+{
+  "password": "example-password"
+}
+```
+
+Returns HTTP `200`:
+
+```json
+{
+  "message": "Account deleted."
+}
+```
+
+The user document, including favorites, is removed; no other collection stores customer data. The account's JWT stops working immediately because every protected request looks the user up. The email address can be registered again afterwards.
+
+A missing, empty or non-string `password`, or any other body field, returns `400`. A wrong password returns `403` with `{ "error": "Incorrect password" }`, not `401`, because the user is still signed in and clients treat a `401` as signed out. A missing, invalid or expired JWT returns `401`. Deleting the **only** verified admin account returns `409` so the client can't lock themselves out of the dashboard; make another account an admin first. (Two admins deleting at the same instant could both succeed; recover with [admin-account-setup.md](../../docs/admin-account-setup.md).) Limited to 20 requests per client IP (counted before the JWT is checked, so bad tokens count too) and 5 per account per 15 minutes; exceeding either returns `429` with `Retry-After`.
+
+The client asks for confirmation and the password before sending this request, then clears its stored token and authenticated state, the same as logout. This is a `POST` rather than `DELETE` because it carries a request body.
+
+### 8. GET /api/menu
 
 Lists available menu items, sorted by name. No authentication or request body required. Items with `isAvailable: false` are excluded.
 
@@ -231,8 +254,7 @@ Returns HTTP `200`:
 
 Prices are numbers in dollars. Image URLs in these examples are illustrative.
 
-### 8. GET /api/menu/seasonal
-
+### 9. GET /api/menu/seasonal
 
 Lists available seasonal menu items. No authentication or request body required.
 
@@ -240,13 +262,13 @@ Returns HTTP `200` with the same `{ "items": [...] }` shape as the public menu, 
 
 Seasonal classification is independent of homepage carousel selection. The homepage carousel uses available items with `isFeatured: true`, which clients identify from `GET /api/menu`.
 
-### 9. GET /api/admin/menu
+### 10. GET /api/admin/menu
 
 Lists all menu items, including hidden items, for the admin dashboard. Requires an admin JWT. No request body required.
 
 Returns HTTP `200` with the same `{ "items": [...] }` shape as the public menu. Hidden items remain visible here so the admin can edit or unhide them.
 
-### 10. POST /api/menu
+### 11. POST /api/menu
 
 Creates a menu item. Requires an admin JWT.
 
@@ -276,7 +298,7 @@ Optional defaults are empty `description`, `imageUrl`, `inspiredBy` and `imageAl
 
 Returns HTTP `201` with `{ "item": {...} }`, containing the saved item in the shape shown above, including its `_id` and timestamps.
 
-### 11. PUT /api/menu/:id
+### 12. PUT /api/menu/:id
 
 Updates an existing item. Requires an admin JWT. Send the editable fields to change; omitted fields retain their existing values. Send at least one editable field. `_id` and timestamps cannot be set by the client. Unknown fields, null and incorrect types return `400`.
 
@@ -303,8 +325,7 @@ Hide an item without deleting it:
 
 Unhide it by sending `"isAvailable": true`. Hiding removes it from public and seasonal reads but keeps it in the admin list. Hide and unhide use this endpoint; they are not additional endpoints.
 
-
-### 12. Menu filtering and display behavior
+### 13. Menu filtering and display behavior
 
 Menu metadata supports dynamic filtering and homepage display across the React website and Flutter mobile app.
 
@@ -324,9 +345,7 @@ Filter counts should be calculated dynamically from available menu items, not ha
 
 These metadata fields are implemented in the API. Corresponding web admin controls and Flutter interface behavior are separate frontend implementation tasks.
 
-
-
-### 13. DELETE /api/menu/:id
+### 14. DELETE /api/menu/:id
 
 Permanently deletes a menu item. Requires an admin JWT. No request body required. The client asks for confirmation before sending this request.
 
@@ -340,7 +359,7 @@ Returns HTTP `200`:
 
 A valid but nonexistent ID returns `404`. Use the update endpoint's availability flag when an item should only be hidden.
 
-### 14. POST /api/uploads
+### 15. POST /api/uploads
 
 Uploads one menu photo to AWS S3 and returns its URL. Requires an admin JWT. Use multipart field `image`; accepted formats are JPEG, PNG and WebP, with a maximum size of 5 MiB (5,242,880 bytes).
 
@@ -360,7 +379,7 @@ Returns HTTP `201`:
 
 The admin form sends this URL as `imageUrl` when creating or updating the menu item. Uploading an image does not itself create or update a menu record. Images are stored in S3, not on the API server's disk.
 
-### 15. GET /api/health
+### 16. GET /api/health
 
 Reports API/database readiness. No authentication or request body required.
 

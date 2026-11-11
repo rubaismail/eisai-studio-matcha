@@ -15,3 +15,5 @@ process.env.MAILTRAP_TOKEN = "test-token";
 process.env.MAILTRAP_USE_SANDBOX = "true";
 process.env.MAILTRAP_INBOX_ID = "1";
 process.env.EMAIL_FROM = "test@example.com";
+process.env.DELETE_ACCOUNT_IP_LIMIT = "100000";
+process.env.DELETE_ACCOUNT_USER_LIMIT = "100000";

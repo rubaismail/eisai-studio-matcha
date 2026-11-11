@@ -307,6 +307,79 @@ paths:
               $ref: '#/components/schemas/ResetPasswordRequest'
             example:
               password: new-example-password
+  /auth/delete-account:
+    post:
+      operationId: deleteAccount
+      summary: Delete your own account
+      description: >-
+        Permanently deletes the signed-in user's account (customer or admin) after checking the
+        current password. Removes the user document, including favorites; the JWT stops working
+        immediately because protected requests look the user up. Deleting the only admin account
+        returns 409 (only verified admins count). A wrong password returns 403, not 401, because the
+        session is still valid and clients treat 401 as signed out. POST rather than DELETE because
+        the request has a body. Default limits: 20 requests per client IP (counted before the JWT
+        check) and 5 per account per 15 minutes.
+        Exceeding either limit returns 429; wait for Retry-After before retrying.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      x-implementation-status: implemented
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+            example:
+              password: example-password
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Account deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Incorrect current password. The session stays valid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Incorrect password
+        '409':
+          description: The account is the only verified admin account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: >-
+                  This is the only admin account. Make another account an admin before deleting
+                  this one.
+        '429':
+          description: Too many requests from this client IP or for this account.
+          headers:
+            Retry-After:
+              description: Seconds to wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Too many attempts. Try again later.
+        '500':
+          $ref: '#/components/responses/ServerError'
   /menu:
     get:
       operationId: listMenu
@@ -771,8 +844,8 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >-
-        Login JWT. All protected operations additionally require role=admin; enforced by the API,
-        never client-provided role or user ID.
+        Login JWT. Menu management and uploads additionally require role=admin; deleteAccount
+        accepts any verified user. Enforced by the API, never client-provided role or user ID.
   schemas:
     Error:
       type: object
@@ -864,6 +937,18 @@ components:
           description: >-
             New passwords: at least 8 characters and at most 72 UTF-8 bytes; never silently truncate
             for bcrypt.
+      additionalProperties: false
+    DeleteAccountRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 1
+          writeOnly: true
+          description: The account's current password.
       additionalProperties: false
     User:
       type: object
