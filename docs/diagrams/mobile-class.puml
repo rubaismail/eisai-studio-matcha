@@ -1,0 +1,183 @@
+@startuml
+' Eisai Studio Flutter mobile class diagram
+
+title Eisai Studio — Flutter Mobile App Class Diagram
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+skinparam class {
+  BackgroundColor #F8F7FC
+  BorderColor #7776A6
+  ArrowColor #7776A6
+}
+hide empty members
+
+package "lib/models" #F3EFFA {
+  class MenuItem {
+    +id: String
+    +name: String
+    +description: String
+    +price: double
+    +imageUrl: String
+    +imageAlt: String
+    +inspiredBy: String
+    +teaBases: List<String>
+    +isRecommended: bool
+    +isFeatured: bool
+    +isAvailable: bool
+    +fromJson(json): MenuItem
+  }
+  class StaffDrink {
+    +id: String
+    +name: String
+    +base: String = "None"
+    +teaBases: List<String> <<derived>>
+    +price: double
+    +onMenu: bool
+    +recommended: bool
+    +onHome: bool
+    +copyWith(...): StaffDrink
+    +fromJson(json): StaffDrink
+    +toJson(): Map
+  }
+}
+
+package "lib/services" #EBF5FF {
+  class "menu_service.dart" as MenuApi <<module>> {
+    +fetchMenu(client?): Future<List<MenuItem>>
+  }
+  class AuthUser {
+    +id: String
+    +email: String
+    +role: String
+    +fromJson(json): AuthUser
+  }
+  interface SessionStore {
+    +read(key): Future<String?>
+    +write(key, value): Future<void>
+    +delete(key): Future<void>
+  }
+  class SecureSessionStore
+  class AuthService {
+    +instance: AuthService
+    +currentEmail: String?
+    +currentRole: String?
+    +isAdmin: bool
+    +login(email, password): Future<AuthUser>
+    +register(...): Future<String>
+    +restoreSession(): Future<String?>
+    +validToken(): Future<String?>
+    +logout(): Future<void>
+    +forgotPassword(email): Future<String>
+    +resendVerification(email): Future<String>
+  }
+  interface StaffMenuRepository {
+    +listDrinks(): Future<List<StaffDrink>>
+    +saveDrink(drink, isNew): Future<StaffDrink>
+    +updateDrinkFields(id, changes): Future<StaffDrink>
+    +deleteDrink(id): Future<void>
+    +uploadPhoto(bytes, filename): Future<String>
+  }
+  class HttpStaffMenuRepository {
+    +baseUrl: String
+    +getToken: Future<String?> Function()
+  }
+  class PreviewStaffMenuRepository <<test support>>
+  class "staff_photo_picker.dart" as PhotoPicker <<module>> {
+    +pickStaffPhoto(): Future<StaffPickedPhoto?>
+  }
+}
+
+package "lib/main.dart and public screens" #F0F8F1 {
+  class EisaiApp <<StatelessWidget>>
+  class MainNavigation <<StatefulWidget>> {
+    +initialIndex: int
+    +returnToStaff: bool
+  }
+  class HomeScreen <<StatefulWidget>>
+  class MenuScreen <<StatefulWidget>>
+  class DrinkDetailsScreen <<StatefulWidget>>
+  class OurStoryScreen <<StatelessWidget>>
+  class OurLocationScreen <<StatelessWidget>>
+}
+
+package "lib/screens — account" #FFF5E8 {
+  class AccountScreen <<StatefulWidget>>
+  class LoginScreen <<StatefulWidget>>
+  class RegisterScreen <<StatefulWidget>>
+  class CheckEmailScreen <<StatefulWidget>>
+  class ForgotPasswordScreen <<StatefulWidget>>
+}
+
+package "lib/screens/admin" #FCEFF4 {
+  class StaffMenuEditorScreen <<StatefulWidget>> {
+    +repository: StaffMenuRepository
+  }
+  class StaffDrinkFormScreen <<StatefulWidget>> {
+    +repository: StaffMenuRepository
+    +drink: StaffDrink?
+  }
+  class StaffPickedPhoto {
+    +filename: String
+    +bytes: List<int>
+  }
+  class StaffAccessDeniedScreen <<StatelessWidget>>
+  class StaffSessionExpiredScreen <<StatelessWidget>>
+  class StaffSaveSuccessScreen <<StatelessWidget>>
+}
+
+SecureSessionStore ..|> SessionStore
+AuthService --> SessionStore : persists session
+AuthService ..> AuthUser : returns
+HttpStaffMenuRepository ..|> StaffMenuRepository
+PreviewStaffMenuRepository ..|> StaffMenuRepository
+StaffMenuRepository ..> StaffDrink : CRUD
+MenuApi ..> MenuItem : parses list
+PhotoPicker ..> StaffPickedPhoto : creates
+
+EisaiApp --> MainNavigation : home
+MainNavigation --> HomeScreen
+MainNavigation --> MenuScreen
+MainNavigation --> OurStoryScreen
+MainNavigation --> OurLocationScreen
+MainNavigation --> AccountScreen : account route
+HomeScreen ..> MenuApi : loads featured drinks
+MenuScreen ..> MenuApi : loads menu
+HomeScreen ..> MenuItem : uses
+MenuScreen ..> MenuItem : uses
+MenuScreen --> DrinkDetailsScreen : opens drink
+
+AccountScreen ..> AuthService : restores / checks role
+AccountScreen --> LoginScreen : unauthenticated
+AccountScreen --> ForgotPasswordScreen : reset link
+AccountScreen --> StaffMenuEditorScreen : authenticated admin
+AccountScreen ..> HttpStaffMenuRepository : creates
+LoginScreen ..> AuthService : login
+RegisterScreen ..> AuthService : register
+LoginScreen --> RegisterScreen : create account
+LoginScreen --> CheckEmailScreen : verification guidance
+LoginScreen --> ForgotPasswordScreen : reset
+RegisterScreen --> CheckEmailScreen : after register
+CheckEmailScreen ..> AuthService : resend
+ForgotPasswordScreen ..> AuthService : reset
+
+StaffMenuEditorScreen --> StaffMenuRepository : list / toggle / delete
+StaffMenuEditorScreen --> StaffDrinkFormScreen : add / edit
+StaffMenuEditorScreen ..> StaffDrink : displays
+StaffDrinkFormScreen --> StaffMenuRepository : save / upload
+StaffDrinkFormScreen ..> StaffDrink : edits
+StaffDrinkFormScreen ..> StaffPickedPhoto : attaches
+StaffMenuEditorScreen ..> StaffAccessDeniedScreen : forbidden
+StaffMenuEditorScreen ..> StaffSessionExpiredScreen : expired token
+StaffDrinkFormScreen ..> StaffSaveSuccessScreen : save feedback
+
+note bottom of PreviewStaffMenuRepository
+  Mock data for tests and former debug preview.
+  Authenticated admin route uses HttpStaffMenuRepository.
+end note
+@enduml
