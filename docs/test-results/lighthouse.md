@@ -13,6 +13,7 @@ Site: https://eisaistudio.com (home page). Tracks every issue from the first Lig
 | Page       | `https://eisaistudio.com/`                                                                                                                                                                              |
 | Baseline   | November 11, 2026, 19:11 UTC, right after launch (#40)                                                                                                                                                  |
 | Raw report | [lighthouse/2026-11-11-baseline-mobile.json](lighthouse/2026-11-11-baseline-mobile.json). Open it in the [Lighthouse Viewer](https://googlechrome.github.io/lighthouse/viewer/) to see the full report. |
+| Re-runs    | Run 3 times per change and record the median run, since scores vary a few points between runs. Reports are saved as `lighthouse/<date>-<change>-mobile.json`.                                           |
 
 Scores vary a few points between runs. Compare trends, not single points.
 
@@ -21,10 +22,12 @@ Scores vary a few points between runs. Compare trends, not single points.
 | Date       | Change deployed           | Performance | Accessibility | Best Practices | SEO | LCP   | FCP   |
 | ---------- | ------------------------- | ----------- | ------------- | -------------- | --- | ----- | ----- |
 | 2026-11-11 | Baseline (launch)         | 62          | 100           | 100            | 83  | 7.7 s | 4.7 s |
-|            | Server gzip + HTTP/2, #96 |             |               |                |     |       |       |
+| 2026-11-11 | Server gzip + HTTP/2, #96 | 81          | 100           | 100            | 100 | 4.4 s | 2.5 s |
 |            | #93 fonts                 |             |               |                |     |       |       |
 |            | #94 images                |             |               |                |     |       |       |
 |            | #95 code splitting        |             |               |                |     |       |       |
+
+After server gzip + HTTP/2 and #96 (median of 3 runs at 19:38–19:40 UTC; Performance 81, 81, 82): First Contentful Paint 2.5 s, Largest Contentful Paint 4.4 s, Speed Index 2.5 s, Time to Interactive 4.4 s, Total Blocking Time 0 ms, Cumulative Layout Shift 0, total download 1.3 MB. Report: [lighthouse/2026-11-11-after-quick-fixes-mobile.json](lighthouse/2026-11-11-after-quick-fixes-mobile.json).
 
 Baseline metrics: First Contentful Paint 4.7 s, Largest Contentful Paint 7.7 s, Speed Index 5.7 s, Time to Interactive 7.8 s, Total Blocking Time 10 ms, Cumulative Layout Shift 0.001. Server response time was 47 ms, so the server itself is not the bottleneck; the page's 1.7 MB download size is.
 
@@ -32,17 +35,17 @@ Baseline metrics: First Contentful Paint 4.7 s, Largest Contentful Paint 7.7 s, 
 
 Status: **Open**, **Fixed** (merged, not yet deployed or measured), **Verified** (deployed and confirmed by a new Lighthouse run).
 
-| #   | Lighthouse audit                                                     | Baseline              | Fix                                                                                  | Owner                 | Tracked in        | Status       | After |
-| --- | -------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ | --------------------- | ----------------- | ------------ | ----- |
-| 1   | Enable text compression                                              | ~300 KB savings       | Nginx `gzip_types` for JS/CSS/JSON (`deploy/eisai-gzip.nginx.conf`)                  | rubaismail            | #96 + server step | Fixed        |       |
-| 2   | Use HTTP/2 / Modern HTTP                                             | 21 requests, ~0.8 s   | `listen 443 ssl http2` in the Nginx site files                                       | rubaismail            | #96 + server step | Fixed        |       |
-| 3   | Largest Contentful Paint / Preload LCP image / LCP request discovery | 7.7 s, ~0.7 s savings | `fetchPriority="high"` on the hero (done); preload the hero from `index.html` (open) | rubaismail, brandenxo | #96, #94          | Partly fixed |       |
-| 4   | Render-blocking requests                                             | ~1.2 s                | Self-host Questrial and Anonymous Pro instead of Google Fonts                        | brandenxo             | #93               | Open         |       |
-| 5   | Properly size images / Serve images in next-gen formats              | ~420 KB               | WebP/AVIF, phone-sized `srcset`, smaller logo, lazy-load below the fold              | brandenxo             | #94               | Open         |       |
-| 6   | Reduce unused JavaScript                                             | ~230 KB               | Load admin and account pages with `React.lazy` so the home page downloads less code  | Cherriuu              | #95               | Open         |       |
-| 7   | Time to Interactive, Speed Index, Network dependency tree            | 7.8 s, 5.7 s          | No separate fix: summary metrics that improve as 1–6 are fixed                       | —                     | —                 | —            |       |
-| 8   | robots.txt is not valid                                              | 19 errors             | Add `apps/web/public/robots.txt` (the missing file fell through to `index.html`)     | rubaismail            | #96               | Fixed        |       |
-| 9   | Document does not have a meta description                            | Missing               | Add `<meta name="description">` to `apps/web/index.html` (client may reword)         | rubaismail            | #96               | Fixed        |       |
+| #   | Lighthouse audit                                                     | Baseline              | Fix                                                                                  | Owner                 | Tracked in        | Status       | After                                                    |
+| --- | -------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ | --------------------- | ----------------- | ------------ | -------------------------------------------------------- |
+| 1   | Enable text compression                                              | ~300 KB savings       | Nginx `gzip_types` for JS/CSS/JSON (`deploy/eisai-gzip.nginx.conf`)                  | rubaismail            | #96 + server step | Verified     | Passes                                                   |
+| 2   | Use HTTP/2 / Modern HTTP                                             | 21 requests, ~0.8 s   | `listen 443 ssl http2` in the Nginx site files                                       | rubaismail            | #96 + server step | Verified     | Passes                                                   |
+| 3   | Largest Contentful Paint / Preload LCP image / LCP request discovery | 7.7 s, ~0.7 s savings | `fetchPriority="high"` on the hero (done); preload the hero from `index.html` (open) | rubaismail, brandenxo | #96, #94          | Partly fixed | LCP 4.4 s; preload and discovery still flagged           |
+| 4   | Render-blocking requests                                             | ~1.2 s                | Self-host Questrial and Anonymous Pro instead of Google Fonts                        | brandenxo             | #93               | Open         | ~0.4 s (CSS now compressed; Google Fonts still blocking) |
+| 5   | Properly size images / Serve images in next-gen formats              | ~420 KB               | WebP/AVIF, phone-sized `srcset`, smaller logo, lazy-load below the fold              | brandenxo             | #94               | Open         | No change (~420 KB)                                      |
+| 6   | Reduce unused JavaScript                                             | ~230 KB               | Load admin and account pages with `React.lazy` so the home page downloads less code  | Cherriuu              | #95               | Open         | ~87 KB (compression shrank it; code still unused)        |
+| 7   | Time to Interactive, Speed Index, Network dependency tree            | 7.8 s, 5.7 s          | No separate fix: summary metrics that improve as 1–6 are fixed                       | —                     | —                 | —            | TTI 4.4 s, Speed Index 2.5 s                             |
+| 8   | robots.txt is not valid                                              | 19 errors             | Add `apps/web/public/robots.txt` (the missing file fell through to `index.html`)     | rubaismail            | #96               | Verified     | Passes                                                   |
+| 9   | Document does not have a meta description                            | Missing               | Add `<meta name="description">` to `apps/web/index.html` (client may reword)         | rubaismail            | #96               | Verified     | Passes                                                   |
 
 ## What each issue means
 
