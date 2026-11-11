@@ -60,11 +60,13 @@ class AuthService {
 
   static const _tokenKey = 'eisai_auth_token';
   static const _emailKey = 'eisai_auth_email';
+  static const _roleKey = 'eisai_auth_role';
 
   final SessionStore _store;
   final http.Client _client;
 
   final ValueNotifier<String?> _signedInEmail = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _signedInRole = ValueNotifier<String?>(null);
   int _sessionRevision = 0;
 
   Future<void> _storageQueue = Future<void>.value();
@@ -88,6 +90,9 @@ class AuthService {
 
   ValueListenable<String?> get signedInEmailListenable => _signedInEmail;
   String? get currentEmail => _signedInEmail.value;
+  String? get currentRole => _signedInRole.value;
+  bool get isAdmin => currentRole == 'admin';
+  ValueListenable<String?> get signedInRoleListenable => _signedInRole;
 
   Uri _url(String path) =>
       Uri.parse('${apiUrl.replaceFirst(RegExp(r'/$'), '')}/auth/$path');
@@ -185,7 +190,9 @@ class AuthService {
       _checkLoginRevision(revision);
       await _store.write(_tokenKey, token);
       await _store.write(_emailKey, user.email);
+      await _store.write(_roleKey, user.role);
       _checkLoginRevision(revision);
+      _signedInRole.value = user.role;
       _signedInEmail.value = user.email;
       return user;
     });
@@ -207,22 +214,30 @@ class AuthService {
         'If an account exists for this email, a password-reset link has been sent.';
   }
 
-  Future<String?> restoreSession() async {
+    Future<String?> restoreSession() async {
     final revision = _sessionRevision;
-    // Reads share the write queue so restoration cannot observe credentials
-    // while logout is deleting them or login is replacing them.
+
     return _withStorageLock<String?>(() async {
       if (revision != _sessionRevision) return null;
+
       final token = await _store.read(_tokenKey);
       if (revision != _sessionRevision) return null;
+
       if (token == null || token.isEmpty) {
+        _signedInRole.value = null;
         _signedInEmail.value = null;
         return null;
       }
+
       final email = await _store.read(_emailKey);
       if (revision != _sessionRevision) return null;
 
+      final role = await _store.read(_roleKey);
+      if (revision != _sessionRevision) return null;
+
+      _signedInRole.value = role;
       _signedInEmail.value = email;
+
       return email;
     });
   }
@@ -237,12 +252,17 @@ class AuthService {
   Future<void> logout() async {
     _sessionRevision++;
     _signedInEmail.value = null;
+    _signedInRole.value = null;
 
     return _withStorageLock<void>(() async {
       try {
         await _store.delete(_tokenKey);
       } finally {
-        await _store.delete(_emailKey);
+        try {
+          await _store.delete(_emailKey);
+        } finally {
+          await _store.delete(_roleKey);
+        }
       }
     });
   }
