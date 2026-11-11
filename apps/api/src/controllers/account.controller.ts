@@ -33,14 +33,22 @@ export async function deleteAccount(req: Request, res: Response) {
     return;
   }
 
+  // 403, not 401: the user is signed in, and clients treat any 401 as
+  // "signed out" and clear the session, which would hide this message.
   if (!(await verifyPassword(user.passwordHash, password))) {
-    res.status(401).json({ error: 'Incorrect password' });
+    res.status(403).json({ error: 'Incorrect password' });
     return;
   }
 
-  // Never remove the last admin: the client would be locked out of the dashboard.
+  // Never remove the last admin who can log in: the client would be locked out
+  // of the dashboard. Unverified admins can't log in, so they don't count.
+  // Not atomic: two admins deleting at the same instant could both pass. Recover
+  // with docs/admin-account-setup.md if that ever happens.
   if (user.role === 'admin') {
-    const admins = await User.countDocuments({ role: 'admin' });
+    const admins = await User.countDocuments({
+      role: 'admin',
+      isVerified: true,
+    });
     if (admins <= 1) {
       res.status(409).json({
         error:
@@ -50,7 +58,13 @@ export async function deleteAccount(req: Request, res: Response) {
     }
   }
 
-  await User.deleteOne({ _id: user._id });
+  const { deletedCount } = await User.deleteOne({ _id: user._id });
+
+  // Already deleted by a request that ran at the same time.
+  if (deletedCount === 0) {
+    res.status(401).json({ error: 'Invalid token' });
+    return;
+  }
 
   // requireAuth looks the user up on every request, so this account's login
   // token stops working immediately.

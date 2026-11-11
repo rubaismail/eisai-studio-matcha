@@ -29,7 +29,12 @@ function token(sub = userId) {
 function mockAccount({
   role = 'customer',
   admins = 1,
-}: { role?: 'customer' | 'admin'; admins?: number } = {}) {
+  deletedCount = 1,
+}: {
+  role?: 'customer' | 'admin';
+  admins?: number;
+  deletedCount?: number;
+} = {}) {
   let exists = true;
   const user = {
     id: userId,
@@ -52,7 +57,7 @@ function mockAccount({
   );
   const deleteOne = mock.method(User, 'deleteOne', async () => {
     exists = false;
-    return { deletedCount: 1 };
+    return { deletedCount };
   });
 
   return { countDocuments, deleteOne };
@@ -92,12 +97,12 @@ test('the login token stops working once the account is deleted', async () => {
   assert.equal(admin.status, 401);
 });
 
-test('rejects a wrong password without deleting', async () => {
+test('rejects a wrong password with 403 (not 401, which clients treat as signed out)', async () => {
   const { deleteOne } = mockAccount();
 
   const res = await del({ password: 'WrongPassword123!' });
 
-  assert.equal(res.status, 401);
+  assert.equal(res.status, 403);
   assert.deepEqual(res.body, { error: 'Incorrect password' });
   assert.equal(deleteOne.mock.callCount(), 0);
 });
@@ -153,25 +158,52 @@ test('an admin can delete their account when another admin exists', async () => 
   const res = await del({ password });
 
   assert.equal(res.status, 200);
+  // Only verified admins can log in, so only they count as a remaining admin.
   assert.deepEqual(countDocuments.mock.calls[0].arguments[0], {
     role: 'admin',
+    isVerified: true,
   });
   assert.equal(deleteOne.mock.callCount(), 1);
 });
 
-test('account limiter counts attempts per signed-in user', async () => {
+test('reports 401 if a simultaneous request already deleted the account', async () => {
+  mockAccount({ deletedCount: 0 });
+
+  const res = await del({ password });
+
+  assert.equal(res.status, 401);
+  assert.deepEqual(res.body, { error: 'Invalid token' });
+});
+
+function limiterApp(signedIn: () => string | null, ipLimit = 100) {
+  const { beforeAuth, afterAuth } = createAccountLimiters({
+    ipLimit,
+    userLimit: 2,
+    windowMs: 1000,
+  });
   const app = express();
   app.use(express.json());
-  let current = 'user-a';
-  app.use((_req, res, next) => {
-    res.locals.authUser = { id: current };
-    next();
-  });
   app.post(
     '/delete',
-    ...createAccountLimiters({ ipLimit: 100, userLimit: 2, windowMs: 1000 }),
+    ...beforeAuth,
+    (_req, res, next) => {
+      const id = signedIn();
+      if (!id) {
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
+      res.locals.authUser = { id };
+      next();
+    },
+    ...afterAuth,
     (_req, res) => res.json({ ok: true }),
   );
+  return app;
+}
+
+test('account limiter counts attempts per signed-in user', async () => {
+  let current = 'user-a';
+  const app = limiterApp(() => current);
 
   assert.equal((await request(app).post('/delete')).status, 200);
   assert.equal((await request(app).post('/delete')).status, 200);
@@ -182,4 +214,31 @@ test('account limiter counts attempts per signed-in user', async () => {
   // A different account isn't affected by user-a's attempts.
   current = 'user-b';
   assert.equal((await request(app).post('/delete')).status, 200);
+});
+
+test('the IP limit also counts requests with bad tokens', async () => {
+  const app = limiterApp(() => null, 3);
+
+  for (let i = 0; i < 3; i++) {
+    assert.equal((await request(app).post('/delete')).status, 401);
+  }
+  assert.equal((await request(app).post('/delete')).status, 429);
+});
+
+test('the per-account limiter refuses to run before requireAuth', async () => {
+  const { afterAuth } = createAccountLimiters();
+  const app = express();
+  app.post('/delete', ...afterAuth, (_req, res) => res.json({ ok: true }));
+  app.use(
+    (
+      _err: unknown,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      res.status(500).json({ error: 'misconfigured' });
+    },
+  );
+
+  assert.equal((await request(app).post('/delete')).status, 500);
 });

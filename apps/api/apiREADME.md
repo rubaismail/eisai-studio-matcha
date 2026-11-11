@@ -49,7 +49,7 @@ Common status codes:
 | `201`  | Account, menu item or uploaded image created                                 |
 | `400`  | Missing or invalid input, malformed ID, or invalid/expired/used action token |
 | `401`  | Missing, invalid or expired login JWT, or incorrect login credentials        |
-| `403`  | Email verification required or user lacks admin access                       |
+| `403`  | Email verification required, user lacks admin access, or wrong current password when deleting an account |
 | `404`  | Menu item or route not found                                                 |
 | `409`  | Email address already registered, or deleting the only admin account         |
 | `413`  | Uploaded image exceeds the size limit                                        |
@@ -218,7 +218,7 @@ Returns HTTP `200`:
 
 The user document, including favorites, is removed; no other collection stores customer data. The account's JWT stops working immediately because every protected request looks the user up. The email address can be registered again afterwards.
 
-A missing, empty or non-string `password`, or any other body field, returns `400`. A wrong password returns `401` with `{ "error": "Incorrect password" }`; a missing, invalid or expired JWT also returns `401`. Deleting the **only** admin account returns `409` so the client can't lock themselves out of the dashboard; make another account an admin first. Limited to 20 attempts per client IP and 5 per account per 15 minutes; exceeding either returns `429` with `Retry-After`.
+A missing, empty or non-string `password`, or any other body field, returns `400`. A wrong password returns `403` with `{ "error": "Incorrect password" }`, not `401`, because the user is still signed in and clients treat a `401` as signed out. A missing, invalid or expired JWT returns `401`. Deleting the **only** verified admin account returns `409` so the client can't lock themselves out of the dashboard; make another account an admin first. (Two admins deleting at the same instant could both succeed; recover with [admin-account-setup.md](../../docs/admin-account-setup.md).) Limited to 20 requests per client IP (counted before the JWT is checked, so bad tokens count too) and 5 per account per 15 minutes; exceeding either returns `429` with `Retry-After`.
 
 The client asks for confirmation and the password before sending this request, then clears its stored token and authenticated state, the same as logout. This is a `POST` rather than `DELETE` because it carries a request body.
 
