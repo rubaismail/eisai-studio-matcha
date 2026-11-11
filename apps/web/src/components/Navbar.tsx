@@ -7,18 +7,14 @@ import logo from '../assets/eisai-logo-purple.png';
 import menuIcon from '../assets/menu-icon.svg';
 import { focusRing, label } from './styles';
 
-export const INSTAGRAM_URL = 'https://www.instagram.com/eisaistudio/';
-
-// Find us goes to the home page footer on pages without one.
-// Products is hidden until its page exists.
-function getSiteLinks(hasFooter: boolean) {
-  return [
-    { to: '/menu', label: 'Menu' },
-    { to: '/#our-story', label: 'Our story' },
-    { to: hasFooter ? '#find-us' : '/#find-us', label: 'Find us' },
-  ];
-}
-type SiteLink = ReturnType<typeof getSiteLinks>[number];
+const siteLinks = [
+  { to: '/menu', label: 'Menu' },
+  { to: '/our-story', label: 'Our story' },
+  { to: '/products', label: 'Products' },
+  // Always the schedule on the home page.
+  { to: '/#find-us', label: 'Find us' },
+];
+type SiteLink = (typeof siteLinks)[number];
 
 type AccountLink =
   { to: string; label: string } | { action: 'logout'; label: string };
@@ -26,9 +22,8 @@ type AccountLink =
 const desktopLink = `${label} text-ink underline-offset-4 hover:underline aria-[current=page]:underline ${focusRing}`;
 const phoneRow = `flex w-full items-center justify-between border-b border-rule py-5 text-left text-[28px] tracking-[-0.01em] text-ink ${focusRing}`;
 
-export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
+export default function Navbar() {
   const { user, logOut } = useAuth();
-  const siteLinks = getSiteLinks(hasFooter);
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
@@ -103,14 +98,6 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
 
   function renderSiteLink(item: SiteLink, className: string, phone = false) {
     const content = phone ? <PhoneRowContent label={item.label} /> : item.label;
-    // Plain anchor so the browser scrolls to it.
-    if (item.to.startsWith('#')) {
-      return (
-        <a href={item.to} className={className} onClick={() => setOpen(false)}>
-          {content}
-        </a>
-      );
-    }
     // Section links shouldn't show as the current page.
     if (item.to.includes('#')) {
       return (
@@ -146,18 +133,6 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
     );
   }
 
-  const instagram = (className: string, phone = false) => (
-    <a
-      href={INSTAGRAM_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={className}
-    >
-      {phone ? <PhoneRowContent label="Instagram" /> : 'Instagram'}
-      <span className="sr-only"> (opens in a new tab)</span>
-    </a>
-  );
-
   return (
     <header className="border-b border-ink bg-white">
       {/* Desktop */}
@@ -178,7 +153,6 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
           />
         </Link>
         <ul className="flex justify-end gap-8">
-          <li>{instagram(desktopLink)}</li>
           {accountLinks.map((item) => (
             <li key={item.label}>{renderAccountLink(item, desktopLink)}</li>
           ))}
@@ -244,7 +218,6 @@ export default function Navbar({ hasFooter = true }: { hasFooter?: boolean }) {
               {siteLinks.map((item) => (
                 <li key={item.label}>{renderSiteLink(item, phoneRow, true)}</li>
               ))}
-              <li>{instagram(phoneRow, true)}</li>
               {accountLinks.map((item) => (
                 <li key={item.label}>
                   {renderAccountLink(item, phoneRow, true)}

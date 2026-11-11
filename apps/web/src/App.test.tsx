@@ -54,7 +54,10 @@ test('Log out in the navbar on My account goes home, not to log in', async () =>
     within(desktopNav()).getByRole('button', { name: 'Log out' }),
   );
   expect(
-    await screen.findByRole('heading', { name: 'Eisai Studio' }),
+    await screen.findByRole('heading', {
+      level: 1,
+      name: /Building a new matcha experience/,
+    }),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/');
   expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
@@ -68,7 +71,10 @@ test('Log out in the navbar on the menu editor goes home', async () => {
     within(desktopNav()).getByRole('button', { name: 'Log out' }),
   );
   expect(
-    await screen.findByRole('heading', { name: 'Eisai Studio' }),
+    await screen.findByRole('heading', {
+      level: 1,
+      name: /Building a new matcha experience/,
+    }),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/');
 });
@@ -130,7 +136,10 @@ test('Log out with unsaved menu edits: confirming leaves and signs out', async (
   );
 
   expect(
-    await screen.findByRole('heading', { name: 'Eisai Studio' }),
+    await screen.findByRole('heading', {
+      level: 1,
+      name: /Building a new matcha experience/,
+    }),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/');
   expect(router.state.location.state).toBeNull();
@@ -152,4 +161,31 @@ test('signed-in admins who open /login go to the menu editor', async () => {
   const router = renderApp('/login');
   await screen.findByText('No drinks yet');
   expect(router.state.location.pathname).toBe('/admin');
+});
+
+test('Our story, Products and unknown addresses have their own pages', async () => {
+  const router = renderApp('/our-story');
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Our story' }),
+  ).toBeInTheDocument();
+  await router.navigate('/products');
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Coming soon.' }),
+  ).toBeInTheDocument();
+  await router.navigate('/no-such-page');
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Page not found.' }),
+  ).toBeInTheDocument();
+});
+
+test('Find us scrolls to the schedule, again on a repeat click', async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  const router = renderApp('/menu');
+  await router.navigate('/#find-us');
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+  await router.navigate('/#find-us');
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+  // jsdom has no scrollIntoView of its own.
+  delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
 });

@@ -1,6 +1,6 @@
 import matchaMan from '../assets/matcha-man-peeking.png';
 import wordmark from '../assets/eisai-wordmark-white.png';
-import { INSTAGRAM_URL } from './Navbar';
+import { INSTAGRAM_URL } from './links';
 
 const CONTACT_EMAIL = 'contact@eisaistudio.com';
 
@@ -61,8 +61,28 @@ export default function Footer() {
               href={INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className={`self-start ${footerLink}`}
+              className={`inline-flex items-center gap-2 self-start ${footerLink}`}
             >
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                className="shrink-0"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4.2" />
+                <circle
+                  cx="17.4"
+                  cy="6.6"
+                  r="1"
+                  fill="currentColor"
+                  stroke="none"
+                />
+              </svg>
               @eisaistudio
               <span className="sr-only">
                 {' '}

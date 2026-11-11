@@ -20,21 +20,14 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
+import OurStoryPage from './pages/OurStoryPage';
+import ProductsPage from './pages/ProductsPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
 const isAdminPath = (path: string) =>
   path === '/admin' || path.startsWith('/admin/');
-
-// Old narrow layout for Home and Menu until #24.
-function Narrow() {
-  return (
-    <div className="mx-auto max-w-4xl p-6">
-      <Outlet />
-    </div>
-  );
-}
 
 // Scroll to the top on new pages, or to a #section.
 // Skips Back/Forward and moves between admin pages.
@@ -54,7 +47,7 @@ function useScrollOnNavigate() {
     if (navigationType === 'POP' || from === location.pathname) return;
     if (isAdminPath(from) && isAdminPath(location.pathname)) return;
     window.scrollTo(0, 0);
-  }, [location.pathname, location.hash, navigationType]);
+  }, [location.key, location.pathname, location.hash, navigationType]);
 }
 
 export default function App() {
@@ -65,14 +58,14 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <Navbar hasFooter={!isAdmin} />
+      <Navbar />
       <main className="flex-1">
         <Routes>
-          <Route element={<Narrow />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/menu" element={<MenuPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="/our-story" element={<OurStoryPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/check-email" element={<CheckEmailPage />} />

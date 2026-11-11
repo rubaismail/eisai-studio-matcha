@@ -75,12 +75,47 @@ test('the phone menu opens, traps focus on its close button, and closes with Esc
   expect(openButton).toHaveFocus();
 });
 
+test('site links go to their pages, and Find us to the home schedule', () => {
+  for (const path of ['/', '/menu', '/login']) {
+    renderWithAuth(<Navbar />, [path]);
+    const nav = within(desktopNav());
+    expect(nav.getByRole('link', { name: 'Our story' })).toHaveAttribute(
+      'href',
+      '/our-story',
+    );
+    expect(nav.getByRole('link', { name: 'Products' })).toHaveAttribute(
+      'href',
+      '/products',
+    );
+    expect(nav.getByRole('link', { name: 'Find us' })).toHaveAttribute(
+      'href',
+      '/#find-us',
+    );
+    cleanup();
+  }
+});
+
+test('the phone menu lists every site link', () => {
+  renderWithAuth(<Navbar />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+  const dialog = within(screen.getByRole('dialog', { name: 'Site menu' }));
+  for (const name of ['Menu', 'Our story', 'Products', 'Find us'])
+    expect(dialog.getByRole('link', { name: new RegExp(`^${name}`) }));
+});
+
 test('only the current page is marked current, not home-page sections', () => {
   renderWithAuth(<Navbar />, ['/']);
   const nav = within(desktopNav());
-  expect(nav.getByRole('link', { name: 'Our story' })).not.toHaveAttribute(
+  expect(nav.getByRole('link', { name: 'Find us' })).not.toHaveAttribute(
     'aria-current',
   );
+});
+
+test('Products is marked current on the products page', () => {
+  renderWithAuth(<Navbar />, ['/products']);
+  expect(
+    within(desktopNav()).getByRole('link', { name: 'Products' }),
+  ).toHaveAttribute('aria-current', 'page');
 });
 
 test('the Menu link is marked current on the menu page', () => {
@@ -90,13 +125,11 @@ test('the Menu link is marked current on the menu page', () => {
   ).toHaveAttribute('aria-current', 'page');
 });
 
-test('Instagram links say they open a new tab', () => {
+test('Instagram is in the footer, not the navbar', () => {
   renderWithAuth(<Navbar />);
-  const link = within(desktopNav()).getByRole('link', {
-    name: /^Instagram\s*\(opens in a new tab\)$/,
-  });
-  expect(link).toHaveAttribute('target', '_blank');
-  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  expect(screen.queryByRole('link', { name: /Instagram/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+  expect(screen.queryByRole('link', { name: /Instagram/ })).toBeNull();
 });
 
 test('the phone menu closes when a link to the current page is tapped', () => {
