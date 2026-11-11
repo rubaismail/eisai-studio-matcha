@@ -77,6 +77,33 @@ Remaining:
 - [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
 - [ ] Optional hardening: add `server_tokens off;` to Nginx so it doesn't advertise its version.
 
+## Privacy and legal
+
+General guidance from the team, not legal advice. Have a lawyer review before relying on it.
+
+**What the site does today (November 2026):** no cookies, no analytics, no advertising pixels, no chat widgets, no embedded third-party video. Logging in stores a sign-in token in the browser's local storage (the app uses the phone's secure storage). Accounts hold first and last name, email, a hashed password and favorites. Because of this, **no cookie banner is needed**. The privacy policy is at [`/privacy`](https://eisaistudio.com/privacy) (`apps/web/src/pages/PrivacyPage.tsx`) and is linked from the footer and the sign-up form.
+
+**Keep the privacy policy true.** It must describe what the site actually does. Whenever any of the following changes, update the policy and its "Last updated" date (`LAST_UPDATED` in `PrivacyPage.tsx`) in the same release:
+
+- New information collected (phone number, birthday, address, order history...).
+- A new service that receives customer data (email provider, hosting, payments...).
+- Google Fonts removed (#93): delete its bullet under "Who we share it with".
+- Account deletion added (#102, #103): update "Your choices".
+
+**Before adding any of these, plan the legal requirements first.** These are the features that law firms target small businesses over:
+
+| If the client wants to add...                                                                          | They also need                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Analytics, a Meta/TikTok/Pinterest pixel, session recording (Hotjar, Clarity), or a chat widget | A consent banner that **blocks those scripts until the visitor agrees** (not just a notice), plus a cookies/tracking section in the privacy policy. Tracking without consent is the basis of the California "wiretapping" (CIPA) lawsuits filed in bulk against small business sites. |
+| Embedded YouTube/Vimeo/Instagram videos, together with any tracking pixel                              | The same consent banner. Video plus a pixel is the pattern behind Video Privacy Protection Act (VPPA) suits. Self-hosted videos, as the site uses now, avoid this.                                                                                                                    |
+| A newsletter or marketing emails                                                                       | CAN-SPAM: an unsubscribe link that works within 10 business days, the business's physical mailing address in every email, honest subject lines. Add it to the privacy policy.                                                                                                         |
+| Text messages (SMS) to customers                                                                       | TCPA: written opt-in consent before the first text, "Reply STOP to unsubscribe" honored immediately, and records of consent. TCPA penalties are per message, so this one is expensive to get wrong.                                                                                   |
+| Online ordering or payments                                                                            | Use a hosted checkout (Square, Stripe Checkout) so card data never touches this server, and update the privacy policy and add Terms of Sale.                                                                                                                                          |
+
+**Accessibility is the biggest lawsuit risk for a Florida business website.** Florida is one of the top states for ADA website suits. Lighthouse's accessibility score only covers automated checks. Keep new pages keyboard-usable with alt text and captions, and don't install "accessibility overlay" widgets: they don't make a site compliant and have been cited in lawsuits.
+
+**Email tracking:** the GoDaddy `mt-link` record means Mailtrap can rewrite links to track opens and clicks. Turn click tracking off for account emails (verification, password reset) in Mailtrap's sending domain settings, or mention tracking in the privacy policy.
+
 ## Day-to-day operations
 
 All commands run in Lightsail browser SSH (**Lightsail console → eisai-prod → Connect using SSH**).
