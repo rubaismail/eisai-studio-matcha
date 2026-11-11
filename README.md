@@ -38,7 +38,7 @@ Built by **Team 11**, led by **Ruba Ismail**.
 
 | Who                | GitHub                                                 |
 | ------------------ | ------------------------------------------------------ |
-| **Ruba Ismail** ⭐ | [@rubaismail](https://github.com/rubaismail)           |
+| Ruba Ismail        | [@rubaismail](https://github.com/rubaismail)           |
 | Branden Rivera     | [@brandenxo](https://github.com/brandenxo)             |
 | Brandon Dang       | [@dangdatbrandon](https://github.com/dangdatbrandon)   |
 | Maryam Fathey      | [@rumitv](https://github.com/rumitv)                   |
