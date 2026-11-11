@@ -12,7 +12,7 @@ import {
 import AccountLayout from '../components/AccountLayout';
 import Notice from '../components/Notice';
 import TextField from '../components/TextField';
-import { focusRing, primaryButton, switchLink } from '../components/styles';
+import { inlineLink, primaryButton, switchLink } from '../components/styles';
 
 type Field = 'firstName' | 'lastName' | 'email' | 'password' | 'confirm';
 const FIELD_ORDER: Field[] = [
@@ -136,10 +136,7 @@ export default function RegisterPage() {
   const duplicateError = (
     <>
       An account with this email already exists.{' '}
-      <Link
-        to="/login"
-        className={`underline underline-offset-2 hover:no-underline ${focusRing}`}
-      >
+      <Link to="/login" className={inlineLink}>
         Log in instead
       </Link>
       .
@@ -221,10 +218,7 @@ export default function RegisterPage() {
         <p className="text-[14px] leading-[21px] text-ink-muted">
           We’ll email you a link to verify your address before you log in. See
           our{' '}
-          <Link
-            to="/privacy"
-            className={`underline underline-offset-2 hover:no-underline ${focusRing}`}
-          >
+          <Link to="/privacy" className={inlineLink}>
             privacy policy
           </Link>{' '}
           for how we use your information.

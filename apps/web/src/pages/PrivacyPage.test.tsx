@@ -40,3 +40,17 @@ test('gives a working contact email for privacy requests', () => {
     expect(link).toHaveAttribute('href', `mailto:${CONTACT_EMAIL}`);
   }
 });
+
+test('links back to the home page', () => {
+  renderPage();
+  expect(screen.getByRole('link', { name: '← Back to home' })).toHaveAttribute(
+    'href',
+    '/',
+  );
+});
+
+test('does not describe features that do not exist yet', () => {
+  renderPage();
+  // Favorites aren't built (issue #1). Add this back to the policy if they ship.
+  expect(screen.queryByText(/favorite/i)).not.toBeInTheDocument();
+});
