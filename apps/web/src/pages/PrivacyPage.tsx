@@ -121,7 +121,12 @@ export default function PrivacyPage() {
           <p className={body}>
             You can ask us for a copy of your information, ask us to correct it,
             or ask us to delete your account by emailing {email} from the
-            address on your account. We’ll respond within 30 days.
+            address on your account. We’ll respond within 30 days. You can also
+            delete your account yourself on your{' '}
+            <Link to="/account" className={inlineLink}>
+              Account page
+            </Link>
+            .
           </p>
 
           <h2 className={sectionHeading}>Security</h2>

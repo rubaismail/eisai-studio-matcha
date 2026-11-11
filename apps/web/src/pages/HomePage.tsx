@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { getMenu } from '../api/menu';
 import hero from '../assets/home/hero.jpg';
 import heroWide from '../assets/home/hero-wide.jpg';
@@ -37,6 +37,22 @@ export default function HomePage() {
     'loading',
   );
   const [attempt, setAttempt] = useState(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [accountDeleted, setAccountDeleted] = useState(false);
+
+  // Set by the Account page after deleting the account. Shown once: the flag is
+  // cleared from history so a refresh doesn't bring the message back. It's set
+  // after the first render so screen readers announce the status region.
+  useEffect(() => {
+    if (
+      !(location.state as { accountDeleted?: boolean } | null)?.accountDeleted
+    )
+      return;
+    setAccountDeleted(true);
+    const { pathname, search, hash } = location;
+    navigate({ pathname, search, hash }, { replace: true, state: null });
+  }, [location, navigate]);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +77,13 @@ export default function HomePage() {
 
   return (
     <>
+      <div role="status">
+        {accountDeleted && (
+          <p className="bg-lavender px-4 py-3.5 text-[16px] leading-[23px] text-ink lg:px-[58px]">
+            Your account has been deleted.
+          </p>
+        )}
+      </div>
       <section className="relative h-[640px] overflow-clip bg-ink lg:h-[760px]">
         {/* Desktop uses a copy squashed to the design's proportions, which
             fits more of the scenery like the design does. */}
