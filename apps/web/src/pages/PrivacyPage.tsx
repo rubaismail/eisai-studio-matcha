@@ -3,7 +3,7 @@
 // service (analytics, a newsletter, payments...), update this page and LAST_UPDATED.
 import { Link } from 'react-router';
 import { CONTACT_EMAIL } from '../components/links';
-import { focusRing, label, switchLink } from '../components/styles';
+import { inlineLink, label, switchLink } from '../components/styles';
 
 export const LAST_UPDATED = 'November 11, 2026';
 
@@ -11,12 +11,12 @@ const heading =
   'text-[24px] leading-[30px] lg:text-[26px] lg:leading-[33px] lg:tracking-[-0.01em]';
 const body = 'text-[16px] leading-[27px] lg:text-[18px] lg:leading-[31px]';
 const list = `${body} flex list-disc flex-col gap-2 pl-5 lg:pl-6`;
-// Same rhythm as Our Story: section headings get extra space above them.
-const sectionHeading = `${heading} mt-3 lg:mt-6`;
-const link = `underline underline-offset-2 hover:no-underline ${focusRing}`;
+// Extra space above each section heading and the back link.
+const sectionGap = 'mt-3 lg:mt-6';
+const sectionHeading = `${heading} ${sectionGap}`;
 
 const email = (
-  <a href={`mailto:${CONTACT_EMAIL}`} className={link}>
+  <a href={`mailto:${CONTACT_EMAIL}`} className={inlineLink}>
     {CONTACT_EMAIL}
   </a>
 );
@@ -32,8 +32,8 @@ export default function PrivacyPage() {
         <p className={`${label} text-ink-muted`}>Last updated {LAST_UPDATED}</p>
       </header>
 
-      {/* The rule spans the full content width like Our Story; the text column
-          is narrowed to Our Story's width for a readable line length. */}
+      {/* The rule spans the full content width like Our Story; the text sits in
+          a narrower ~600px column so long policy lines stay easy to read. */}
       <div className="border-t border-ink pt-7 lg:pt-14">
         <div className="flex max-w-150 flex-col gap-4 lg:gap-5">
           <p className={body}>
@@ -54,7 +54,6 @@ export default function PrivacyPage() {
               Your password, which we store only in scrambled (hashed) form. We
               can’t see it.
             </li>
-            <li>Drinks you save as favorites.</li>
           </ul>
           <p className={body}>
             Like most websites, our server also records basic technical details
@@ -70,7 +69,6 @@ export default function PrivacyPage() {
               To send account emails: verifying your address and resetting your
               password. We don’t send marketing emails.
             </li>
-            <li>To show your favorites.</li>
             <li>To protect the service against abuse and fix problems.</li>
           </ul>
 
@@ -153,7 +151,7 @@ export default function PrivacyPage() {
             Orlando, Florida.
           </p>
 
-          <Link to="/" className={`mt-3 self-start lg:mt-6 ${switchLink}`}>
+          <Link to="/" className={`${sectionGap} self-start ${switchLink}`}>
             ← Back to home
           </Link>
         </div>

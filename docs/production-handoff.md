@@ -72,7 +72,7 @@ Remaining:
 
 General guidance from the team, not legal advice. Have a lawyer review before relying on it.
 
-**What the site does today (November 2026):** no cookies, no analytics, no advertising pixels, no chat widgets, no embedded third-party video. Logging in stores a sign-in token in the browser's local storage (the app uses the phone's secure storage). Accounts hold first and last name, email, a hashed password and favorites. Because of this, **no cookie banner is needed**. The privacy policy is at [`/privacy`](https://eisaistudio.com/privacy) (`apps/web/src/pages/PrivacyPage.tsx`) and is linked from the footer and the sign-up form.
+**What the site does today (November 2026):** no cookies, no analytics, no advertising pixels, no chat widgets, no embedded third-party video. Logging in stores a sign-in token in the browser's local storage (the app uses the phone's secure storage). Accounts hold first and last name, email and a hashed password. (The database has an unused `favorites` field for a possible future feature, issue #1; it is always empty. If favorites ship, add them to the privacy policy.) Because of this, **no cookie banner is needed**. The privacy policy is at [`/privacy`](https://eisaistudio.com/privacy) (`apps/web/src/pages/PrivacyPage.tsx`) and is linked from the footer and the sign-up form.
 
 **Keep the privacy policy true.** It must describe what the site actually does. Whenever any of the following changes, update the policy and its "Last updated" date (`LAST_UPDATED` in `PrivacyPage.tsx`) in the same release:
 
