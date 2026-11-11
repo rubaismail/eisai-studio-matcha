@@ -1,8 +1,7 @@
 import matchaMan from '../assets/matcha-man-peeking.png';
 import wordmark from '../assets/eisai-wordmark-white.png';
-import { INSTAGRAM_URL } from './links';
-
-const CONTACT_EMAIL = 'contact@eisaistudio.com';
+import { Link } from 'react-router';
+import { CONTACT_EMAIL, INSTAGRAM_URL } from './links';
 
 // Update when the schedule changes.
 const schedule = [
@@ -111,6 +110,12 @@ export default function Footer() {
       <div className="flex flex-col gap-1.5 border-t border-white/35 pt-[18px] pb-6 pl-4 pr-[120px] font-mono text-[11px] leading-none tracking-[0.08em] uppercase lg:flex-row lg:justify-between lg:px-[43px] lg:pt-5 lg:pb-7 lg:text-[12px]">
         <p>Copyright © Eisai Studio LLC</p>
         <p>Eisai Studio LLC · Orlando, Florida</p>
+        <Link
+          to="/privacy"
+          className="self-start underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          Privacy policy
+        </Link>
       </div>
 
       {/* Desktop: sits just left of the address so it never covers it. */}

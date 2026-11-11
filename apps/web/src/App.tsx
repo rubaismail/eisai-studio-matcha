@@ -21,6 +21,7 @@ import LoginPage from './pages/LoginPage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
 import OurStoryPage from './pages/OurStoryPage';
+import PrivacyPage from './pages/PrivacyPage';
 import ProductsPage from './pages/ProductsPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/our-story" element={<OurStoryPage />} />
           <Route path="/products" element={<ProductsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<NotFoundPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

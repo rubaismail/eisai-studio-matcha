@@ -219,7 +219,15 @@ export default function RegisterPage() {
           {submitting ? 'Creating account…' : 'Create account →'}
         </button>
         <p className="text-[14px] leading-[21px] text-ink-muted">
-          We’ll email you a link to verify your address before you log in.
+          We’ll email you a link to verify your address before you log in. See
+          our{' '}
+          <Link
+            to="/privacy"
+            className={`underline underline-offset-2 hover:no-underline ${focusRing}`}
+          >
+            privacy policy
+          </Link>{' '}
+          for how we use your information.
         </p>
       </form>
 
