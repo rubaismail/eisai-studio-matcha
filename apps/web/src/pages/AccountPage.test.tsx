@@ -110,8 +110,7 @@ function renderWithHome() {
 const openButton = () => screen.getByRole('button', { name: 'Delete account' });
 const step = () => screen.getByRole('group', { name: 'Delete your account?' });
 const passwordField = () => screen.getByLabelText('Current password');
-const confirmButton = () =>
-  screen.getByRole('button', { name: 'Delete my account' });
+const confirmButton = () => screen.getByRole('button', { name: 'Delete' });
 
 function openStep() {
   fireEvent.click(openButton());

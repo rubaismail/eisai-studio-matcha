@@ -194,7 +194,7 @@ function DeleteAccountSection() {
                 disabled={deleting}
                 className={`sm:flex-1 ${dangerButton}`}
               >
-                {deleting ? 'Deleting…' : 'Delete my account'}
+                {deleting ? 'Deleting…' : 'Delete'}
               </button>
               <button
                 type="button"
