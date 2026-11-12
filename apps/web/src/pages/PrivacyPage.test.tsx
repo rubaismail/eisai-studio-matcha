@@ -54,3 +54,11 @@ test('does not describe features that do not exist yet', () => {
   // Favorites aren't built (issue #1). Add this back to the policy if they ship.
   expect(screen.queryByText(/favorite/i)).not.toBeInTheDocument();
 });
+
+test('says accounts can be deleted from the Account page', () => {
+  renderPage();
+  expect(screen.getByRole('link', { name: 'Account page' })).toHaveAttribute(
+    'href',
+    '/account',
+  );
+});

@@ -55,3 +55,13 @@ export function resetPassword(
     { method: 'POST', body: { password }, auth: false },
   );
 }
+
+// Needs the login token. Throws ApiError with the status so the page can tell
+// a wrong password (403), the last admin (409) and rate limiting (429) apart.
+// A wrong password is 403, not 401, so the user isn't signed out.
+export function deleteAccount(password: string): Promise<MessageResponse> {
+  return apiRequest<MessageResponse>('/auth/delete-account', {
+    method: 'POST',
+    body: { password },
+  });
+}
