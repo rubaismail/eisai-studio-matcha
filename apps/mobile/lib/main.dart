@@ -5,6 +5,7 @@ import 'screens/our_story_screen.dart';
 import 'screens/our_location_screen.dart';
 import 'screens/account_screen.dart';
 import 'services/auth_service.dart';
+import 'screens/products_screen.dart';
 
 void main() {
   runApp(const EisaiApp());
@@ -94,24 +95,35 @@ class _MainNavigationState extends State<MainNavigation> {
           onViewMenu: () => _selectTab(1),
           onGoStory: () => _selectTab(2),
           onGoLocation: () => _selectTab(3),
+          onGoProducts: () => _selectTab(4),
           onGoAccount: _openAccount,
         ),
         MenuScreen(
           onGoHome: () => _selectTab(0),
           onGoStory: () => _selectTab(2),
           onGoLocation: () => _selectTab(3),
+          onGoProducts: () => _selectTab(4),
           onGoAccount: _openAccount,
         ),
         OurStoryScreen(
           onGoHome: () => _selectTab(0),
           onGoDrinks: () => _selectTab(1),
           onGoLocation: () => _selectTab(3),
+          onGoProducts: () => _selectTab(4),
           onGoAccount: _openAccount,
         ),
         OurLocationScreen(
           onGoHome: () => _selectTab(0),
           onGoDrinks: () => _selectTab(1),
           onGoStory: () => _selectTab(2),
+          onGoProducts: () => _selectTab(4),
+          onGoAccount: _openAccount,
+        ),
+        ProductsScreen(
+          onGoHome: () => _selectTab(0),
+          onGoDrinks: () => _selectTab(1),
+          onGoStory: () => _selectTab(2),
+          onGoLocation: () => _selectTab(3),
           onGoAccount: _openAccount,
         ),
       ],

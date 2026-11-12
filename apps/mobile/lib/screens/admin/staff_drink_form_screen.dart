@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/staff_menu_repository.dart';
 import '../../widgets/eisai_staff_ui.dart';
 import 'staff_status_screens.dart';
+import '../../main.dart';
 
 typedef StaffPhotoPicker = Future<StaffPickedPhoto?> Function();
 
@@ -285,6 +286,17 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
       child: StaffChrome(
         onLogout: () => _confirmAndNavigate(widget.onLogout),
         onMenu: () => _confirmAndNavigate(widget.onStaffMenu),
+        onHome: () => _confirmAndNavigate(() {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute<void>(
+              builder: (_) => const MainNavigation(
+                initialIndex: 0,
+                returnToStaff: true,
+              ),
+            ),
+            (route) => route.settings.name == '/staff' || route.isFirst,
+          );
+        }),
         publicMenuUrl: widget.publicMenuUrl,
         logoAsset: widget.logoAsset,
         body: StaffBody(

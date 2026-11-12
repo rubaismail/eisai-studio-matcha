@@ -42,6 +42,18 @@ void openStaffLiveMenu(BuildContext context) {
   );
 }
 
+void openStaffHome(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: '/staff/home'),
+      builder: (_) => const MainNavigation(
+        initialIndex: 0,
+        returnToStaff: true,
+      ),
+    ),
+  );
+}
+
 class StaffChrome extends StatelessWidget {
   const StaffChrome({
     super.key,
@@ -50,10 +62,12 @@ class StaffChrome extends StatelessWidget {
     required this.onMenu,
     required this.publicMenuUrl,
     this.logoAsset,
+    this.onHome,
     this.showFooter = true,
   });
   final Widget body;
   final VoidCallback onLogout, onMenu;
+  final VoidCallback? onHome;
   final Uri? publicMenuUrl;
 
   final String? logoAsset;
@@ -69,22 +83,38 @@ class StaffChrome extends StatelessWidget {
             width: double.infinity,
             color: StaffColors.ink,
             child: Stack(
-              children: [
-                Positioned(
-                  left: 16,
-                  top: 12,
-                  width: 80,
-                  height: 21,
-                  child: Image.asset(
-                    logoAsset ?? 'assets/images/eisai_logo_white.png',
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
-                    errorBuilder: (_, __, ___) => Text(
-                      'Eisai',
-                      style: staffText(22, color: Colors.white),
+              children: [              
+              Positioned(
+                left: 8,
+                top: 0,
+                width: 112,
+                height: 48,
+                child: Semantics(
+                  button: true,
+                  label: 'Go to home',
+                  child: InkWell(
+                    excludeFromSemantics: true,
+                    onTap: onHome ?? () => openStaffHome(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Image.asset(
+                          logoAsset ?? 'assets/images/eisai_logo_white.png',
+                          width: 80,
+                          height: 21,
+                          fit: BoxFit.contain,
+                          excludeFromSemantics: true,
+                          errorBuilder: (_, __, ___) => Text(
+                            'Eisai',
+                            style: staffText(22, color: Colors.white),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
+              ),
                 Positioned(
                   left: 16,
                   top: 44,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../widgets/eisai_navigation_overlay.dart';
+import '../widgets/eisai_home_logo.dart';
 
 class EisaiAuthStyle {
   static const ink = Color(0xFF202020);
@@ -53,20 +54,18 @@ class _EisaiAuthShellState extends State<EisaiAuthShell> {
             child: Stack(
               children: [
                 Positioned(
-                  left: 22,
-                  bottom: 20,
-                  child: Image.asset(
-                    'assets/images/eisai_logo_periwinkle.png',
-                    width: 112,
-                    height: 29,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Text(
-                      'EISAI STUDIO',
-                      style: EisaiAuthStyle.mono(
-                        16,
-                        color: const Color(0xFF8B91C7),
-                      ),
-                    ),
+                  left: 14,
+                  bottom: 10,
+                  child: EisaiHomeLogo(
+                    assetPath: 'assets/images/eisai_logo_periwinkle.png',
+                    onTap: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MainNavigation(initialIndex: 0),
+                        ),
+                        (route) => false,
+                      );
+                    },
                   ),
                 ),
                 Positioned(

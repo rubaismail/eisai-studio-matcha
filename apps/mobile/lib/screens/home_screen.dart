@@ -4,6 +4,7 @@ import '../widgets/eisai_navigation_overlay.dart';
 import '../widgets/eisai_home_video_card.dart';
 import '../models/menu_item.dart';
 import '../services/menu_service.dart' as menu_service;
+import '../widgets/eisai_home_logo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -12,12 +13,14 @@ class HomeScreen extends StatefulWidget {
     this.onGoStory,
     this.onGoLocation,
     this.fetchMenu,
+    this.onGoProducts,
     this.onGoAccount,
   });
 
   final VoidCallback onViewMenu;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
   // test loader
   final Future<List<MenuItem>> Function()? fetchMenu;
@@ -116,7 +119,7 @@ class HomeScreenState extends State<HomeScreen> {
     if (!_popupScrollController.hasClients) return;
     final cardIndex = (_popupScrollController.offset / _popupCardExtent)
         .round()
-        .clamp(0, 4);
+        .clamp(0, 7);
     if (cardIndex != _activePopupCard && mounted) {
       setState(() => _activePopupCard = cardIndex);
     }
@@ -210,7 +213,13 @@ class HomeScreenState extends State<HomeScreen> {
       padding: EdgeInsets.fromLTRB(22 * s, 0, 22 * s, 0),
       child: Row(
         children: [
-          _image('eisai_logo.png', width: 112 * s, height: 40 * s),
+          EisaiHomeLogo(
+            assetPath: 'assets/images/eisai_logo.png',
+            width: 112 * s,
+            height: 29 * s,
+            onTap: () {
+            },
+          ),
           const Spacer(),
           Builder(
             builder: (context) => IconButton(
@@ -494,7 +503,10 @@ class HomeScreenState extends State<HomeScreen> {
           onTap: widget.onViewMenu,
           child: Text(
             'See the full menu →',
-            style: _a(14 * s, letterSpacing: 1.12 * s),
+            style: _a(
+              14 * s,
+              letterSpacing: 1.12 * s,
+            ).copyWith(decoration: TextDecoration.underline),
           ),
         ),
         SizedBox(height: 24 * s),
@@ -561,32 +573,61 @@ class HomeScreenState extends State<HomeScreen> {
                   s,
                   'VIDEO',
                   null,
-                  'Eisai at the pop-up · Video 1',
-                  video: 'assets/videos/eisai_video_1.mp4',
+                  'Making a Mango Dango',
+                  video: 'assets/videos/popup-video-4.mp4',
                   active: _activePopupCard == 0,
+                ),
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'Making a Midnight Mori',
+                  video: 'assets/videos/eisai_video_1.mp4',
+                  active: _activePopupCard == 1,
                 ),
                 _popupCard(
                   s,
                   'PHOTO',
                   'popup_photo.jpg',
-                  'Eisai at the pop-up',
+                  'Two matcha lattes with latte art',
                 ),
                 _popupCard(
                   s,
                   'VIDEO',
                   null,
-                  'Eisai at the pop-up · Video 2',
+                  'Pouring Matcha Blossom Trail',
+                  video: 'assets/videos/popup-video-5.mp4',
+                  active: _activePopupCard == 3,
+                ),
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'Whisking matcha at the stand',
                   video: 'assets/videos/eisai_video_2.mp4',
-                  active: _activePopupCard == 2,
+                  active: _activePopupCard == 4,
                 ),
-                _popupCard(s, 'PHOTO', 'home_hero.png', 'Eisai matcha'),
+                _popupCard(
+                  s,
+                  'PHOTO',
+                  'home_hero.png',
+                  'Matcha drink by the lake',
+                ),
                 _popupCard(
                   s,
                   'VIDEO',
                   null,
-                  'Eisai at the pop-up · Video 3',
-                  video: 'assets/videos/eisai_video_3.mp4',
-                  active: _activePopupCard == 4,
+                  'Our first Eisai pop-up event',
+                  video: 'assets/videos/popup-video-6.mp4',
+                  active: _activePopupCard == 6,
+                ),
+                _popupCard(
+                  s,
+                  'VIDEO',
+                  null,
+                  'The Eisai pop-up table',
+                  video: 'assets/videos/popup-video-3.mp4',
+                  active: _activePopupCard == 7,
                 ),
               ],
             ),
@@ -711,6 +752,10 @@ class HomeScreenState extends State<HomeScreen> {
                           if (!mounted) return;
                           _scrollToFooter();
                         });
+                      },
+                      onProducts: () {
+                        setState(() => _menuOpen = false);
+                        widget.onGoProducts?.call();
                       },
                       onAccount: () {
                         setState(() => _menuOpen = false);

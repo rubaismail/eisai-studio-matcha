@@ -9,12 +9,14 @@ class OurLocationScreen extends StatelessWidget {
     this.onGoHome,
     this.onGoDrinks,
     this.onGoStory,
+    this.onGoProducts,
     this.onGoAccount,
   });
 
   final VoidCallback? onGoHome;
   final VoidCallback? onGoDrinks;
   final VoidCallback? onGoStory;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
 
   static const _ink = Color(0xFF202020);
@@ -72,6 +74,7 @@ class OurLocationScreen extends StatelessWidget {
     onGoDrinks: onGoDrinks,
     onGoStory: onGoStory,
     onGoLocation: () {},
+    onGoProducts: onGoProducts,
     onGoAccount: onGoAccount,
     body: (s) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

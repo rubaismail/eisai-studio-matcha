@@ -8,6 +8,7 @@ class EisaiNavigationOverlay extends StatelessWidget {
     required this.onDrinks,
     required this.onStory,
     required this.onLocation,
+    this.onProducts,
     this.onAccount,
   });
 
@@ -16,6 +17,7 @@ class EisaiNavigationOverlay extends StatelessWidget {
   final VoidCallback onDrinks;
   final VoidCallback onStory;
   final VoidCallback onLocation;
+  final VoidCallback? onProducts;
   final VoidCallback? onAccount;
 
   static const _ink = Color(0xFF1F1F1F);
@@ -87,6 +89,7 @@ class EisaiNavigationOverlay extends StatelessWidget {
                       _item('HOME', onHome, scale),
                       _item('OUR DRINKS', onDrinks, scale),
                       _item('OUR STORY', onStory, scale),
+                      _item('OUR PRODUCTS', onProducts, scale),
                       _item('OUR LOCATION', onLocation, scale),
                       _item('ACCOUNT', onAccount, scale),
                       SizedBox(height: 108 * scale),

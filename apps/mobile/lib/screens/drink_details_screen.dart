@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/eisai_home_logo.dart';
 
 import '../widgets/eisai_navigation_overlay.dart';
 
@@ -76,13 +77,13 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
     child: Stack(
       children: [
         Positioned(
-          left: 22 * s,
-          top: 73 * s,
-          child: Image.asset(
-            'assets/images/eisai_logo.png',
+          top: 64 * s,
+          left: 14 * s,
+          child: EisaiHomeLogo(
+            assetPath: 'assets/images/eisai_logo.png',
             width: 112 * s,
             height: 29 * s,
-            fit: BoxFit.contain,
+            onTap: () => _leaveFor(widget.onGoHome),
           ),
         ),
         Positioned(
