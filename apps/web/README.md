@@ -96,7 +96,7 @@ try {
 
 If a request that sent the current token gets a `401`, the user is signed out automatically as an expired session. Pages don't need to handle that case themselves.
 
-`src/api/auth.ts` already has every account call: `login`, `register`, `verifyEmail`, `resendVerification`, `forgotPassword` and `resetPassword`. The password-reset pages (#50) only need to add the pages.
+`src/api/auth.ts` already has every account call: `login`, `register`, `verifyEmail`, `resendVerification`, `forgotPassword`, `checkResetLink` and `resetPassword`. The reset page calls `checkResetLink` when it opens so a used or expired link shows "Link expired" before the form (#113).
 
 ### Account forms
 

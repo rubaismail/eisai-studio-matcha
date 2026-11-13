@@ -10,7 +10,7 @@ Each operation has an `x-implementation-status` marker indicating its implementa
 
 React TypeScript website and Flutter app → JSON over HTTP (HTTPS when deployed) → Express/Node API → Mongoose → remote MongoDB Atlas. The API alone accesses the database, sends verification/reset email through an email service, and uploads menu photos to S3. Email and database credentials stay server-side. The clients use one configurable API base URL ending in `/api`; Swagger paths omit that prefix because it is already in `servers.url`.
 
-All 15 operations are covered. Seven account operations (including deleting your own account), public menu and seasonal reads, admin list including hidden items, create/update/delete, image upload and health. Hide/unhide are updates of `isAvailable`. GrubHub is a frontend link; favorites, checkout, loyalty, refresh tokens, logout and single-item reads are outside this baseline.
+All 16 operations are covered. Eight account operations (including checking a reset link and deleting your own account), public menu and seasonal reads, admin list including hidden items, create/update/delete, image upload and health. Hide/unhide are updates of `isAvailable`. GrubHub is a frontend link; favorites, checkout, loyalty, refresh tokens, logout and single-item reads are outside this baseline.
 
 ## Initial validation decisions
 
@@ -120,7 +120,7 @@ Register → verify in browser → log in. Login issues an expiring JWT; protect
 
 The website keeps its token in memory for this baseline (reload requires login); Flutter uses secure storage. Both clear token/user state on logout or a protected request's `401` and prompt for login. A `403` does not mean token expiration: show verification-required or access-denied guidance. No refresh or logout API exists; clearing a token does not revoke other copies, and password reset does not promise revocation of existing JWTs.
 
-Verification/reset tokens are separate, expiring and single-use. Website pages extract the email-link token and call the appropriate endpoint. The verification token is sent as the `token` query parameter to `GET /api/auth/verify`. The reset token is also sent as the `token` query parameter to `POST /api/auth/reset-password` — not in the JSON body; the body contains only `password`. Mobile users finish that browser flow then return to login. Successful reset consumes the token and requires a fresh login.
+Verification/reset tokens are separate, expiring and single-use. Website pages extract the email-link token and call the appropriate endpoint. The verification token is sent as the `token` query parameter to `GET /api/auth/verify`. The reset token is also sent as the `token` query parameter to `POST /api/auth/reset-password` — not in the JSON body; the body contains only `password`. Before showing the reset form, the website calls the read-only `GET /api/auth/reset-password/check?token=...`, which returns `200` for a live link and `400` for a missing, expired or used one without consuming it. Mobile users finish that browser flow then return to login. Successful reset consumes the token and requires a fresh login.
 
 Exact JWT and action-token lifetimes, email provider and deployed URLs remain server configuration decisions for auth/deployment work. Clients must not hardcode lifetimes or decode tokens to decide permissions. All tokens must expire, and the API is the authority on validity.
 
@@ -160,9 +160,11 @@ even when the API uses a separate host:
 
 - Verification: `WEB_ORIGIN/verify-email?token=<raw-token>`. The website page reads the
   token and calls `GET /api/auth/verify?token=...`.
-- Password reset: `WEB_ORIGIN/reset-password?token=<raw-token>`. The website form submits
+- Password reset: `WEB_ORIGIN/reset-password?token=<raw-token>`. The website page first
+  calls `GET /api/auth/reset-password/check?token=...` and shows "link expired" straight
+  away if the link is used or expired (#113). Otherwise the form submits
   `{ "password": "..." }` to `POST /api/auth/reset-password?token=...`; the email must not
-  link directly to that POST-only API endpoint. The reset form is tracked in #50.
+  link directly to that POST-only API endpoint.
 
 A missing or invalid email or `WEB_ORIGIN` configuration is rejected before registration
 creates an account, resend replaces a verification token or forgot-password stores a reset
@@ -175,6 +177,12 @@ Configure `AUTH_RATE_WINDOW_MS`, `REGISTER_IP_LIMIT`, `REGISTER_EMAIL_LIMIT`,
 `RESEND_IP_LIMIT`, and `RESEND_EMAIL_LIMIT` using positive integer values. Excess requests
 return 429 with `Retry-After`; clients should wait before retrying. Resend also enforces
 an atomic 60-second account cooldown and returns a neutral message for ineligible accounts.
+
+Forgot-password defaults to 10 requests per IP and 2 per email (`FORGOT_IP_LIMIT`,
+`FORGOT_EMAIL_LIMIT`). Reset-password defaults to 10 per IP (`RESET_IP_LIMIT`,
+`RESET_EMAIL_LIMIT`; the request has no email, so both count per IP). The reset-link check
+has its own counter, 30 per IP (`RESET_CHECK_IP_LIMIT`), so opening a link never uses up
+reset attempts.
 
 Account deletion defaults to 20 requests per IP and 5 per signed-in account per 15 minutes
 (`DELETE_ACCOUNT_IP_LIMIT`, `DELETE_ACCOUNT_USER_LIMIT`). It counts per account rather than

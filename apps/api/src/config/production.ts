@@ -25,7 +25,7 @@ export function validateProductionConfig(config: NodeJS.ProcessEnv): void {
   const port = Number(config.PORT ?? 4000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be between 1 and 65535.');
   for (const key of ['AUTH_RATE_WINDOW_MS', 'REGISTER_IP_LIMIT', 'REGISTER_EMAIL_LIMIT',
-    'RESEND_IP_LIMIT', 'RESEND_EMAIL_LIMIT', 'FORGOT_IP_LIMIT', 'FORGOT_EMAIL_LIMIT', 'RESET_IP_LIMIT', 'RESET_EMAIL_LIMIT']) {
+    'RESEND_IP_LIMIT', 'RESEND_EMAIL_LIMIT', 'FORGOT_IP_LIMIT', 'FORGOT_EMAIL_LIMIT', 'RESET_IP_LIMIT', 'RESET_EMAIL_LIMIT', 'RESET_CHECK_IP_LIMIT']) {
     if (config[key] !== undefined && (!Number.isSafeInteger(Number(config[key])) || Number(config[key]) <= 0)) {
       throw new Error(`${key} must be a positive integer.`);
     }

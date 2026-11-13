@@ -22,7 +22,7 @@ test('production rejects unsafe URLs, disabled limits, malformed limits and inco
     { AWS_S3_PUBLIC_URL: 'not-a-url' }, { MAILTRAP_USE_SANDBOX: 'true' },
     { RATE_LIMIT_DISABLED: '1' }, { JWT_SECRET: 'short' }, { MONGODB_URI: 'invalid' },
     { AWS_ACCESS_KEY_ID: 'only-one-half' }, { PORT: '0' }, { PORT: '65536' },
-    { FORGOT_IP_LIMIT: 'abc' }, { RESET_IP_LIMIT: '0.5' }, { AUTH_RATE_WINDOW_MS: '0' },
+    { FORGOT_IP_LIMIT: 'abc' }, { RESET_IP_LIMIT: '0.5' }, { RESET_CHECK_IP_LIMIT: '-1' }, { AUTH_RATE_WINDOW_MS: '0' },
   ]) assert.throws(() => validateProductionConfig({ ...valid, ...invalid }));
 });
 test('production config no longer needs APP_URL (email links use WEB_ORIGIN)', () => {

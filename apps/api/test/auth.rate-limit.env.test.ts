@@ -17,6 +17,8 @@ afterEach(() => {
   mock.restoreAll();
   delete process.env.FORGOT_IP_LIMIT;
   delete process.env.FORGOT_EMAIL_LIMIT;
+  delete process.env.RESET_CHECK_IP_LIMIT;
+  delete process.env.RESET_IP_LIMIT;
 });
 
 // Load the real auth router with a FRESH module graph so auth.routes.ts
@@ -80,4 +82,24 @@ test('FORGOT_IP_LIMIT=3 is honored by the real router', async () => {
     .post('/api/auth/forgot-password')
     .send({ email: 'fourth@example.com' });
   assert.equal(blocked.status, 429, '4th request must be rate-limited at FORGOT_IP_LIMIT=3');
+});
+test('reset-link checks have their own limit and never use up reset attempts', async () => {
+  mock.method(User, 'exists', async () => null);
+  mock.method(User, 'findOne', async () => null);
+
+  const app = await loadAuthRouterWith({ RESET_CHECK_IP_LIMIT: '2', RESET_IP_LIMIT: '2' });
+  const check = () => request(app).get('/api/auth/reset-password/check').query({ token: 'x' });
+
+  assert.equal((await check()).status, 400);
+  assert.equal((await check()).status, 400);
+  assert.equal((await check()).status, 429, '3rd check must be rate-limited at RESET_CHECK_IP_LIMIT=2');
+
+  // The reset counter is untouched by the checks above.
+  for (let i = 0; i < 2; i++) {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .query({ token: 'x' })
+      .send({ password: 'NewPassword123' });
+    assert.equal(res.status, 400, `reset ${i + 1} should reach the controller`);
+  }
 });
