@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { register } from '../api/auth';
-import { ApiError } from '../api/client';
+import { ApiError, NetworkError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import {
   confirmPasswordError,
@@ -23,7 +23,8 @@ const FIELD_ORDER: Field[] = [
   'confirm',
 ];
 
-type Problem = 'none' | 'duplicate' | 'invalid' | 'rate-limited' | 'failed';
+type Problem =
+  'none' | 'duplicate' | 'invalid' | 'rate-limited' | 'offline' | 'failed';
 
 // The API's sign-up limit window, used when the wait time isn't readable.
 const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
@@ -127,7 +128,8 @@ export default function RegisterPage() {
           DEFAULT_LOCKOUT_SECONDS;
         setLockedUntil(Date.now() + seconds * 1000);
         setProblem('rate-limited');
-      } else setProblem('failed');
+      } else if (err instanceof NetworkError) setProblem('offline');
+      else setProblem('failed');
       inFlight.current = false;
       setSubmitting(false);
     }
@@ -156,6 +158,11 @@ export default function RegisterPage() {
       {problem === 'rate-limited' && (
         <Notice tone="error">
           Too many sign-up attempts. Please try again later.
+        </Notice>
+      )}
+      {problem === 'offline' && (
+        <Notice tone="error">
+          We couldn’t reach Eisai. Check your connection and try again.
         </Notice>
       )}
       {problem === 'failed' && (

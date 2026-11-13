@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { deleteAccount } from './auth';
-import { ApiError, setUnauthorizedHandler } from './client';
+import { ApiError, NetworkError, setUnauthorizedHandler } from './client';
 import { customer, jsonResponse, signInAs } from '../test-utils';
 
 afterEach(() => {
@@ -70,10 +70,19 @@ test('rate limiting (429) carries the Retry-After wait', async () => {
   expect(err.retryAfterSeconds).toBe(90);
 });
 
-test('a network failure rejects with the original error, not an ApiError', async () => {
+test('a network failure rejects with a NetworkError, not an ApiError', async () => {
   signInAs(customer);
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
 
   const err = await deleteAccount('secret123').catch((e: unknown) => e);
-  expect(err).toBeInstanceOf(TypeError);
+  expect(err).toBeInstanceOf(NetworkError);
+  expect(err).not.toBeInstanceOf(ApiError);
+});
+
+test('a cancelled request rejects with the AbortError unchanged', async () => {
+  signInAs(customer);
+  const abort = new DOMException('The operation was aborted.', 'AbortError');
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abort));
+
+  await expect(deleteAccount('secret123')).rejects.toBe(abort);
 });

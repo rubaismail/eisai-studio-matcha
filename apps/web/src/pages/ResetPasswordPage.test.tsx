@@ -251,3 +251,31 @@ test('a signed-in visitor is signed out after resetting', async () => {
   await screen.findByRole('heading', { name: 'Password updated' });
   expect(getToken()).toBeNull();
 });
+
+test('empty password fields show text placeholders, not dots', () => {
+  renderPage(linkPath);
+  expect(passwordField()).toHaveValue('');
+  expect(passwordField()).toHaveAttribute(
+    'placeholder',
+    'Enter a new password',
+  );
+  expect(confirmField()).toHaveAttribute(
+    'placeholder',
+    'Re-enter your password',
+  );
+  expect(document.body.innerHTML).not.toContain('•');
+});
+
+test('a network failure asks the visitor to check their connection and keeps the form', async () => {
+  renderPage(linkPath);
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+  fill('new password');
+  fireEvent.click(submitButton());
+  expect(
+    await screen.findByText(
+      'We couldn’t reach Eisai. Check your connection and try again.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/on our end/)).not.toBeInTheDocument();
+  expect(passwordField()).toHaveValue('new password');
+});
