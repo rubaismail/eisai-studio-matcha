@@ -83,7 +83,7 @@ records what happened afterwards.
 
 | Finding | Severity | Follow-up | Status |
 | --- | --- | --- | --- |
-| A used password-reset link is only rejected after the user types and submits a new password (the verify link is rejected on open) | Low, UX only | [#113](https://github.com/rubaismail/eisai-studio-matcha/issues/113) | Fixed in PR #THIS_PR: new read-only `GET /api/auth/reset-password/check`; the page shows "Link expired" on open |
+| A used password-reset link is only rejected after the user types and submits a new password (the verify link is rejected on open) | Low, UX only | [#113](https://github.com/rubaismail/eisai-studio-matcha/issues/113) | Fixed in [PR #117](https://github.com/rubaismail/eisai-studio-matcha/pull/117): new read-only `GET /api/auth/reset-password/check`; the page shows "Link expired" on open |
 | Reset-password fields use dot placeholders (`••••••••••••`), so empty fields look already filled in | Low, UX only | [#115](https://github.com/rubaismail/eisai-studio-matcha/issues/115) | Fixed in [PR #116](https://github.com/rubaismail/eisai-studio-matcha/pull/116): "Enter a new password" / "Re-enter your password" |
 | Login network error says "Something went wrong on our end", although the cause was the visitor's connection | Cosmetic | [#115](https://github.com/rubaismail/eisai-studio-matcha/issues/115) | Fixed in [PR #116](https://github.com/rubaismail/eisai-studio-matcha/pull/116): login, sign-up and reset now say "We couldn't reach Eisai. Check your connection and try again." |
 
