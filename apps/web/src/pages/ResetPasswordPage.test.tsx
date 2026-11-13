@@ -16,13 +16,25 @@ import ResetPasswordPage from './ResetPasswordPage';
 const TOKEN = 'reset-a+b/c=';
 const linkPath = `/reset-password?token=${encodeURIComponent(TOKEN)}`;
 const OK = { message: 'Password reset. Log in with your new password.' };
+const CHECK_PATH = `/api/auth/reset-password/check?token=${encodeURIComponent(TOKEN)}`;
+const VALID_LINK = jsonResponse(200, { message: 'Reset link is valid.' });
 
+type Entry = string | { pathname: string; state: unknown };
+
+// The page checks the link when it opens (GET .../check), then submits the
+// reset (POST). `check` answers every link check; `responses` answer the
+// submits in order.
 function renderPage(
-  entry: string | { pathname: string; state: unknown },
+  entry: Entry,
   responses: unknown[] = [],
+  check: () => Promise<unknown> = async () => VALID_LINK,
 ) {
-  const fetchMock = vi.fn();
-  for (const response of responses) fetchMock.mockResolvedValueOnce(response);
+  const queue = [...responses];
+  const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
+    url.startsWith('/api/auth/reset-password/check')
+      ? check()
+      : Promise.resolve(queue.shift()),
+  );
   vi.stubGlobal('fetch', fetchMock);
   const router = createMemoryRouter(
     [
@@ -46,7 +58,22 @@ function renderPage(
       <RouterProvider router={router} />
     </StrictMode>,
   );
-  return { fetchMock, router };
+  const resetCalls = () =>
+    fetchMock.mock.calls.filter(
+      ([url]) => !url.startsWith('/api/auth/reset-password/check'),
+    ) as unknown as [string, RequestInit & { body: string }][];
+  const checkCalls = () =>
+    fetchMock.mock.calls.filter(([url]) =>
+      url.startsWith('/api/auth/reset-password/check'),
+    );
+  return { fetchMock, router, resetCalls, checkCalls };
+}
+
+// Opens the page and waits for the link check to finish and the form to show.
+async function openForm(entry: Entry = linkPath, responses: unknown[] = []) {
+  const page = renderPage(entry, responses);
+  await screen.findByRole('heading', { name: 'New password' });
+  return page;
 }
 
 const passwordField = () => screen.getByLabelText('New password');
@@ -65,18 +92,60 @@ afterEach(() => {
   localStorage.clear();
 });
 
-test('removes the token from the address bar without sending anything', () => {
-  const { fetchMock, router } = renderPage(linkPath);
+test('removes the token from the address bar and only checks the link', async () => {
+  signInAs(customer);
+  const { router, resetCalls, checkCalls } = renderPage(linkPath);
   expect(
-    screen.getByRole('heading', { name: 'New password' }),
+    screen.getByRole('heading', { name: 'Checking your link' }),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', { name: 'New password' }),
   ).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/reset-password');
   expect(router.state.location.search).toBe('');
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(resetCalls()).toHaveLength(0);
+  expect(checkCalls().length).toBeGreaterThan(0);
+  for (const [url, init] of checkCalls()) {
+    expect(url).toBe(CHECK_PATH);
+    expect(init?.method).toBe('GET');
+    // The check never sends the visitor's login.
+    expect(
+      (init?.headers as Record<string, string> | undefined)?.Authorization,
+    ).toBeUndefined();
+  }
+});
+
+test('a used or expired link says so as soon as it opens', async () => {
+  const { router, resetCalls } = renderPage(linkPath, [], async () =>
+    jsonResponse(400, { error: 'Invalid request.' }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'Link expired' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText('New password')).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('link', { name: 'Request a new link →' }),
+  ).toHaveAttribute('href', '/forgot-password');
+  expect(resetCalls()).toHaveLength(0);
+  expect(JSON.stringify(router.state.location)).not.toContain('reset-a');
+});
+
+test.each([
+  ['offline', async () => Promise.reject(new TypeError('offline'))],
+  ['a server error', async () => jsonResponse(500, { error: 'x' })],
+  ['the rate limit', async () => jsonResponse(429, { error: 'x' })],
+])('if the check fails (%s) the form still shows', async (_name, check) => {
+  renderPage(linkPath, [], check);
+  expect(
+    await screen.findByRole('heading', { name: 'New password' }),
+  ).toBeInTheDocument();
+  expect(passwordField()).toBeEnabled();
 });
 
 test('sends the token in the query and only the password in the body', async () => {
-  const { fetchMock, router } = renderPage(linkPath, [jsonResponse(200, OK)]);
+  const { router, resetCalls } = await openForm(linkPath, [
+    jsonResponse(200, OK),
+  ]);
   fill(' new password ');
   fireEvent.click(submitButton());
 
@@ -87,26 +156,26 @@ test('sends the token in the query and only the password in the body', async () 
     'href',
     '/login',
   );
-  const [url, init] = fetchMock.mock.calls[0];
+  const [url, init] = resetCalls()[0];
   expect(url).toBe(
     `/api/auth/reset-password?token=${encodeURIComponent(TOKEN)}`,
   );
   expect(init.method).toBe('POST');
   // Passwords are never trimmed.
   expect(JSON.parse(init.body)).toEqual({ password: ' new password ' });
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(resetCalls()).toHaveLength(1);
   expect(JSON.stringify(router.state.location)).not.toContain('reset-a');
 });
 
 test('a reload after the token left the address bar still shows the form', async () => {
-  const { fetchMock } = renderPage(
+  const { resetCalls } = await openForm(
     { pathname: '/reset-password', state: { resetToken: TOKEN } },
     [jsonResponse(200, OK)],
   );
   fill('new password');
   fireEvent.click(submitButton());
   await screen.findByRole('heading', { name: 'Password updated' });
-  expect(fetchMock.mock.calls[0][0]).toBe(
+  expect(resetCalls()[0][0]).toBe(
     `/api/auth/reset-password?token=${encodeURIComponent(TOKEN)}`,
   );
 });
@@ -122,8 +191,8 @@ test('a reload after success shows Password updated', () => {
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
-test('checks both passwords before sending', () => {
-  const { fetchMock } = renderPage(linkPath);
+test('checks both passwords before sending', async () => {
+  const { resetCalls } = await openForm();
   expect(screen.getByText('At least 8 characters.')).toBeInTheDocument();
   expect(passwordField()).toHaveAccessibleDescription('At least 8 characters.');
 
@@ -141,19 +210,19 @@ test('checks both passwords before sending', () => {
   fireEvent.click(submitButton());
   expect(confirmField()).toHaveAccessibleDescription('Passwords don’t match.');
   expect(confirmField()).toHaveFocus();
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(resetCalls()).toHaveLength(0);
 });
 
-test('rejects passwords over 72 bytes, like the API', () => {
-  const { fetchMock } = renderPage(linkPath);
+test('rejects passwords over 72 bytes, like the API', async () => {
+  const { resetCalls } = await openForm();
   fill('é'.repeat(37));
   fireEvent.click(submitButton());
   expect(screen.getByText(/That password is too long/)).toBeInTheDocument();
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(resetCalls()).toHaveLength(0);
 });
 
 test('repeat clicks send one request', async () => {
-  const { fetchMock } = renderPage(linkPath, [jsonResponse(200, OK)]);
+  const { resetCalls } = await openForm(linkPath, [jsonResponse(200, OK)]);
   fill('new password');
   await act(async () => {
     fireEvent.click(submitButton());
@@ -161,11 +230,11 @@ test('repeat clicks send one request', async () => {
     fireEvent.click(submitButton());
   });
   await screen.findByRole('heading', { name: 'Password updated' });
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(resetCalls()).toHaveLength(1);
 });
 
-test('a used or expired link (400) offers a new one', async () => {
-  const { router } = renderPage(linkPath, [
+test('a link that expires while the form is open (400 on submit) offers a new one', async () => {
+  const { router } = await openForm(linkPath, [
     jsonResponse(400, { error: 'Invalid request.' }),
   ]);
   fill('new password');
@@ -191,7 +260,7 @@ test('a link without a token shows Link expired', () => {
 });
 
 test('the reset limit (429) keeps the form and says how long to wait', async () => {
-  renderPage(linkPath, [
+  await openForm(linkPath, [
     jsonResponse(429, { error: 'Too many login attempts. Try again later.' }),
   ]);
   fill('new password');
@@ -208,7 +277,7 @@ test('the reset limit (429) keeps the form and says how long to wait', async () 
 });
 
 test('a server error keeps the form so it can be tried again', async () => {
-  const { fetchMock } = renderPage(linkPath, [
+  const { resetCalls } = await openForm(linkPath, [
     jsonResponse(500, { error: 'x' }),
     jsonResponse(200, OK),
   ]);
@@ -222,12 +291,12 @@ test('a server error keeps the form so it can be tried again', async () => {
   expect(passwordField()).toHaveValue('new password');
   fireEvent.click(submitButton());
   await screen.findByRole('heading', { name: 'Password updated' });
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(resetCalls()).toHaveLength(2);
 });
 
 test('leaving while the reset is sending does not replace the new page', async () => {
   let respond!: (value: unknown) => void;
-  const { fetchMock, router } = renderPage(linkPath);
+  const { fetchMock, router } = await openForm();
   fetchMock.mockReturnValueOnce(new Promise((resolve) => (respond = resolve)));
   fill('new password');
   fireEvent.click(submitButton());
@@ -245,9 +314,37 @@ test('leaving while the reset is sending does not replace the new page', async (
 
 test('a signed-in visitor is signed out after resetting', async () => {
   signInAs(customer);
-  renderPage(linkPath, [jsonResponse(200, OK)]);
+  await openForm(linkPath, [jsonResponse(200, OK)]);
   fill('new password');
   fireEvent.click(submitButton());
   await screen.findByRole('heading', { name: 'Password updated' });
   expect(getToken()).toBeNull();
+});
+
+test('empty password fields show text placeholders, not dots', async () => {
+  await openForm();
+  expect(passwordField()).toHaveValue('');
+  expect(passwordField()).toHaveAttribute(
+    'placeholder',
+    'Enter a new password',
+  );
+  expect(confirmField()).toHaveAttribute(
+    'placeholder',
+    'Re-enter your password',
+  );
+  expect(document.body.innerHTML).not.toContain('•');
+});
+
+test('a network failure asks the visitor to check their connection and keeps the form', async () => {
+  await openForm();
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+  fill('new password');
+  fireEvent.click(submitButton());
+  expect(
+    await screen.findByText(
+      'We couldn’t reach Eisai. Check your connection and try again.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/on our end/)).not.toBeInTheDocument();
+  expect(passwordField()).toHaveValue('new password');
 });

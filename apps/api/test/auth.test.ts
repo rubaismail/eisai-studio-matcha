@@ -907,6 +907,60 @@ test('reset-password with an invalid password does not consume the token', async
   assert.equal(update.mock.callCount(), 0); // token never unset
 });
 
+// ---- Reset link check (issue #113) -----------------------------------------
+
+test('reset-password/check returns 200 for a live token and looks it up by hash', async () => {
+  const exists = mock.method(User, 'exists', async () => ({ _id: 'u1' }));
+  const writes = [
+    mock.method(User, 'updateOne', async () => ({ matchedCount: 1 })),
+    mock.method(User, 'findOneAndUpdate', async () => null),
+  ];
+  const before = Date.now();
+  const res = await request(createApp()).get('/api/auth/reset-password/check').query({ token: 'raw-token' });
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { message: 'Reset link is valid.' });
+  const [filter] = exists.mock.calls[0].arguments as unknown as [
+    { resetPasswordToken: string; resetPasswordExpires: { $gt: Date } },
+  ];
+  assert.equal(filter.resetPasswordToken, createHash('sha256').update('raw-token').digest('hex'));
+  assert.ok(filter.resetPasswordExpires.$gt.getTime() >= before);
+  // Read-only: the token is never consumed or extended.
+  for (const write of writes) assert.equal(write.mock.callCount(), 0);
+});
+
+test('reset-password/check rejects unknown, expired and used tokens', async () => {
+  mock.method(User, 'exists', async () => null);
+  const res = await request(createApp()).get('/api/auth/reset-password/check').query({ token: 'used' });
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+});
+
+test('reset-password/check rejects missing, empty and repeated tokens without touching the DB', async () => {
+  const exists = mock.method(User, 'exists', async () => ({ _id: 'u1' }));
+  const app = createApp();
+  for (const path of [
+    '/api/auth/reset-password/check',
+    '/api/auth/reset-password/check?token=',
+    '/api/auth/reset-password/check?token=a&token=b',
+  ]) {
+    const res = await request(app).get(path);
+    assert.equal(res.status, 400, path);
+    assert.deepEqual(res.body, { error: MSG_BAD_INPUT });
+  }
+  assert.equal(exists.mock.callCount(), 0);
+});
+
+test('reset-password/check returns a generic 500 and logs the cause when the database fails', async () => {
+  mock.method(User, 'exists', async () => {
+    throw new Error('db down');
+  });
+  const logged = mock.method(console, 'error', () => {});
+  const res = await request(createApp()).get('/api/auth/reset-password/check').query({ token: 'x' });
+  assert.equal(res.status, 500);
+  assert.deepEqual(res.body, { error: MSG_INTERNAL });
+  assertLoggedNotLeaked(logged, 'reset-password check failed:', 'db down', res.body);
+});
+
 test('reset-password with a bad body returns 400 without touching the DB', async () => {
   const find = mockFindOneResetUser();
   const update = mockResetUpdate(1);

@@ -1,0 +1,378 @@
+# API unit tests (models mocked, Supertest)
+# Commit: 1d14cb5 (branch feature/33-integration-tests)
+# Run: 2026-11-13T02:59Z, Node v24.21.0, macOS 13 arm64
+# Command: npm test -w @eisai/api
+
+✔ deletes the signed-in customer with the correct password (77.299792ms)
+✔ the login token stops working once the account is deleted (10.857375ms)
+✔ rejects a wrong password with 403 (not 401, which clients treat as signed out) (11.167917ms)
+✔ rejects a missing, empty, non-string or extra-field body (25.372792ms)
+✔ requires a valid login token (14.881375ms)
+✔ refuses to delete the only admin account (7.694042ms)
+✔ an admin can delete their account when another admin exists (2.99425ms)
+✔ reports 401 if a simultaneous request already deleted the account (7.564291ms)
+✔ account limiter counts attempts per signed-in user (13.400292ms)
+✔ the IP limit also counts requests with bad tokens (10.355875ms)
+✔ the per-account limiter refuses to run before requireAuth (6.58075ms)
+✔ admin can see available and hidden menu items (28.291166ms)
+✔ customers cannot access admin menu (4.272125ms)
+✔ admin menu rejects requests without a token (9.8795ms)
+✔ admin menu rejects invalid tokens (3.101958ms)
+✔ admin menu returns an empty list (5.015958ms)
+✔ admin menu handles database errors (6.414625ms)
+✔ rejects requests without a token (19.644125ms)
+✔ rejects invalid JWT tokens (3.766583ms)
+✔ rejects expired JWT tokens (5.744334ms)
+✔ allows verified users with valid tokens (7.687917ms)
+✔ blocks customers from admin routes (3.289625ms)
+✔ allows administrators into admin routes (10.912458ms)
+✔ rejects deleted or missing accounts (4.541292ms)
+(node:49328) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49328) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+✔ FORGOT_IP_LIMIT=abc falls back to the default (10) in the real router (240.094708ms)
+✔ FORGOT_IP_LIMIT=3 is honored by the real router (10.069208ms)
+(node:49329) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49329) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+✔ register blocks excess attempts from one IP and does not create accounts (424.948459ms)
+✔ register limits normalized emails across casing (253.308667ms)
+✔ register recovers after the window expires (1432.500708ms)
+✔ resend blocks excess attempts and does not send email when blocked (4.412083ms)
+✔ forgot-password and resend-verification have independent buckets (3.80025ms)
+✔ reset-password is IP-rate-limited (3.443792ms)
+(node:49330) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49330) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+✔ registration creates a customer with hashed password and token (202.159417ms)
+✔ registration trims names and normalizes email (145.617417ms)
+✔ registration does not trim passwords (314.659041ms)
+✔ registration rejects missing fields (20.373667ms)
+✔ registration rejects blank names (13.458708ms)
+✔ registration rejects invalid email syntax (13.920333ms)
+✔ registration rejects explicit nulls and wrong types (15.682584ms)
+✔ registration rejects unknown fields including role and id (9.567875ms)
+✔ registration rejects passwords under 8 characters (8.810833ms)
+✔ registration rejects fewer than eight Unicode characters before creating an account (12.6235ms)
+✔ registration accepts eight Unicode characters and preserves the password (170.550667ms)
+✔ registration rejects passwords over 72 UTF-8 bytes (3.158833ms)
+✔ registration rejects an already-registered email (2.591292ms)
+✔ registration rejects a duplicate-key race (86.930542ms)
+✔ verify marks the user verified atomically (2.204917ms)
+✔ verify returns a generic 500 and logs the cause when the database fails (1.189333ms)
+✔ verify rejects missing and empty tokens (1.944791ms)
+✔ verify rejects unknown, expired and previously used tokens (1.392792ms)
+✔ concurrent verify yields exactly one 200 and one 400 (1.826834ms)
+✔ resend returns the generic message when no eligible account matches (2.086375ms)
+✔ resend updates the token and emails when eligible (1.661958ms)
+✔ resend does not email when the cooldown filter excludes the account (3.12775ms)
+✔ resend returns 500 when email delivery fails (2.818583ms)
+✔ resend rejects invalid input (9.552084ms)
+✔ buildVerificationLink produces an absolute, encoded website verify URL (0.220208ms)
+✔ registration hands the service a token whose hash is stored (83.421375ms)
+✔ registration returns a generic 500 when email delivery fails (75.328334ms)
+✔ registration hash verifies with the shared login comparison (216.269125ms)
+✔ production registration works without APP_URL (links use WEB_ORIGIN) (71.073542ms)
+register failed: Error: MAILTRAP_TOKEN is required.
+    at requireMailConfig (<repo>/apps/api/src/config/env.ts:71:21)
+    at requireEmailConfig (<repo>/apps/api/src/config/env.ts:58:10)
+    at register (<repo>/apps/api/src/controllers/auth.controller.ts:79:5)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (<repo>/node_modules/router/lib/route.js:117:3)
+    at handle (<repo>/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at <repo>/node_modules/router/index.js:295:15
+    at processParams (<repo>/node_modules/router/index.js:582:12)
+✔ whitespace-only MAILTRAP_TOKEN returns 500 without creating an account (2.23875ms)
+register failed: Error: EMAIL_FROM is required.
+    at requireMailConfig (<repo>/apps/api/src/config/env.ts:72:20)
+    at requireEmailConfig (<repo>/apps/api/src/config/env.ts:58:10)
+    at register (<repo>/apps/api/src/controllers/auth.controller.ts:79:5)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (<repo>/node_modules/router/lib/route.js:117:3)
+    at handle (<repo>/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at <repo>/node_modules/router/index.js:295:15
+    at processParams (<repo>/node_modules/router/index.js:582:12)
+✔ whitespace-only EMAIL_FROM returns 500 without creating an account (1.183083ms)
+register failed: Error: EMAIL_FROM must be a valid email address.
+    at requireMailConfig (<repo>/apps/api/src/config/env.ts:74:11)
+    at requireEmailConfig (<repo>/apps/api/src/config/env.ts:58:10)
+    at register (<repo>/apps/api/src/controllers/auth.controller.ts:79:5)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (<repo>/node_modules/router/lib/route.js:117:3)
+    at handle (<repo>/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at <repo>/node_modules/router/index.js:295:15
+    at processParams (<repo>/node_modules/router/index.js:582:12)
+✔ malformed EMAIL_FROM returns 500 without creating an account (1.122875ms)
+resend-verification failed: Error: EMAIL_FROM must be a valid email address.
+    at requireMailConfig (<repo>/apps/api/src/config/env.ts:74:11)
+    at requireEmailConfig (<repo>/apps/api/src/config/env.ts:58:10)
+    at resendVerification (<repo>/apps/api/src/controllers/auth.controller.ts:181:5)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (<repo>/node_modules/router/lib/route.js:117:3)
+    at handle (<repo>/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at <repo>/node_modules/router/index.js:295:15
+    at processParams (<repo>/node_modules/router/index.js:582:12)
+✔ resend with invalid config replaces no token and sends no email (1.048958ms)
+✔ email configuration returns the trimmed credentials it validates (0.094583ms)
+✔ concurrent resends send one email whose token matches the atomic update (1.573375ms)
+✔ registered customer can log in only after consuming the emailed token (218.138625ms)
+✔ forgot-password returns generic 200 and sends nothing for unknown email (1.490125ms)
+✔ register rejects invalid website configuration before creating an account (1.317166ms)
+✔ resend-verification rejects invalid website configuration before replacing a token (1.161667ms)
+✔ forgot-password rejects invalid website configuration before storing a token (1.253209ms)
+✔ forgot-password writes a hashed token and emails the raw token (1.270375ms)
+✔ forgot-password cooldown filter uses $exists:false and expiry comparison (1.362333ms)
+✔ forgot-password rejects invalid input (4.43875ms)
+✔ forgot-password returns 500 and writes no token when email delivery fails (1.232959ms)
+✔ reset-password updates the hash and unsets the token atomically (139.912541ms)
+✔ reset-password returns a generic 500 and logs the cause when the database fails (71.03725ms)
+✔ reset-password with an invalid password does not consume the token (1.3875ms)
+✔ reset-password with a bad body returns 400 without touching the DB (3.099958ms)
+✔ reset-password rejects missing, empty, expired and used tokens (2.871541ms)
+✔ concurrent reset-password with the same token yields one 200 and one 400 (140.7825ms)
+✔ forgot → reset → login end-to-end with the emailed token (147.472ms)
+(node:49331) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49331) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+✔ sendVerificationEmail emits the website verify URL with the raw token (3.161417ms)
+✔ sendResetPasswordEmail emits the reset URL with the raw token (0.321375ms)
+✔ emitted verify URL has no double slash when WEB_ORIGIN ends with / (0.157292ms)
+✔ invalid website configuration sends no verification email (0.517542ms)
+✔ invalid website configuration sends no reset email (0.369875ms)
+(node:49332) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49332) DeprecationWarning: mock.module(): options.defaultExport is deprecated. Use options.exports.default instead.
+✔ real email service builds matching absolute HTML/text links with normalized sender (2.181ms)
+✔ real email service propagates delivery failures to the controller (0.292667ms)
+✔ proxy trust defaults to disabled and rejects unsafe or malformed settings (7.648959ms)
+✔ real login keeps proxy clients independent and ignores forged earlier hops (156.582ms)
+✔ an untrusted socket peer cannot spoof its IP with forwarding headers (75.848916ms)
+✔ blocks excessive attempts from one IP (101.403084ms)
+✔ limits normalized emails even with different casing (13.079917ms)
+✔ allows requests again after the limit window expires (208.544166ms)
+✔ login returns a valid JWT and correct user response (221.089916ms)
+✔ login rejects an incorrect password (172.742542ms)
+✔ login rejects an unverified user (157.634583ms)
+✔ login rejects missing credentials (1.857125ms)
+✔ login rejects an unknown email (73.794459ms)
+✔ login rejects malformed email addresses (7.47825ms)
+✔ login rejects unexpected request fields (1.1185ms)
+✔ unknown email uses the precomputed dummy bcrypt hash (73.691167ms)
+✔ metadata is trimmed, saved and returned across every menu listing (58.142291ms)
+✔ partial updates preserve metadata, accept plain text, and explicitly clear it (26.443333ms)
+✔ new and legacy records receive empty defaults without a migration (14.501125ms)
+✔ rejects inspiredBy=null on create/update without writes (4.441625ms)
+✔ rejects inspiredBy=123 on create/update without writes (4.651667ms)
+✔ rejects inspiredBy=true on create/update without writes (4.744791ms)
+✔ rejects inspiredBy=[] on create/update without writes (4.652209ms)
+✔ rejects inspiredBy={} on create/update without writes (4.647792ms)
+✔ rejects inspiredBy=["text"] on create/update without writes (4.055084ms)
+✔ rejects imageAlt=null on create/update without writes (7.184458ms)
+✔ rejects imageAlt=123 on create/update without writes (4.224792ms)
+✔ rejects imageAlt=true on create/update without writes (6.1925ms)
+✔ rejects imageAlt=[] on create/update without writes (2.859458ms)
+✔ rejects imageAlt={} on create/update without writes (2.743042ms)
+✔ rejects imageAlt=["text"] on create/update without writes (4.420416ms)
+✔ unknown fields still reject the entire write even with valid metadata (3.879375ms)
+✔ anonymous cannot create or update metadata (3.014458ms)
+✔ customer cannot create or update metadata (4.957542ms)
+✔ metadata does not change hidden-item filtering or independent display flags (7.755791ms)
+✔ GET /api/menu returns available items (16.565666ms)
+✔ GET /api/menu returns an empty list (3.5165ms)
+✔ GET /api/menu/seasonal returns available seasonal items (1.471833ms)
+✔ GET /api/menu/seasonal returns an empty list (1.427875ms)
+✔ GET /api/menu/seasonal handles database errors (1.628291ms)
+✔ unknown routes return 404 JSON (1.806041ms)
+✔ database errors return a generic 500 (1.401125ms)
+✔ GET /api/admin/menu requires an admin JWT (1.155292ms)
+✔ POST /api/menu creates an item for admins (10.195084ms)
+Error: Name is required
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:54:19)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: Price must be a nonnegative finite number
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:69:19)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+✔ POST /api/menu rejects invalid data or non-admins (7.157333ms)
+✔ PUT /api/menu/:id hides and unhides items (9.556833ms)
+Error: Price must be a nonnegative finite number
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:78:19)
+    at updateMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:203:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+✔ PUT /api/menu/:id rejects nonfinite prices (2.211333ms)
+✔ PUT /api/menu/:id returns 404 for unknown IDs (6.115ms)
+✔ DELETE /api/menu/:id permanently removes an item (4.287375ms)
+✔ DELETE /api/menu/:id returns 404 for unknown IDs (1.769458ms)
+✔ POST /api/menu stores tea bases and independent display flags (8.132ms)
+Error: teaBases must be an array containing unique matcha/hojicha values
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:124:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: teaBases must be an array containing unique matcha/hojicha values
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:124:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: teaBases must be an array containing unique matcha/hojicha values
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:124:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: teaBases must be an array containing unique matcha/hojicha values
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:124:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: teaBases cannot be null
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:46:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: isRecommended must be a boolean
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:131:19)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: isFeatured must be a boolean
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:137:19)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+Error: isFeatured cannot be null
+    at validateMenuPayload (<repo>/apps/api/src/controllers/menu.controller.ts:46:21)
+    at createMenuItem (<repo>/apps/api/src/controllers/menu.controller.ts:166:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAdmin (<repo>/apps/api/src/middleware/requireAdmin.ts:11:3)
+    at Layer.handleRequest (<repo>/node_modules/router/lib/layer.js:152:17)
+    at next (<repo>/node_modules/router/lib/route.js:157:13)
+    at requireAuth (<repo>/apps/api/src/middleware/requireAuth.ts:44:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  status: 400
+}
+✔ POST /api/menu rejects invalid menu metadata (17.025292ms)
+✔ PUT /api/menu/:id updates featured, seasonal and recommended independently (3.244875ms)
+✔ GET /api/menu excludes unavailable featured items (1.022583ms)
+✔ POST /api/uploads accepts an admin-uploaded image URL (21.851417ms)
+Error: Unsupported image type
+    at validateUploadFile (<repo>/apps/api/src/services/upload.ts:68:19)
+    at async uploadMenuImage (<repo>/apps/api/src/services/upload.ts:87:26)
+    at async <anonymous> (<repo>/apps/api/src/routes/upload.routes.ts:56:24) {
+  status: 415
+}
+✔ POST /api/uploads rejects malformed PNG content before S3 upload (5.951458ms)
+✔ production config accepts same-host deployment and provider-chain AWS credentials (0.560625ms)
+✔ production config rejects missing settings without leaking values (0.275542ms)
+✔ production rejects unsafe URLs, disabled limits, malformed limits and incomplete credentials (0.295792ms)
+✔ production config no longer needs APP_URL (email links use WEB_ORIGIN) (0.088125ms)
+✔ local development retains existing defaults (0.065459ms)
+✔ uploads fully decoded valid.png with its original bytes and detected MIME type (44.234834ms)
+✔ uploads fully decoded alpha.png with its original bytes and detected MIME type (12.146167ms)
+✔ uploads fully decoded valid.jpg with its original bytes and detected MIME type (7.776459ms)
+✔ uploads fully decoded valid-no-app.jpg with its original bytes and detected MIME type (6.835708ms)
+✔ uploads fully decoded progressive.jpg with its original bytes and detected MIME type (6.997ms)
+✔ uploads fully decoded valid.webp with its original bytes and detected MIME type (6.981458ms)
+✔ uploads fully decoded lossless.webp with its original bytes and detected MIME type (6.390375ms)
+✔ uploads fully decoded animated.webp with its original bytes and detected MIME type (6.412ms)
+✔ rejects PNG header only before calling S3 (3.226125ms)
+✔ rejects PNG without IEND before calling S3 (2.2725ms)
+✔ rejects corrupt PNG pixel data before calling S3 (2.162792ms)
+✔ rejects four-byte JPEG before calling S3 (1.464833ms)
+✔ rejects truncated JPEG scan before calling S3 (1.397083ms)
+✔ rejects truncated WebP data before calling S3 (1.312709ms)
+✔ rejects truncated animated WebP before calling S3 (1.320083ms)
+✔ rejects plain text before calling S3 (1.495083ms)
+✔ rejects empty image before calling S3 (1.321625ms)
+✔ rejects MIME mismatch before calling S3 (5.896125ms)
+✔ rejects unsupported MIME before calling S3 (1.642041ms)
+✔ rejects missing, multiple, incorrectly named and oversized uploads before S3 (10.775708ms)
+✔ validation enforces the byte limit before decoding (0.835083ms)
+✔ upload rejects missing, placeholder, expired and non-admin credentials before S3 (5.116792ms)
+✔ upload waits for S3 and returns a generic error if persistence fails (7.510375ms)
+✔ upload preserves temporary AWS session credentials (8.175084ms)
+ℹ tests 173
+ℹ suites 0
+ℹ pass 173
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3459.954958
+# exit code: 0

@@ -23,11 +23,17 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 - Live email through the client's Mailtrap account: register → resend-verification → verification email received → verify link → `Email verified`. A direct Mailtrap API send from the server also succeeded.
 - A verified account was promoted to `admin` with the database shell ([admin-account-setup.md](admin-account-setup.md)). It is a team member's temporary account; see the credentials checklist below.
 
+### Verified on November 12–13, 2026
+
+- Website sign-up, delivered verification email, verify, login, logout, forgot/reset password and account deletion; admin menu create/edit/hide/delete with photo upload; public bucket images; anonymous and customer requests rejected from admin routes. Evidence: [live acceptance test](test-results/live-acceptance-2026-11-12.md).
+- From outside the server, only HTTPS (443) answers. MongoDB (27017), the API port (4000) and SSH (22) are not publicly reachable.
+- Lightsail automatic snapshots are enabled and succeeding daily (see [Backups](#unfinished-production-work)).
+- AWS budget alert created (see [Ownership and billing](#ownership-and-billing)).
+
 ### Not yet verified
 
-- Sign-up, email verification and forgot/reset password end to end **through the website** (deployed November 11, 2026). Register with a test address, click the email link through to `Email verified`, then reset the password.
-- Admin login, menu create/edit/delete, image upload to the bucket and public image URLs.
-- Reboot recovery, certificate renewal dry run (`sudo certbot renew --dry-run`), backups and restore.
+- Reboot recovery and a certificate renewal dry run (`sudo certbot renew --dry-run`).
+- Restoring from a backup (see the backups item below).
 - The rest of the [live acceptance checklist](deployment.md#live-acceptance-checklist).
 
 ## Must change before handoff to the client
@@ -37,7 +43,9 @@ Things set up temporarily under a team member's identity, or not finished yet.
 ### Ownership and billing
 
 - [ ] **AWS plan:** the project is on the AWS **Free plan** ($100 credits, ends **April 26, 2027**, or earlier if credits run out at about $13/month). Upgrade to the paid plan in **AWS Settings → Billing** before then, or the server, database and bucket are lost.
-- [ ] Make sure the client owns the AWS project and invite maintainers as team members in AWS Settings. Set a budget alert or spend limit. Remove student team members' access at the end of the engagement.
+- [ ] Make sure the client owns the AWS project and invite maintainers as team members in AWS Settings. Remove student team members' access at the end of the engagement.
+- [x] **Budget alert** (November 13, 2026): AWS Budgets `Eisai-Monthly-Cost`, **$20/month**, credits and refunds excluded so it tracks real usage even while credits pay the bill. Emails `contact@eisaistudio.com` when actual spend passes 85% and 100%, and when spend is forecast to pass 100%. Free (alerts only). Normal spend is about $13–15/month. View or change it in the **Billing and Cost Management console → Budgets**. Alerts are checked about once a day.
+- [ ] **Spend limit:** after upgrading to the paid plan, set one in **AWS Settings → Billing** (project owner only). Set it well above normal spend, for example $50. **If the limit is hit, AWS pauses the project and the website and API go down,** so the budget alert above is the early warning and the spend limit is only a last-resort cap.
 - [ ] GoDaddy is currently accessed through delegate access. Confirm the client keeps full ownership, and remove delegate access when the work is done.
 
 ### Email (Mailtrap)
@@ -63,7 +71,9 @@ Remaining:
 
 ### Unfinished production work
 
-- [ ] **Backups:** there are none yet. At minimum, enable Lightsail automatic snapshots. Properly, schedule `mongodump` to a private backup bucket and test a restore ([deployment.md](deployment.md#backups-and-tested-restore)).
+- [x] **Backups (server snapshots):** Lightsail **automatic snapshots** of `eisai-prod` are on, taken daily at 03:00 UTC (11 PM / 10 PM Eastern); Lightsail keeps the seven most recent. Confirmed succeeding daily since November 8, 2026. Each snapshot is the whole server: code, MongoDB data and `/etc/eisai` secrets. Snapshot storage adds a small monthly cost.
+- [ ] **Test a restore** (about 20 minutes, then delete the copy): Lightsail console → **Snapshots** → latest `eisai-prod` automatic snapshot → **Create new instance** (same `us-east-2`, same 2 GB bundle). Don't attach the static IP or change DNS, so the copy gets no real traffic. Connect with browser SSH, check `curl -s localhost:4000/api/health` and the menu count in the database shell, then **delete the test instance** so it stops costing money. Record the date and result here.
+- [ ] **Optional, stronger backups:** a daily `mongodump` to a private backup bucket, so the database can be restored without the whole server ([deployment.md](deployment.md#backups-and-tested-restore)). Snapshots alone are lost if the AWS project itself is lost.
 - [ ] **Monitoring:** nothing alerts if the server or API goes down. Add Lightsail metric alarms (CPU, status checks) and an uptime check on `/api/health`.
 - [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
 - [ ] Optional hardening: the API still shows its Nginx version (`Server: nginx/1.18.0 (Ubuntu)`). Add `server_tokens off;` to the `server` blocks in `/etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`. The website already hides it.
@@ -141,4 +151,4 @@ Secrets live only in `/etc/eisai/` on the server. Nothing in this repository con
 4. Run `sudo eisai-set-secrets`, then `sudo certbot --nginx -d api.eisaistudio.com`.
 5. Website: `sudo cp /srv/eisai/current/deploy/eisai-web.nginx.conf /etc/nginx/sites-available/eisai-web`, `sudo ln -sfn /etc/nginx/sites-available/eisai-web /etc/nginx/sites-enabled/eisai-web`, `sudo cp /srv/eisai/current/deploy/eisai-gzip.nginx.conf /etc/nginx/conf.d/eisai-gzip.conf`, `sudo nginx -t && sudo systemctl reload nginx`, then `sudo certbot --nginx -d eisaistudio.com -d www.eisaistudio.com` (choose redirect).
 6. Turn on HTTP/2: `sudo sed -i 's/listen 443 ssl;/listen 443 ssl http2;/' /etc/nginx/sites-available/eisai-web /etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`.
-7. Restore the database from the latest backup (see the backups item above; there is nothing to restore from yet).
+7. Restore the database from the latest backup. Faster alternative to steps 1–7: create the new instance from the latest **automatic snapshot** (Lightsail → Snapshots → Create new instance), attach the static IP, and check health; it already contains the code, database, secrets and certificates.

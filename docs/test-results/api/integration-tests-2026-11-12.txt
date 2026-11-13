@@ -1,0 +1,24 @@
+# API integration tests (real local MongoDB 7.0.14, database eisai_test)
+# Commit: 1d14cb5 (branch feature/33-integration-tests)
+# Run: 2026-11-13T02:59Z, Node v24.21.0, macOS 13 arm64
+# Command: npm run test:integration
+
+MongoDB connected (eisai_test)
+(node:49351) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49351) DeprecationWarning: mock.module(): options.namedExports is deprecated. Use options.exports instead.
+✔ health check reports the database as connected (21.730125ms)
+✔ full run: register -> verify -> login -> admin adds item -> appears on menu (473.100833ms)
+✔ hiding an item removes it from the public menu but not the admin list; deleting removes it (230.762292ms)
+✔ the unique email index rejects a second account with the same address (148.472417ms)
+✔ password reset: new password works, old one and the used link do not (361.319458ms)
+✔ deleting an account removes it and its login stops working; the last admin is kept (508.591875ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3469.049709
+# exit code: 0

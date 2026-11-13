@@ -307,6 +307,44 @@ paths:
               $ref: '#/components/schemas/ResetPasswordRequest'
             example:
               password: new-example-password
+  /auth/reset-password/check:
+    get:
+      operationId: checkResetPassword
+      summary: Check a password-reset link
+      description: >-
+        Read-only check that a reset token exists and hasn't expired, so the website can show
+        "link expired" before the user types a new password. Never consumes or extends the token.
+        Missing, invalid, expired or used tokens return the same 400 as reset-password.
+        Default limit: 30 requests per client IP per 15 minutes (RESET_CHECK_IP_LIMIT), counted
+        separately from reset-password so checks never use up reset attempts.
+        Exceeding the limit returns 429; wait for Retry-After before retrying.
+      tags:
+        - Auth
+      security: []
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: The reset link is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: Reset link is valid.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/AuthRateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Password-reset action token from the email link; not a login JWT.
   /auth/delete-account:
     post:
       operationId: deleteAccount

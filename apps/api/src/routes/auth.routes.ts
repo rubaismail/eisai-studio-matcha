@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { register, verify, resendVerification, resetPassword, forgotPassword} from "../controllers/auth.controller.js";
+import {
+  register,
+  verify,
+  resendVerification,
+  resetPassword,
+  checkResetPassword,
+  forgotPassword,
+} from "../controllers/auth.controller.js";
 import { createAccountLimiters, createLoginLimiters } from "../middleware/loginRateLimit.js";
 import { deleteAccount } from "../controllers/account.controller.js";
 import { requireAuth } from "../middleware/requireAuth.js";
@@ -36,6 +43,12 @@ const resetLimiters = limiters({
   emailLimit: intEnv("RESET_EMAIL_LIMIT", 10),
   windowMs,
 });
+// Separate counter so opening a reset link never uses up actual reset attempts.
+const resetCheckLimiters = limiters({
+  ipLimit: intEnv("RESET_CHECK_IP_LIMIT", 30),
+  emailLimit: intEnv("RESET_CHECK_IP_LIMIT", 30),
+  windowMs,
+});
 const deleteAccountLimiters = rateLimitDisabled
   ? { beforeAuth: [], afterAuth: [] }
   : createAccountLimiters({
@@ -49,6 +62,7 @@ router.get("/verify", verify);
 router.post("/register", ...registerLimiters, register);
 router.post("/resend-verification", ...resendLimiters, resendVerification);
 router.post("/forgot-password", ...forgotLimiters, forgotPassword);
+router.get("/reset-password/check", ...resetCheckLimiters, checkResetPassword);
 router.post("/reset-password", ...resetLimiters, resetPassword);
 // Signed-in customers delete their own account (issue #102).
 router.post(

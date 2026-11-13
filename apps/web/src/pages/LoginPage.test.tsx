@@ -166,7 +166,7 @@ test('uses the API wait time when it is readable', async () => {
   ).toBeInTheDocument();
 });
 
-test('a server or network error shows a general message', async () => {
+test('a server error shows a general message', async () => {
   renderLogin(undefined, [
     jsonResponse(500, { error: 'Something went wrong' }),
   ]);
@@ -174,6 +174,22 @@ test('a server or network error shows a general message', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Something went wrong on our end',
   );
+});
+
+test('a network failure asks the visitor to check their connection', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+  renderWithAuth(
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+    </Routes>,
+    ['/login'],
+  );
+  fillAndSubmit();
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent(
+    'We couldn’t reach Eisai. Check your connection and try again.',
+  );
+  expect(alert).not.toHaveTextContent('on our end');
 });
 
 test('prevents a second submit while logging in', async () => {
