@@ -61,7 +61,12 @@ class _EisaiInfoScaffoldState extends State<EisaiInfoScaffold> {
                                   assetPath: 'assets/images/eisai_logo.png',
                                   width: 112 * s,
                                   height: 29 * s,
+                                  scale: s,
                                   onTap: () => _navigate(widget.onGoHome),
+                                  errorBuilder: (_, __, ___) => Text(
+                                    'EISAI',
+                                    style: TextStyle(fontSize: 21 * s),
+                                  ),
                                 ),
                               ),
                               Positioned(

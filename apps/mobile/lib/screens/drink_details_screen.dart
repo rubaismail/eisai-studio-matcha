@@ -85,6 +85,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
             assetPath: 'assets/images/eisai_logo.png',
             width: 112 * s,
             height: 29 * s,
+            scale: s,
             onTap: () => _leaveFor(widget.onGoHome),
           ),
         ),

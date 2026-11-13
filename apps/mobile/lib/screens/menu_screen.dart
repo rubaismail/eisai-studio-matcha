@@ -221,6 +221,7 @@ class _MenuScreenState extends State<MenuScreen> {
             assetPath: 'assets/images/eisai_logo.png',
             width: 112 * s,
             height: 29 * s,
+            scale: s,
             onTap: () {
               setState(() => _menuOpen = false);
               widget.onGoHome?.call();

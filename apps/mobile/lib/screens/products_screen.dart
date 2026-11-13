@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../widgets/eisai_info_scaffold.dart';
 import '../widgets/eisai_footer.dart';
 import '../widgets/eisai_instagram_link.dart';
@@ -29,13 +27,6 @@ class ProductsScreen extends StatelessWidget {
 
   TextStyle _a(double size, {Color color = _ink}) =>
       TextStyle(fontFamily: 'Anonymous Pro', fontSize: size, color: color);
-
-  Future<void> _openInstagram() async {
-    await launchUrl(
-      EisaiInstagramLink.profile,
-      mode: LaunchMode.externalApplication,
-    );
-  }
 
   @override
   Widget build(BuildContext context) => EisaiInfoScaffold(
@@ -97,7 +88,7 @@ class ProductsScreen extends StatelessWidget {
               SizedBox(
                 height: 52 * s,
                 child: OutlinedButton(
-                  onPressed: _openInstagram,
+                  onPressed: () => EisaiInstagramLink.open(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _ink,
                     side: const BorderSide(color: _ink),

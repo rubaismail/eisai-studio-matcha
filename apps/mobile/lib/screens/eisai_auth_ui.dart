@@ -58,14 +58,14 @@ class _EisaiAuthShellState extends State<EisaiAuthShell> {
                   bottom: 10,
                   child: EisaiHomeLogo(
                     assetPath: 'assets/images/eisai_logo_periwinkle.png',
-                    onTap: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const MainNavigation(initialIndex: 0),
-                        ),
-                        (route) => false,
-                      );
-                    },
+                    onTap: () => _openDestination(0),
+                    errorBuilder: (_, __, ___) => Text(
+                      'EISAI STUDIO',
+                      style: EisaiAuthStyle.mono(
+                        16,
+                        color: const Color(0xFF8B91C7),
+                      ),
+                    ),
                   ),
                 ),
                 Positioned(

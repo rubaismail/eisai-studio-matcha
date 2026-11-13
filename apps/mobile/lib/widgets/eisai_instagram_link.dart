@@ -10,37 +10,57 @@ class EisaiInstagramLink extends StatelessWidget {
     'https://www.instagram.com/eisaistudio/',
   );
 
-  Future<void> _open() async {
-    await launchUrl(profile, mode: LaunchMode.externalApplication);
+  static Future<void> open(BuildContext context) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(profile, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+    if (opened || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Could not open Instagram. Visit instagram.com/eisaistudio.',
+        ),
+      ),
+    );
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    link: true,
-    label: 'Eisai Studio Instagram profile',
-    child: InkWell(
-      onTap: _open,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CustomPaint(
-            size: const Size(20, 20),
-            painter: _InstagramLogoPainter(const Color(0xFFF5F5F5)),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '@eisaistudio',
-            style: style.copyWith(
-              color: const Color(0xFFF5F5F5),
-              decoration: TextDecoration.underline,
-              decorationColor: const Color(0xFFF5F5F5),
-              decorationThickness: 1.2,
+  Widget build(BuildContext context) {
+    final color =
+        style.color ??
+        DefaultTextStyle.of(context).style.color ??
+        Theme.of(context).colorScheme.onSurface;
+
+    return Semantics(
+      link: true,
+      label: 'Eisai Studio Instagram profile',
+      child: InkWell(
+        onTap: () => open(context),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomPaint(
+              size: const Size(20, 20),
+              painter: _InstagramLogoPainter(color),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              '@eisaistudio',
+              style: style.copyWith(
+                color: color,
+                decoration: TextDecoration.underline,
+                decorationColor: color,
+                decorationThickness: 1.2,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _InstagramLogoPainter extends CustomPainter {

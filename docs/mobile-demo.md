@@ -1,35 +1,23 @@
 # Eisai Studio — Flutter Mobile Build & Demo Guide
 
-APK download: (https://github.com/rubaismail/eisai-studio-matcha/releases/tag/mobile-demo)
-
-Application source commit: a590a934e34e5747eb7a62bc1bd6108066d30a84
-
-APK SHA-256: DBD33BBEB100B9823A21ED84F43010E2BC1EDB7D4DE32583BD00B82CD118804E
-
-Build configuration: Release APK with production API https://api.eisaistudio.com/api.
-
-Verification Evidence
-
-Flutter automated test results — 73 passed
-
-APK installation log
-
-Installed application
-
-Updated navigation
-
-Our Products
-
-Account screen
-
-Email verification
-
 
 ## Overview
 
 The Eisai Studio mobile application is packaged as an installable Android APK. The application uses the deployed Eisai Studio API and includes the customer-facing screens, authentication flows, video carousel, and staff menu management interface.
 
 **Demonstration platform:** Physical Android device or Android 17 (API 37) emulator
+
+## Verified release
+
+- **APK download:** [Download Android APK](DIRECT_APK_URL)
+- **GitHub release:** [View release](PASTE_RELEASE_PAGE_URL)
+- **Application source commit:** [PASTE_SHORT_COMMIT](https://github.com/rubaismail/eisai-studio-matcha/commit/PASTE_FULL_COMMIT)
+- **APK SHA-256:** `3E7091CEEF8EC6584857AD0A21D09DA90DBEE1B274D7A9013FA61A27C461E87F`
+- **APK size:** 85,000,552 bytes (81.06 MiB).
+- **Automated tests:** 73 passed.
+- **Test evidence:** [Flutter test results](test-results/flutter-mobile-tests.txt)
+- **Installed on:** sdk gphone64 x86 64 — Android 17 (API 37), android-x64 emulator.
+- **Installation:** Successfully installed using `flutter install --use-application-binary=build/app/outputs/flutter-apk/app-release.apk`.
 
 
 ## Build Environment
@@ -68,6 +56,8 @@ The generated APK is located at:
 **Build result:** Successful
 
 **APK size:** Approximately 84.5 MB
+
+2ed020369909b10e2b904d0118d30a6f62a0c1c3
 
 ## Installing the APK
 
@@ -184,23 +174,25 @@ With approved administrator credentials:
 - Full accessibility verification, including TalkBack, is separate from the website's Lighthouse audit.
 
 
-## Evidence
+## Verification Evidence
 
-Automated Flutter test evidence:
+- [Flutter automated test output](test-results/flutter-mobile-tests.txt)
+- [Release APK installation log](test-results/mobile-release/apk-install.txt)
+- [Installed application](test-results/mobile-release/installed-app.png)
+- [Home](test-results/mobile-release/home.png)
+- [Navigation](test-results/mobile-release/navigation.png)
+- [Our Drinks](test-results/mobile-release/our-drinks.png)
+- [Our Products](test-results/mobile-release/products.png)
+- [Account](test-results/mobile-release/account.png)
+- [Login](test-results/mobile-release/login.png)
+- [Email verification](test-results/mobile-release/email_verification.png)
+- [Footer](test-results/mobile-release/footer.png)
+- [Video carousel](test-results/mobile-release/video-carousel.png)
+- [Old password attempt](test-results/mobile-release/invalid-password-after-reset.png)
+- [Rseset Password Email link](test-results/mobile-release/reset-link.png)
 
-`docs/test-results/flutter-mobile-tests.txt`
 
-Additional screenshots and test logs may be saved under:
 
-`docs/test-results/mobile-demo/`
-
-Release APK build output:
-
-`apps/mobile/build/app/outputs/flutter-apk/app-release.apk`
-
-The APK is generated locally in the Flutter build directory and is not committed as ordinary source code.
-
-For distribution, attach the verified release APK to an approved GitHub Release or provide it through the instructor-approved delivery method.
 
 ## Issue #42 Completion
 

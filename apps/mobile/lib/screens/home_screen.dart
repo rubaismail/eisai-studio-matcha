@@ -105,6 +105,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   late Future<List<_FeaturedDrink>> _drinks = _loadFeatured();
   final GlobalKey _footerKey = GlobalKey();
+  final ScrollController _pageScrollController = ScrollController();
   final ScrollController _popupScrollController = ScrollController();
   int _activePopupCard = 0;
   double _popupCardExtent = 304;
@@ -113,6 +114,18 @@ class HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _popupScrollController.addListener(_onPopupScroll);
+  }
+
+  void _goHome() {
+    setState(() => _menuOpen = false);
+
+    if (!_pageScrollController.hasClients) return;
+
+    _pageScrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+    );
   }
 
   void _onPopupScroll() {
@@ -128,6 +141,7 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _popupScrollController.dispose();
+    _pageScrollController.dispose();
     super.dispose();
   }
 
@@ -210,15 +224,15 @@ class HomeScreenState extends State<HomeScreen> {
   Widget _header(double s, double safeTop) => SizedBox(
     height: (122 - safeTop / s).clamp(66.0, 122.0) * s,
     child: Padding(
-      padding: EdgeInsets.fromLTRB(22 * s, 0, 22 * s, 0),
+      padding: EdgeInsets.fromLTRB(14 * s, 0, 22 * s, 0),
       child: Row(
         children: [
           EisaiHomeLogo(
             assetPath: 'assets/images/eisai_logo.png',
             width: 112 * s,
             height: 29 * s,
-            onTap: () {
-            },
+            scale: s,
+            onTap: _goHome,
           ),
           const Spacer(),
           Builder(
@@ -695,6 +709,7 @@ class HomeScreenState extends State<HomeScreen> {
             return Stack(
               children: [
                 SingleChildScrollView(
+                  controller: _pageScrollController,
                   child: Center(
                     child: SizedBox(
                       width: 390 * s,
@@ -724,9 +739,7 @@ class HomeScreenState extends State<HomeScreen> {
                       onClose: () {
                         setState(() => _menuOpen = false);
                       },
-                      onHome: () {
-                        setState(() => _menuOpen = false);
-                      },
+                      onHome: _goHome,
                       onDrinks: () {
                         setState(() => _menuOpen = false);
                         widget.onViewMenu();

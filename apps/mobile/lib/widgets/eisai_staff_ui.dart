@@ -32,23 +32,35 @@ Future<bool> openEisaiWebsite(Uri? url) async {
   return launchUrl(url, mode: LaunchMode.externalApplication);
 }
 
-void openStaffLiveMenu(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: '/staff/live-menu'),
-      builder: (_) =>
-          const MainNavigation(initialIndex: 1, returnToStaff: true),
-    ),
+void _openStaffDestination(
+  BuildContext context, {
+  required int index,
+  required String routeName,
+  RoutePredicate? removeUntil,
+}) {
+  final route = MaterialPageRoute<void>(
+    settings: RouteSettings(name: routeName),
+    builder: (_) => MainNavigation(initialIndex: index, returnToStaff: true),
   );
+
+  final navigator = Navigator.of(context);
+  if (removeUntil != null) {
+    navigator.pushAndRemoveUntil(route, removeUntil);
+    return;
+  }
+  navigator.push(route);
 }
 
-void openStaffHome(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: '/staff/home'),
-      builder: (_) =>
-          const MainNavigation(initialIndex: 0, returnToStaff: true),
-    ),
+void openStaffLiveMenu(BuildContext context) {
+  _openStaffDestination(context, index: 1, routeName: '/staff/live-menu');
+}
+
+void openStaffHome(BuildContext context, {RoutePredicate? removeUntil}) {
+  _openStaffDestination(
+    context,
+    index: 0,
+    routeName: '/staff/home',
+    removeUntil: removeUntil,
   );
 }
 
