@@ -9,13 +9,14 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks test/*.test.ts",
+    "test:integration": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks --test-concurrency=1 test/integration/*.int.test.ts",
     "seed": "tsx src/scripts/seed.ts",
     "preflight": "node dist/scripts/preflight.js"
   },
   "dependencies": {
-    "bcrypt": "6.0.0",
     "@aws-sdk/client-s3": "3.1160.0",
     "@types/multer": "2.0.0",
+    "bcrypt": "6.0.0",
     "bcryptjs": "3.0.3",
     "cors": "2.8.6",
     "dotenv": "18.0.7",
@@ -25,8 +26,8 @@
     "jsonwebtoken": "9.0.3",
     "mailtrap": "6.0.0",
     "mongoose": "9.11.2",
-    "nodemailer": "10.3.1",
     "multer": "2.5.0",
+    "nodemailer": "10.3.1",
     "sharp": "0.35.5"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@types/node": "24.19.2",
     "@types/nodemailer": "8.0.2",
     "@types/supertest": "7.2.1",
+    "mongodb-memory-server": "11.3.0",
     "supertest": "7.3.1",
     "tsx": "4.23.15"
   }

@@ -58,7 +58,7 @@ The website and mobile app **only talk to the API**. Never connect them straight
    ```
 
 3. **Commit small and often.** Only touch files for your issue.
-4. **Run the checks:** `npm run check` (web/API), plus `flutter analyze && flutter test` in `apps/mobile` (mobile).
+4. **Run the checks:** `npm run check` (web/API), `npm run test:integration` if you changed the API or models, plus `flutter analyze && flutter test` in `apps/mobile` (mobile).
 5. **Open a PR** into `main`. Write `Closes #16` in the description so the issue closes on merge. GitHub runs the same checks automatically.
 6. **One teammate reviews** and approves, then merge.
 

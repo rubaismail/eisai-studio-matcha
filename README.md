@@ -93,6 +93,7 @@ Working on mobile? Follow [apps/mobile/mobileREADME.md](apps/mobile/mobileREADME
 | `npm run dev`    | Starts the website and API together. Ctrl+C to stop.                         |
 | `npm run seed`   | Adds the sample menu items if they're missing.                               |
 | `npm test`       | Runs the web and API tests.                                                  |
+| `npm run test:integration` | Runs the API against a throwaway local MongoDB (see [apps/api/test/integration](apps/api/test/integration/README.md)). Never touches Atlas. |
 | `npm run check`  | Lint + type check + tests + build. Run before every PR (GitHub runs it too). |
 | `npm run format` | Auto-formats your code.                                                      |
 
