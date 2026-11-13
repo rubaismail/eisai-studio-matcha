@@ -1,5 +1,29 @@
 # Eisai Studio — Flutter Mobile Build & Demo Guide
 
+APK download: (https://github.com/rubaismail/eisai-studio-matcha/releases/tag/mobile-demo)
+
+Application source commit: a590a934e34e5747eb7a62bc1bd6108066d30a84
+
+APK SHA-256: DBD33BBEB100B9823A21ED84F43010E2BC1EDB7D4DE32583BD00B82CD118804E
+
+Build configuration: Release APK with production API https://api.eisaistudio.com/api.
+
+Verification Evidence
+
+Flutter automated test results — 73 passed
+
+APK installation log
+
+Installed application
+
+Updated navigation
+
+Our Products
+
+Account screen
+
+Email verification
+
 
 ## Overview
 
