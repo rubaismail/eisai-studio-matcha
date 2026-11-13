@@ -11,14 +11,16 @@ The Eisai Studio mobile application is packaged as an installable Android APK. T
 
 - **APK download:** [app-release.apk](https://github.com/rubaismail/eisai-studio-matcha/releases/download/mobile-demo/app-release.apk)
 - **GitHub release:** [mobile-demo](https://github.com/rubaismail/eisai-studio-matcha/releases/tag/mobile-demo)
-- **Application source commit:** [a590a93](https://github.com/rubaismail/eisai-studio-matcha/commit/a590a934e34e5747eb7a62bc1bd6108066d30a84) (the commit the `mobile-demo` tag points to)
-- **APK SHA-256:** `DBD33BBEB100B9823A21ED84F43010E2BC1EDB7D4DE32583BD00B82CD118804E`
-- **APK size:** 88,618,101 bytes (84.5 MiB).
-- **Note:** The released APK was built from `a590a93`. It does not include the later review fixes in this PR (logo fallback, Home logo scroll-to-top, launch-failure messages, unused-video removal).
-- **Automated tests:** 73 passed.
+- **Build base commit:** [d43c949](https://github.com/rubaismail/eisai-studio-matcha/commit/d43c949266367c691c2d9281c9b6d31deb787739)
+- **Source status:** Built from the base commit above. 
+- **Local APK SHA-256:** `3E7091CEEF8EC6584857AD0A21D09DA90DBEE1B274D7A9013FA61A27C461E87F`
+- **Local APK size:** 85,000,552 bytes (approximately 81.1 MiB).
+- **Release publication:** Updated `app-release.apk` uploaded to the existing `mobile-demo` release.
+- **Automated tests:** Previously recorded as 73 passed; see the linked test output.
 - **Test evidence:** [Flutter test results](test-results/flutter-mobile-tests.txt)
-- **Installed on:** sdk gphone64 x86 64 — Android 17 (API 37), android-x64 emulator.
-- **Installation:** Successfully installed using `flutter install --use-application-binary=build/app/outputs/flutter-apk/app-release.apk`.
+- **Installation:** This production-configured APK was successfully installed using `adb install -r`.
+- **Test device:** sdk gphone64 x86 64 — Android 17 (API 37), android-x64 emulator.
+
 
 
 ## Build Environment
@@ -56,23 +58,24 @@ The generated APK is located at:
 
 **Build result:** Successful
 
-**APK size:** Approximately 84.5 MB
+**APK size:** 85,000,552 bytes (approximately 81.1 MiB).
 
 ## Installing the APK
 
 Start the Android emulator through Android Studio's Device Manager.
 
 From `apps/mobile`, run:
-
 ```powershell
-adb devices
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices
 
-adb install -r build/app/outputs/flutter-apk/app-release.apk
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r .\build\app\outputs\flutter-apk\app-release.apk
 ```
 
 Launch Eisai Studio from the Android emulator's application drawer.
 
 The installed release APK should be tested separately from the Flutter debug build.
+
+If the Android SDK is installed elsewhere, adjust the executable path.
 
 ## Production API Configuration
 
@@ -155,22 +158,22 @@ With approved administrator credentials:
 
 | Test | Result |
 |---|---|
-| Flutter release APK compilation | Passed |
-| Android 17 emulator installation | Passed in documented setup |
+| Production-configured release APK compilation | Passed |
+| Release APK installation on Android emulator | Passed |
+| Menu loading in final installed APK | Passed |
+| Login in final installed APK | Passed |
 | Customer screen visual and navigation checks | Passed |
 | Eight-slide homepage carousel | Passed — scrolling and playback |
+| Registration and email verification | Passed |
 | Our Products screen and navigation | Passed |
-| Automated Flutter tests | Previously recorded as passed; retain latest test output |
+| Password reset and login with updated password | Passed |
+| Automated Flutter tests |  Previously recorded as 73 passed |
 | Production API specified in APK build | Passed |
-| Customer registration | Tested |
-| Email verification through deployed website | Passed |
-| Live password-reset workflow | Tested |
 | Physical Android device testing | Not verified |
 
 ## Known Limitations
 
 - Physical Android device compatibility has not been verified.
-- Full accessibility verification, including TalkBack, is separate from the website's Lighthouse audit.
 
 
 ## Verification Evidence
@@ -184,17 +187,21 @@ With approved administrator credentials:
 - [Our Products](test-results/mobile-release/products.png)
 - [Account](test-results/mobile-release/account.png)
 - [Login](test-results/mobile-release/login.png)
-- [Email verification](test-results/mobile-release/check-inbox.png)
+- [Check Your Inbox screen](test-results/mobile-release/check-inbox.png)
 - [Footer](test-results/mobile-release/footer.png)
 - [Video carousel](test-results/mobile-release/video-carousel.png)
 - [Old password attempt](test-results/mobile-release/invalid-password-after-reset.png)
 - [Password reset email requested](test-results/mobile-release/reset-link.png)
 
 
-
-
 ## Issue #42 Completion
 
-This guide documents the reproducible Android build process, production API configuration, demo workflow, and verification results.
+Issue closure requires:
 
-The deliverable is ready for issue closure once the latest release APK installation is confirmed, the current test evidence is linked, and the pull request is reviewed and accepted.
+- Committed source and Android build configuration matching the final APK.
+- Successful installation and verification of the production-configured APK.
+- Updated `app-release.apk` on the `mobile-demo` release.
+- The `mobile-demo` tag pointing to the exact build source commit.
+- Matching SHA-256 and size for the uploaded APK.
+- Current verification evidence and final reviewer approval.
+
