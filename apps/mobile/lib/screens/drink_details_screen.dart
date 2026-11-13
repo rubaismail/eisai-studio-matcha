@@ -15,6 +15,7 @@ class DrinkDetailsScreen extends StatefulWidget {
     this.onGoHome,
     this.onGoStory,
     this.onGoLocation,
+    this.onGoProducts,
     this.onGoAccount,
   });
 
@@ -27,6 +28,7 @@ class DrinkDetailsScreen extends StatefulWidget {
   final VoidCallback? onGoHome;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
 
   @override
@@ -264,6 +266,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                       onDrinks: _goBackToDrinks,
                       onStory: () => _leaveFor(widget.onGoStory),
                       onLocation: () => _leaveFor(widget.onGoLocation),
+                      onProducts: () => _leaveFor(widget.onGoProducts),
                       onAccount: widget.onGoAccount == null
                           ? null
                           : () => _leaveFor(widget.onGoAccount),

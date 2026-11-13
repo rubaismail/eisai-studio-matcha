@@ -562,6 +562,7 @@ class _MenuScreenState extends State<MenuScreen> {
           onGoHome: widget.onGoHome,
           onGoStory: widget.onGoStory,
           onGoLocation: widget.onGoLocation,
+          onGoProducts: widget.onGoProducts,
           onGoAccount: widget.onGoAccount,
         ),
       ),

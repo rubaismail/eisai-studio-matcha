@@ -117,6 +117,7 @@ class _EisaiAuthShellState extends State<EisaiAuthShell> {
                       onHome: () => _openDestination(0),
                       onDrinks: () => _openDestination(1),
                       onStory: () => _openDestination(2),
+                      onProducts: () => _openDestination(4),
                       onLocation: () => _openDestination(3),
                       onAccount: () => setState(() => _menuOpen = false),
                     ),

@@ -46,10 +46,8 @@ void openStaffHome(BuildContext context) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       settings: const RouteSettings(name: '/staff/home'),
-      builder: (_) => const MainNavigation(
-        initialIndex: 0,
-        returnToStaff: true,
-      ),
+      builder: (_) =>
+          const MainNavigation(initialIndex: 0, returnToStaff: true),
     ),
   );
 }
@@ -83,38 +81,39 @@ class StaffChrome extends StatelessWidget {
             width: double.infinity,
             color: StaffColors.ink,
             child: Stack(
-              children: [              
-              Positioned(
-                left: 8,
-                top: 0,
-                width: 112,
-                height: 48,
-                child: Semantics(
-                  button: true,
-                  label: 'Go to home',
-                  child: InkWell(
-                    excludeFromSemantics: true,
+              children: [
+                Positioned(
+                  left: 8,
+                  top: 0,
+                  width: 112,
+                  height: 48,
+                  child: Semantics(
+                    button: true,
+                    label: 'Go to home',
                     onTap: onHome ?? () => openStaffHome(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Image.asset(
-                          logoAsset ?? 'assets/images/eisai_logo_white.png',
-                          width: 80,
-                          height: 21,
-                          fit: BoxFit.contain,
-                          excludeFromSemantics: true,
-                          errorBuilder: (_, __, ___) => Text(
-                            'Eisai',
-                            style: staffText(22, color: Colors.white),
+                    child: InkWell(
+                      excludeFromSemantics: true,
+                      onTap: onHome ?? () => openStaffHome(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Image.asset(
+                            logoAsset ?? 'assets/images/eisai_logo_white.png',
+                            width: 80,
+                            height: 21,
+                            fit: BoxFit.contain,
+                            excludeFromSemantics: true,
+                            errorBuilder: (_, __, ___) => Text(
+                              'Eisai',
+                              style: staffText(22, color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
                 Positioned(
                   left: 16,
                   top: 44,
