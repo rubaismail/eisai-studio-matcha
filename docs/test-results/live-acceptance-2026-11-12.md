@@ -81,6 +81,7 @@ integration tests against a real MongoDB.
 | Finding | Severity | Follow-up |
 | --- | --- | --- |
 | A used password-reset link is only rejected after the user types and submits a new password (the verify link is rejected on open) | Low, UX only | [#113](https://github.com/rubaismail/eisai-studio-matcha/issues/113) |
+| Reset-password fields use dot placeholders (`••••••••••••`), so empty fields look already filled in | Low, UX only | [#113](https://github.com/rubaismail/eisai-studio-matcha/issues/113) |
 | Login network error says "Something went wrong on our end", although the cause was the visitor's connection | Cosmetic | Optional wording change; not filed |
 
 No defects blocking release were found.
