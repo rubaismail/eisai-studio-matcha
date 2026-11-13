@@ -9,11 +9,12 @@ The Eisai Studio mobile application is packaged as an installable Android APK. T
 
 ## Verified release
 
-- **APK download:** [Download Android APK](DIRECT_APK_URL)
-- **GitHub release:** [View release](PASTE_RELEASE_PAGE_URL)
-- **Application source commit:** [PASTE_SHORT_COMMIT](https://github.com/rubaismail/eisai-studio-matcha/commit/PASTE_FULL_COMMIT)
-- **APK SHA-256:** `3E7091CEEF8EC6584857AD0A21D09DA90DBEE1B274D7A9013FA61A27C461E87F`
-- **APK size:** 85,000,552 bytes (81.06 MiB).
+- **APK download:** [app-release.apk](https://github.com/rubaismail/eisai-studio-matcha/releases/download/mobile-demo/app-release.apk)
+- **GitHub release:** [mobile-demo](https://github.com/rubaismail/eisai-studio-matcha/releases/tag/mobile-demo)
+- **Application source commit:** [a590a93](https://github.com/rubaismail/eisai-studio-matcha/commit/a590a934e34e5747eb7a62bc1bd6108066d30a84) (the commit the `mobile-demo` tag points to)
+- **APK SHA-256:** `DBD33BBEB100B9823A21ED84F43010E2BC1EDB7D4DE32583BD00B82CD118804E`
+- **APK size:** 88,618,101 bytes (84.5 MiB).
+- **Note:** The released APK was built from `a590a93`. It does not include the later review fixes in this PR (logo fallback, Home logo scroll-to-top, launch-failure messages, unused-video removal).
 - **Automated tests:** 73 passed.
 - **Test evidence:** [Flutter test results](test-results/flutter-mobile-tests.txt)
 - **Installed on:** sdk gphone64 x86 64 — Android 17 (API 37), android-x64 emulator.
@@ -56,8 +57,6 @@ The generated APK is located at:
 **Build result:** Successful
 
 **APK size:** Approximately 84.5 MB
-
-2ed020369909b10e2b904d0118d30a6f62a0c1c3
 
 ## Installing the APK
 
@@ -185,11 +184,11 @@ With approved administrator credentials:
 - [Our Products](test-results/mobile-release/products.png)
 - [Account](test-results/mobile-release/account.png)
 - [Login](test-results/mobile-release/login.png)
-- [Email verification](test-results/mobile-release/email_verification.png)
+- [Email verification](test-results/mobile-release/check-inbox.png)
 - [Footer](test-results/mobile-release/footer.png)
 - [Video carousel](test-results/mobile-release/video-carousel.png)
 - [Old password attempt](test-results/mobile-release/invalid-password-after-reset.png)
-- [Rseset Password Email link](test-results/mobile-release/reset-link.png)
+- [Password reset email requested](test-results/mobile-release/reset-link.png)
 
 
 
