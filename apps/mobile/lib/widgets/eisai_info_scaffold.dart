@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'eisai_navigation_overlay.dart';
+import 'eisai_home_logo.dart';
 
 class EisaiInfoScaffold extends StatefulWidget {
   const EisaiInfoScaffold({
@@ -9,6 +10,7 @@ class EisaiInfoScaffold extends StatefulWidget {
     this.onGoDrinks,
     this.onGoStory,
     this.onGoLocation,
+    this.onGoProducts,
     this.onGoAccount,
   });
 
@@ -17,6 +19,7 @@ class EisaiInfoScaffold extends StatefulWidget {
   final VoidCallback? onGoDrinks;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
 
   @override
@@ -52,12 +55,14 @@ class _EisaiInfoScaffoldState extends State<EisaiInfoScaffold> {
                           child: Stack(
                             children: [
                               Positioned(
-                                top: 73 * s,
-                                left: 22 * s,
-                                child: Image.asset(
-                                  'assets/images/eisai_logo.png',
+                                top: 64 * s,
+                                left: 14 * s,
+                                child: EisaiHomeLogo(
+                                  assetPath: 'assets/images/eisai_logo.png',
                                   width: 112 * s,
                                   height: 29 * s,
+                                  scale: s,
+                                  onTap: () => _navigate(widget.onGoHome),
                                   errorBuilder: (_, __, ___) => Text(
                                     'EISAI',
                                     style: TextStyle(fontSize: 21 * s),
@@ -107,6 +112,7 @@ class _EisaiInfoScaffoldState extends State<EisaiInfoScaffold> {
                     onHome: () => _navigate(widget.onGoHome),
                     onDrinks: () => _navigate(widget.onGoDrinks),
                     onStory: () => _navigate(widget.onGoStory),
+                    onProducts: () => _navigate(widget.onGoProducts),
                     onLocation: () => _navigate(widget.onGoLocation),
                     onAccount: widget.onGoAccount == null
                         ? null

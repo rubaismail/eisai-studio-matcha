@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../widgets/eisai_navigation_overlay.dart';
+import '../widgets/eisai_home_logo.dart';
 
 class EisaiAuthStyle {
   static const ink = Color(0xFF202020);
@@ -53,13 +54,11 @@ class _EisaiAuthShellState extends State<EisaiAuthShell> {
             child: Stack(
               children: [
                 Positioned(
-                  left: 22,
-                  bottom: 20,
-                  child: Image.asset(
-                    'assets/images/eisai_logo_periwinkle.png',
-                    width: 112,
-                    height: 29,
-                    fit: BoxFit.contain,
+                  left: 14,
+                  bottom: 10,
+                  child: EisaiHomeLogo(
+                    assetPath: 'assets/images/eisai_logo_periwinkle.png',
+                    onTap: () => _openDestination(0),
                     errorBuilder: (_, __, ___) => Text(
                       'EISAI STUDIO',
                       style: EisaiAuthStyle.mono(
@@ -118,6 +117,7 @@ class _EisaiAuthShellState extends State<EisaiAuthShell> {
                       onHome: () => _openDestination(0),
                       onDrinks: () => _openDestination(1),
                       onStory: () => _openDestination(2),
+                      onProducts: () => _openDestination(4),
                       onLocation: () => _openDestination(3),
                       onAccount: () => setState(() => _menuOpen = false),
                     ),

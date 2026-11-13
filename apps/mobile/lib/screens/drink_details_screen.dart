@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/eisai_home_logo.dart';
 
 import '../widgets/eisai_navigation_overlay.dart';
 
@@ -14,6 +15,7 @@ class DrinkDetailsScreen extends StatefulWidget {
     this.onGoHome,
     this.onGoStory,
     this.onGoLocation,
+    this.onGoProducts,
     this.onGoAccount,
   });
 
@@ -26,6 +28,7 @@ class DrinkDetailsScreen extends StatefulWidget {
   final VoidCallback? onGoHome;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
 
   @override
@@ -76,13 +79,14 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
     child: Stack(
       children: [
         Positioned(
-          left: 22 * s,
-          top: 73 * s,
-          child: Image.asset(
-            'assets/images/eisai_logo.png',
+          top: 64 * s,
+          left: 14 * s,
+          child: EisaiHomeLogo(
+            assetPath: 'assets/images/eisai_logo.png',
             width: 112 * s,
             height: 29 * s,
-            fit: BoxFit.contain,
+            scale: s,
+            onTap: () => _leaveFor(widget.onGoHome),
           ),
         ),
         Positioned(
@@ -263,6 +267,7 @@ class _DrinkDetailsScreenState extends State<DrinkDetailsScreen> {
                       onDrinks: _goBackToDrinks,
                       onStory: () => _leaveFor(widget.onGoStory),
                       onLocation: () => _leaveFor(widget.onGoLocation),
+                      onProducts: () => _leaveFor(widget.onGoProducts),
                       onAccount: widget.onGoAccount == null
                           ? null
                           : () => _leaveFor(widget.onGoAccount),

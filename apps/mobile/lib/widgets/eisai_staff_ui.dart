@@ -32,13 +32,35 @@ Future<bool> openEisaiWebsite(Uri? url) async {
   return launchUrl(url, mode: LaunchMode.externalApplication);
 }
 
+void _openStaffDestination(
+  BuildContext context, {
+  required int index,
+  required String routeName,
+  RoutePredicate? removeUntil,
+}) {
+  final route = MaterialPageRoute<void>(
+    settings: RouteSettings(name: routeName),
+    builder: (_) => MainNavigation(initialIndex: index, returnToStaff: true),
+  );
+
+  final navigator = Navigator.of(context);
+  if (removeUntil != null) {
+    navigator.pushAndRemoveUntil(route, removeUntil);
+    return;
+  }
+  navigator.push(route);
+}
+
 void openStaffLiveMenu(BuildContext context) {
-  Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      settings: const RouteSettings(name: '/staff/live-menu'),
-      builder: (_) =>
-          const MainNavigation(initialIndex: 1, returnToStaff: true),
-    ),
+  _openStaffDestination(context, index: 1, routeName: '/staff/live-menu');
+}
+
+void openStaffHome(BuildContext context, {RoutePredicate? removeUntil}) {
+  _openStaffDestination(
+    context,
+    index: 0,
+    routeName: '/staff/home',
+    removeUntil: removeUntil,
   );
 }
 
@@ -50,10 +72,12 @@ class StaffChrome extends StatelessWidget {
     required this.onMenu,
     required this.publicMenuUrl,
     this.logoAsset,
+    this.onHome,
     this.showFooter = true,
   });
   final Widget body;
   final VoidCallback onLogout, onMenu;
+  final VoidCallback? onHome;
   final Uri? publicMenuUrl;
 
   final String? logoAsset;
@@ -71,17 +95,34 @@ class StaffChrome extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned(
-                  left: 16,
-                  top: 12,
-                  width: 80,
-                  height: 21,
-                  child: Image.asset(
-                    logoAsset ?? 'assets/images/eisai_logo_white.png',
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
-                    errorBuilder: (_, __, ___) => Text(
-                      'Eisai',
-                      style: staffText(22, color: Colors.white),
+                  left: 8,
+                  top: 0,
+                  width: 112,
+                  height: 48,
+                  child: Semantics(
+                    button: true,
+                    label: 'Go to home',
+                    onTap: onHome ?? () => openStaffHome(context),
+                    child: InkWell(
+                      excludeFromSemantics: true,
+                      onTap: onHome ?? () => openStaffHome(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Image.asset(
+                            logoAsset ?? 'assets/images/eisai_logo_white.png',
+                            width: 80,
+                            height: 21,
+                            fit: BoxFit.contain,
+                            excludeFromSemantics: true,
+                            errorBuilder: (_, __, ___) => Text(
+                              'Eisai',
+                              style: staffText(22, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

@@ -4,6 +4,7 @@ import '../services/menu_service.dart' as menu_service;
 import '../widgets/eisai_navigation_overlay.dart';
 import '../widgets/eisai_footer.dart';
 import 'drink_details_screen.dart';
+import '../widgets/eisai_home_logo.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({
@@ -11,6 +12,7 @@ class MenuScreen extends StatefulWidget {
     this.onGoHome,
     this.onGoStory,
     this.onGoLocation,
+    this.onGoProducts,
     this.onGoAccount,
     this.fetchMenu,
   });
@@ -18,6 +20,7 @@ class MenuScreen extends StatefulWidget {
   final VoidCallback? onGoHome;
   final VoidCallback? onGoStory;
   final VoidCallback? onGoLocation;
+  final VoidCallback? onGoProducts;
   final VoidCallback? onGoAccount;
   final Future<List<MenuItem>> Function()? fetchMenu;
 
@@ -212,9 +215,18 @@ class _MenuScreenState extends State<MenuScreen> {
     child: Stack(
       children: [
         Positioned(
-          top: 73 * s,
-          left: 22 * s,
-          child: _asset('eisai_logo.png', width: 112 * s, height: 29 * s),
+          top: 64 * s,
+          left: 14 * s,
+          child: EisaiHomeLogo(
+            assetPath: 'assets/images/eisai_logo.png',
+            width: 112 * s,
+            height: 29 * s,
+            scale: s,
+            onTap: () {
+              setState(() => _menuOpen = false);
+              widget.onGoHome?.call();
+            },
+          ),
         ),
         Positioned(
           top: 67 * s,
@@ -551,6 +563,7 @@ class _MenuScreenState extends State<MenuScreen> {
           onGoHome: widget.onGoHome,
           onGoStory: widget.onGoStory,
           onGoLocation: widget.onGoLocation,
+          onGoProducts: widget.onGoProducts,
           onGoAccount: widget.onGoAccount,
         ),
       ),
@@ -802,6 +815,10 @@ class _MenuScreenState extends State<MenuScreen> {
                       onLocation: () {
                         setState(() => _menuOpen = false);
                         widget.onGoLocation?.call();
+                      },
+                      onProducts: () {
+                        setState(() => _menuOpen = false);
+                        widget.onGoProducts?.call();
                       },
                       onAccount: widget.onGoAccount == null
                           ? null

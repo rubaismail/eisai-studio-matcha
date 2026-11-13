@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'eisai_instagram_link.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EisaiFooter extends StatelessWidget {
   const EisaiFooter({super.key, required this.scale});
@@ -17,6 +18,27 @@ class EisaiFooter extends StatelessWidget {
       Text(hours, style: _q(14 * s, color: const Color(0xFFD7D7D7))),
     ],
   );
+
+  Future<void> _openEmail(BuildContext context) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri(scheme: 'mailto', path: 'contact@eisaistudio.com'),
+      );
+    } catch (_) {
+      opened = false;
+    }
+    if (opened || !context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Could not open an email app. Email contact@eisaistudio.com.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = scale;
@@ -59,14 +81,31 @@ class EisaiFooter extends StatelessWidget {
                   children: [
                     Text('FOLLOW ALONG', style: _a(12 * s, color: _lime)),
                     SizedBox(height: 20 * s),
-                    EisaiInstagramLink(style: _a(13 * s)),
+                    EisaiInstagramLink(
+                      style: _a(14 * s, color: const Color(0xFFF5F5F5)),
+                    ),
                     SizedBox(height: 30 * s),
                     Text('CONTACT', style: _a(12 * s, color: _lime)),
                     SizedBox(height: 19 * s),
-                    Text(
-                      '[contact@eisaistudio]',
-                      softWrap: true,
-                      style: _a(12 * s, color: const Color(0xFFD7D7D7)),
+                    Semantics(
+                      link: true,
+                      label: 'Email Eisai Studio',
+                      child: InkWell(
+                        onTap: () => _openEmail(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          child: Text(
+                            'contact@eisaistudio.com',
+                            softWrap: true,
+                            style: _a(14 * s, color: const Color(0xFFF5F5F5))
+                                .copyWith(
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: const Color(0xFFF5F5F5),
+                                  decorationThickness: 1.2,
+                                ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

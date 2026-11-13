@@ -285,6 +285,13 @@ class _StaffDrinkFormScreenState extends State<StaffDrinkFormScreen> {
       child: StaffChrome(
         onLogout: () => _confirmAndNavigate(widget.onLogout),
         onMenu: () => _confirmAndNavigate(widget.onStaffMenu),
+        onHome: () => _confirmAndNavigate(
+          () => openStaffHome(
+            context,
+            removeUntil: (route) =>
+                route.settings.name == '/staff' || route.isFirst,
+          ),
+        ),
         publicMenuUrl: widget.publicMenuUrl,
         logoAsset: widget.logoAsset,
         body: StaffBody(
