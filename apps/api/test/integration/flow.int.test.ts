@@ -192,6 +192,17 @@ test('password reset: new password works, old one and the used link do not', asy
   const pending = await User.findOne({ email }).select('+resetPasswordToken').lean();
   assert.equal(pending?.resetPasswordToken, sha256(raw));
 
+  // Opening the link checks it without using it up (issue #113).
+  const check = () => request(app).get('/api/auth/reset-password/check').query({ token: raw });
+  assert.equal((await check()).status, 200);
+  assert.equal((await check()).status, 200);
+  const stillPending = await User.findOne({ email }).select('+resetPasswordToken').lean();
+  assert.equal(stillPending?.resetPasswordToken, sha256(raw));
+  assert.equal(
+    (await request(app).get('/api/auth/reset-password/check').query({ token: 'not-the-token' })).status,
+    400,
+  );
+
   const reset = await request(app)
     .post('/api/auth/reset-password')
     .query({ token: raw })
@@ -202,6 +213,8 @@ test('password reset: new password works, old one and the used link do not', asy
     .query({ token: raw })
     .send({ password: 'ThirdPass12345' });
   assert.equal(reused.status, 400);
+  // After a successful reset, reopening the link is reported as used.
+  assert.equal((await check()).status, 400);
 
   const oldLogin = await request(app).post('/api/auth/login').send({ email, password: 'OriginalPass123' });
   assert.equal(oldLogin.status, 401);

@@ -222,6 +222,31 @@ export async function resendVerification(req: Request, res: Response) {
   }
 }
 
+// Read-only: lets the website show "link expired" before the user types a new
+// password (issue #113). Never consumes or extends the token.
+export async function checkResetPassword(req: Request, res: Response) {
+  try {
+    const raw = req.query.token;
+    if (typeof raw !== "string" || raw.length === 0) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    const valid = await User.exists({
+      resetPasswordToken: hashTokens(raw),
+      resetPasswordExpires: { $gt: new Date() },
+    });
+    if (!valid) {
+      return res.status(400).json({ error: MSG_BAD_INPUT });
+    }
+
+    return res.status(200).json({ message: "Reset link is valid." });
+  } catch (err) {
+    // Log server-side only; the client still gets the generic message.
+    console.error("reset-password check failed:", err);
+    return res.status(500).json({ error: MSG_INTERNAL });
+  }
+}
+
 export async function resetPassword(req: Request, res: Response) {
   try {
     const raw = req.query.token;

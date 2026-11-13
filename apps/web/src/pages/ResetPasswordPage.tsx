@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
-import { resetPassword } from '../api/auth';
+import { checkResetLink, resetPassword } from '../api/auth';
 import { ApiError, NetworkError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { confirmPasswordError, newPasswordError } from '../auth/validation';
 import AccountLayout from '../components/AccountLayout';
 import Notice from '../components/Notice';
+import Spinner from '../components/Spinner';
 import TextField from '../components/TextField';
 import { primaryButton, switchLink } from '../components/styles';
 
@@ -60,11 +61,58 @@ export default function ResetPasswordPage() {
     void navigate('/reset-password', { replace: true, state: resultState });
   }
 
+  // Check the link before showing the form, so a used or expired link says so
+  // right away instead of after the user types a new password (issue #113).
+  const [checkedToken, setCheckedToken] = useState<string | null>(null);
+  const checking = !result && token !== null && checkedToken !== token;
+  useEffect(() => {
+    if (!checking || !token) return;
+    let cancelled = false;
+    checkResetLink(token).then(
+      () => {
+        if (!cancelled) setCheckedToken(token);
+      },
+      (err: unknown) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 400) {
+          const resultState: ResetState = { resetResult: 'expired' };
+          void navigate('/reset-password', {
+            replace: true,
+            state: resultState,
+          });
+        } else {
+          // Offline, server error or rate limit: show the form anyway.
+          // Submitting checks the link again, so nothing is lost.
+          setCheckedToken(token);
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [checking, token, navigate]);
+
   return (
     <>
       <p role="status" className="sr-only">
-        {result ? announcements[result] : ''}
+        {result
+          ? announcements[result]
+          : checking
+            ? 'Checking your reset link.'
+            : ''}
       </p>
+      {checking && (
+        <AccountLayout
+          eyebrow="Reset your password"
+          title="Checking your link"
+          titleSize="md"
+        >
+          <Spinner />
+          <p className="text-[17px] leading-[26px] text-ink-muted">
+            Please wait while we check your reset link.
+          </p>
+        </AccountLayout>
+      )}
       {result === 'updated' && (
         <AccountLayout
           eyebrow="Reset your password"
@@ -96,7 +144,9 @@ export default function ResetPasswordPage() {
           </Link>
         </AccountLayout>
       )}
-      {!result && token && <ResetForm token={token} onResult={showResult} />}
+      {!result && !checking && token && (
+        <ResetForm token={token} onResult={showResult} />
+      )}
     </>
   );
 }

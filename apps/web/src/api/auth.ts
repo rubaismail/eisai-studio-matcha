@@ -46,6 +46,14 @@ export function forgotPassword(email: string): Promise<MessageResponse> {
 }
 
 // Token goes in the query string, not the body.
+// Read-only: says whether a reset link still works, without using it up.
+export function checkResetLink(token: string): Promise<MessageResponse> {
+  return apiRequest<MessageResponse>(
+    `/auth/reset-password/check?token=${encodeURIComponent(token)}`,
+    { auth: false },
+  );
+}
+
 export function resetPassword(
   token: string,
   password: string,
