@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { login } from '../api/auth';
-import { ApiError } from '../api/client';
+import { ApiError, NetworkError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useResendVerification } from '../auth/useResendVerification';
 import { emailError } from '../auth/validation';
@@ -21,7 +21,8 @@ type Problem =
   | { kind: 'incorrect' } // 401
   | { kind: 'unverified'; email: string } // 403
   | { kind: 'rate-limited'; minutes: number } // 429
-  | { kind: 'failed' }; // network or server error
+  | { kind: 'offline' } // request never reached the API
+  | { kind: 'failed' }; // server error
 
 export default function LoginPage() {
   const { user, signIn } = useAuth();
@@ -100,7 +101,8 @@ export default function LoginPage() {
           DEFAULT_LOCKOUT_SECONDS;
         setLockedUntil(Date.now() + seconds * 1000);
         setProblem({ kind: 'rate-limited', minutes: Math.ceil(seconds / 60) });
-      } else setProblem({ kind: 'failed' });
+      } else if (err instanceof NetworkError) setProblem({ kind: 'offline' });
+      else setProblem({ kind: 'failed' });
       inFlight.current = false;
       setSubmitting(false);
     }
@@ -127,6 +129,11 @@ export default function LoginPage() {
       {problem.kind === 'rate-limited' && (
         <Notice tone="error">
           Too many login attempts. Please wait and try again later.
+        </Notice>
+      )}
+      {problem.kind === 'offline' && (
+        <Notice tone="error">
+          We couldn’t reach Eisai. Check your connection and try again.
         </Notice>
       )}
       {problem.kind === 'failed' && (

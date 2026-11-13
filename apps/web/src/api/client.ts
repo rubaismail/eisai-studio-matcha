@@ -21,6 +21,15 @@ export class ApiError extends Error {
   }
 }
 
+// The request never reached the API (offline, DNS, blocked). Pages use this to
+// say "check your connection" instead of blaming the server.
+export class NetworkError extends Error {
+  constructor() {
+    super('Network request failed');
+    this.name = 'NetworkError';
+  }
+}
+
 // Set by AuthProvider to sign out on a 401.
 let onUnauthorized: (() => void) | null = null;
 export function setUnauthorizedHandler(handler: (() => void) | null) {
@@ -53,7 +62,14 @@ async function send<T>(
   const token = sendToken ? getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  } catch (err) {
+    // A cancelled request isn't a connection problem; let callers see it as-is.
+    if ((err as Error)?.name === 'AbortError') throw err;
+    throw new NetworkError();
+  }
   if (!res.ok) {
     // Ignore 401s for an old token.
     if (res.status === 401 && token && getToken() === token) onUnauthorized?.();

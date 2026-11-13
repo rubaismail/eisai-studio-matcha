@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { resetPassword } from '../api/auth';
-import { ApiError } from '../api/client';
+import { ApiError, NetworkError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { confirmPasswordError, newPasswordError } from '../auth/validation';
 import AccountLayout from '../components/AccountLayout';
@@ -20,7 +20,8 @@ interface ResetState {
 type Problem =
   | { kind: 'none' }
   | { kind: 'rate-limited'; minutes: number } // 429
-  | { kind: 'failed' }; // network or server error
+  | { kind: 'offline' } // request never reached the API
+  | { kind: 'failed' }; // server error
 
 // The API's rate limit window.
 const DEFAULT_LOCKOUT_SECONDS = 15 * 60;
@@ -179,6 +180,8 @@ function ResetForm({
           DEFAULT_LOCKOUT_SECONDS;
         setLockedUntil(Date.now() + seconds * 1000);
         setProblem({ kind: 'rate-limited', minutes: Math.ceil(seconds / 60) });
+      } else if (err instanceof NetworkError) {
+        setProblem({ kind: 'offline' });
       } else {
         setProblem({ kind: 'failed' });
       }
@@ -199,6 +202,11 @@ function ResetForm({
           Too many reset attempts. Please wait and try again later.
         </Notice>
       )}
+      {problem.kind === 'offline' && (
+        <Notice tone="error">
+          We couldn’t reach Eisai. Check your connection and try again.
+        </Notice>
+      )}
       {problem.kind === 'failed' && (
         <Notice tone="error">
           Something went wrong on our end. Please try again in a moment.
@@ -215,7 +223,7 @@ function ResetForm({
           type="password"
           name="password"
           autoComplete="new-password"
-          placeholder="••••••••••••"
+          placeholder="Enter a new password"
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
@@ -230,7 +238,7 @@ function ResetForm({
           type="password"
           name="confirm"
           autoComplete="new-password"
-          placeholder="••••••••••••"
+          placeholder="Re-enter your password"
           value={confirm}
           onChange={(e) => {
             setConfirm(e.target.value);

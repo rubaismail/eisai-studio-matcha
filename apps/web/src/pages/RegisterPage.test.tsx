@@ -156,7 +156,7 @@ test.each([
   expect(await screen.findByRole('alert')).toHaveTextContent(text);
 });
 
-test('a network failure shows the general message', async () => {
+test('a network failure asks the visitor to check their connection', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
   renderWithAuth(
     <Routes>
@@ -166,9 +166,11 @@ test('a network failure shows the general message', async () => {
   );
   fill();
   submit();
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Something went wrong on our end',
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent(
+    'We couldn’t reach Eisai. Check your connection and try again.',
   );
+  expect(alert).not.toHaveTextContent('on our end');
 });
 
 test('cannot be submitted twice while sending', async () => {
