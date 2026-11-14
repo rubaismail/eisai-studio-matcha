@@ -8,6 +8,42 @@
       name="description"
       content="Eisai Studio is building a new matcha experience in Orlando, Florida. See our menu and find us at our Orlando pop-ups."
     />
+    <!-- The hero is the largest thing on screen. Preloading it means the
+         browser fetches it before the app's code runs. Only the home page
+         has it, so the script below adds these links there alone. Keep in
+         sync with HomePage.tsx, or the hero downloads twice. -->
+    <template id="hero-preload">
+      <link
+        rel="preload"
+        as="image"
+        media="(max-width: 63.99rem)"
+        imagesrcset="
+          /src/assets/home/hero-600.webp   600w,
+          /src/assets/home/hero-900.webp   900w,
+          /src/assets/home/hero-1170.webp 1170w
+        "
+        imagesizes="100vw"
+        fetchpriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        media="(min-width: 64rem)"
+        imagesrcset="
+          /src/assets/home/hero-wide-1440.webp 1440w,
+          /src/assets/home/hero-wide-1920.webp 1920w,
+          /src/assets/home/hero-wide-2400.webp 2400w
+        "
+        imagesizes="100vw"
+        fetchpriority="high"
+      />
+    </template>
+    <script>
+      if (location.pathname === '/')
+        document.head.append(
+          document.getElementById('hero-preload').content.cloneNode(true),
+        );
+    </script>
     <!-- Both fonts appear above the fold (headline and navbar). -->
     <link
       rel="preload"

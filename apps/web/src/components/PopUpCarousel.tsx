@@ -1,19 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import arrowLeft from '../assets/arrow-left.svg';
 import arrowRight from '../assets/arrow-right.svg';
-import latte from '../assets/home/popup-latte.jpg';
-import park from '../assets/home/popup-park.jpg';
-import poster1 from '../assets/home/popup-video-1.jpg';
+import latte320 from '../assets/home/popup-latte-320.webp';
+import latte640 from '../assets/home/popup-latte-640.webp';
+import park320 from '../assets/home/popup-park-320.webp';
+import park640 from '../assets/home/popup-park-640.webp';
+import poster1 from '../assets/home/popup-video-1.webp';
 import video1 from '../assets/home/popup-video-1.mp4';
-import poster2 from '../assets/home/popup-video-2.jpg';
+import poster2 from '../assets/home/popup-video-2.webp';
 import video2 from '../assets/home/popup-video-2.mp4';
-import poster3 from '../assets/home/popup-video-3.jpg';
+import poster3 from '../assets/home/popup-video-3.webp';
 import video3 from '../assets/home/popup-video-3.mp4';
-import poster4 from '../assets/home/popup-video-4.jpg';
+import poster4 from '../assets/home/popup-video-4.webp';
 import video4 from '../assets/home/popup-video-4.mp4';
-import poster5 from '../assets/home/popup-video-5.jpg';
+import poster5 from '../assets/home/popup-video-5.webp';
 import video5 from '../assets/home/popup-video-5.mp4';
-import poster6 from '../assets/home/popup-video-6.jpg';
+import poster6 from '../assets/home/popup-video-6.webp';
 import video6 from '../assets/home/popup-video-6.mp4';
 import playIcon from '../assets/play-button.svg';
 import { INSTAGRAM_URL } from './links';
@@ -28,7 +30,7 @@ type Slide =
       // For screen readers: the videos are silent, so describe them.
       description: string;
     }
-  | { kind: 'photo'; src: string; alt: string };
+  | { kind: 'photo'; src: string; srcSet: string; alt: string };
 
 // Photos are spread out so no more than two videos sit side by side.
 const slides: Slide[] = [
@@ -50,7 +52,8 @@ const slides: Slide[] = [
   },
   {
     kind: 'photo',
-    src: latte,
+    src: latte640,
+    srcSet: `${latte320} 320w, ${latte640} 640w`,
     alt: 'Two matcha lattes with leaf latte art on a café table',
   },
   {
@@ -71,7 +74,8 @@ const slides: Slide[] = [
   },
   {
     kind: 'photo',
-    src: park,
+    src: park640,
+    srcSet: `${park320} 320w, ${park640} 640w`,
     alt: 'A layered matcha drink held up by a lake in Orlando',
   },
   {
@@ -92,6 +96,7 @@ const slides: Slide[] = [
 ];
 
 const card = 'h-[429px] w-[292px] lg:h-[569px] lg:w-80';
+const cardSizes = '(min-width: 64rem) 320px, 292px';
 const tag =
   'absolute top-3 left-3 bg-white px-2 py-1 font-mono text-[11px] leading-none tracking-[0.08em] text-ink uppercase';
 const GAP = 12;
@@ -106,8 +111,25 @@ export default function PopUpCarousel() {
   const trackRef = useRef<HTMLUListElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  // Videos and their still frames only download once the row is close.
+  const [near, setNear] = useState(
+    () => typeof IntersectionObserver === 'undefined',
+  );
   // Pausing any video stops autoplay for the whole row.
   const [autoplay, setAutoplay] = useState(() => !prefersReducedMotion());
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || near) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setNear(true);
+      },
+      { rootMargin: '400px 0px' },
+    );
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [near]);
 
   function step() {
     const first = trackRef.current?.firstElementChild as HTMLElement | null;
@@ -183,12 +205,16 @@ export default function PopUpCarousel() {
                     .length
                 }
                 autoplay={autoplay}
+                load={near}
                 onPause={() => setAutoplay(false)}
               />
             ) : (
               <>
                 <img
-                  src={slide.src}
+                  // Like the videos, waits until the row is close.
+                  src={near ? slide.src : undefined}
+                  srcSet={near ? slide.srcSet : undefined}
+                  sizes={cardSizes}
                   alt={slide.alt}
                   loading="lazy"
                   className="size-full object-cover"
@@ -210,19 +236,24 @@ function VideoSlide({
   slide,
   number,
   autoplay,
+  load,
   onPause,
 }: {
   slide: Extract<Slide, { kind: 'video' }>;
   number: number;
   autoplay: boolean;
+  load: boolean;
   onPause: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // null: follow the carousel; true/false: the visitor played or paused it.
   const [choice, setChoice] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
-  const [visible, setVisible] = useState(true);
-  const playing = !failed && visible && (choice ?? autoplay);
+  // Off screen until the observer says otherwise.
+  const [visible, setVisible] = useState(
+    () => typeof IntersectionObserver === 'undefined',
+  );
+  const playing = !failed && load && visible && (choice ?? autoplay);
 
   // Every video in view plays; ones scrolled out of view (either way) pause.
   useEffect(() => {
@@ -259,8 +290,8 @@ function VideoSlide({
     <>
       <video
         ref={videoRef}
-        src={slide.src}
-        poster={slide.poster}
+        src={load ? slide.src : undefined}
+        poster={load ? slide.poster : undefined}
         muted
         loop
         playsInline
