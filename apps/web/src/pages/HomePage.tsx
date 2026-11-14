@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { getMenu } from '../api/menu';
-import hero from '../assets/home/hero.jpg';
-import heroWide from '../assets/home/hero-wide.jpg';
+import hero600 from '../assets/home/hero-600.webp';
+import hero900 from '../assets/home/hero-900.webp';
+import hero1170 from '../assets/home/hero-1170.webp';
+import heroWide1440 from '../assets/home/hero-wide-1440.webp';
+import heroWide1920 from '../assets/home/hero-wide-1920.webp';
+import heroWide2400 from '../assets/home/hero-wide-2400.webp';
 import matchaMan from '../assets/home/matcha-man.png';
 import DrinkTile from '../components/DrinkTile';
 import PopUpCarousel from '../components/PopUpCarousel';
@@ -23,6 +27,10 @@ const flavors = [
   { name: 'Floral', notes: 'Light, aromatic' },
   { name: 'Umami', notes: 'Savory, deep' },
 ];
+
+// Keep in sync with the hero preloads in index.html, or phones download it twice.
+const heroPhone = `${hero600} 600w, ${hero900} 900w, ${hero1170} 1170w`;
+const heroDesktop = `${heroWide1440} 1440w, ${heroWide1920} 1920w, ${heroWide2400} 2400w`;
 
 const heroButton = `inline-flex min-h-12 items-center justify-center border border-white px-6 font-mono text-[14px] tracking-[0.08em] uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:px-7`;
 const underlinedLink = `font-mono text-[14px] tracking-[0.08em] text-ink uppercase underline underline-offset-2 hover:no-underline ${focusRing}`;
@@ -88,9 +96,15 @@ export default function HomePage() {
         {/* Desktop uses a copy squashed to the design's proportions, which
             fits more of the scenery like the design does. */}
         <picture>
-          <source media="(min-width: 64rem)" srcSet={heroWide} />
+          <source
+            media="(min-width: 64rem)"
+            srcSet={heroDesktop}
+            sizes="100vw"
+          />
           <img
-            src={hero}
+            src={hero1170}
+            srcSet={heroPhone}
+            sizes="100vw"
             alt=""
             // The hero is the largest thing on screen; fetch it before other images.
             fetchPriority="high"
@@ -127,6 +141,7 @@ export default function HomePage() {
         <img
           src={matchaMan}
           alt=""
+          loading="lazy"
           className="h-[86px] w-[72px] object-contain lg:h-[106px] lg:w-[88px]"
         />
         <p className={`${label} text-ink-muted`}>Our story</p>

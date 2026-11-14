@@ -115,3 +115,37 @@ test('Eisai’s Special holds its space while the menu loads', async () => {
     ).toBeInTheDocument(),
   );
 });
+
+test('the hero sizes match the preload in index.html', async () => {
+  const { default: indexHtml } = await import('../../index.html?raw');
+  renderHome(jsonResponse(200, { items: [] }));
+  const hero = document.querySelector('section img[fetchpriority="high"]')!;
+  const desktop = hero.parentElement!.querySelector('source')!;
+  const files = (srcset: string) =>
+    srcset.split(',').map((c) =>
+      c
+        .trim()
+        .split(/\s+/)
+        .map((p) => p.split('/').pop())
+        .join(' '),
+    );
+  const preloads = [
+    ...new DOMParser()
+      .parseFromString(indexHtml, 'text/html')
+      .querySelector<HTMLTemplateElement>('#hero-preload')!
+      .content.querySelectorAll('link'),
+  ];
+  const phonePreload = preloads.find((l) => l.media.includes('max-width'))!;
+  const desktopPreload = preloads.find((l) => l.media.includes('min-width'))!;
+
+  expect(files(phonePreload.getAttribute('imagesrcset')!)).toEqual(
+    files(hero.getAttribute('srcset')!),
+  );
+  expect(files(desktopPreload.getAttribute('imagesrcset')!)).toEqual(
+    files(desktop.getAttribute('srcset')!),
+  );
+  expect(desktopPreload.media).toBe(desktop.media);
+  expect(phonePreload.getAttribute('imagesizes')).toBe(
+    hero.getAttribute('sizes'),
+  );
+});
