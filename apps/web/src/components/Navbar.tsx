@@ -3,7 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import closeIcon from '../assets/close-x.svg';
-import logo from '../assets/eisai-logo-purple.png';
+import logo from '../assets/eisai-logo-purple.webp';
 import menuIcon from '../assets/menu-icon.svg';
 import { focusRing, label } from './styles';
 
