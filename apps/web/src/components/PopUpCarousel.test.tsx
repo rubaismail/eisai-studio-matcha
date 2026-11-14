@@ -132,7 +132,8 @@ test('a play cut short by a pause still autoplays later', async () => {
   expect(playing()).toContain('Pause video 1: Making a Mango Dango');
 });
 
-test('videos pause off screen, even one the visitor started', () => {
+// Fake IntersectionObserver: tests report what's on screen themselves.
+function fakeObserver() {
   const observers = new Map<
     Element,
     (e: { isIntersecting: boolean }[]) => void
@@ -150,19 +151,50 @@ test('videos pause off screen, even one the visitor started', () => {
       disconnect() {}
     },
   );
-  render(<PopUpCarousel />);
-  const report = (n: RegExp, isIntersecting: boolean) =>
-    act(() => observers.get(videoOf(n))!([{ isIntersecting }]));
+  return (el: Element, isIntersecting: boolean) =>
+    act(() => observers.get(el)!([{ isIntersecting }]));
+}
 
-  report(/video 6/, false);
+test('photos, videos and still frames only download once the row is close', () => {
+  const report = fakeObserver();
+  render(<PopUpCarousel />);
+  const videos = [...document.querySelectorAll('video')];
+  for (const video of videos) {
+    expect(video).not.toHaveAttribute('src');
+    expect(video).not.toHaveAttribute('poster');
+  }
+  const photo = screen.getByRole('img', { name: /latte art/ });
+  expect(photo).not.toHaveAttribute('src');
+  expect(play).not.toHaveBeenCalled();
+
+  report(screen.getAllByRole('list')[0], true);
+  for (const video of videos) {
+    expect(video).toHaveAttribute('src');
+    expect(video).toHaveAttribute('poster');
+  }
+  expect(photo.getAttribute('srcset')).toMatch(/320w, .* 640w/);
+  // Close isn't on screen: nothing plays yet.
+  expect(play).not.toHaveBeenCalled();
+  report(videos[0], true);
+  expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
+});
+
+test('videos pause off screen, even one the visitor started', () => {
+  const report = fakeObserver();
+  render(<PopUpCarousel />);
+  report(screen.getAllByRole('list')[0], true);
+  for (const video of document.querySelectorAll('video')) report(video, true);
+  expect(playing()).toHaveLength(6);
+
+  report(videoOf(/video 6/), false);
   expect(playing()).not.toContain('Pause video 6: The pop-up table');
   expect(playing()).toHaveLength(5);
 
   fireEvent.click(screen.getByRole('button', { name: /^Pause video 1/ }));
   fireEvent.click(screen.getByRole('button', { name: /^Play video 1/ }));
-  report(/video 1/, false);
+  report(videoOf(/video 1/), false);
   expect(screen.queryAllByRole('button', { name: /^Pause/ })).toHaveLength(0);
-  report(/video 1/, true);
+  report(videoOf(/video 1/), true);
   expect(playing()).toEqual(['Pause video 1: Making a Mango Dango']);
 });
 
