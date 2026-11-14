@@ -21,6 +21,7 @@ export default function Footer() {
           <img
             src={wordmark}
             alt="Eisai"
+            loading="lazy"
             className="h-[29px] w-[112px] object-contain object-left lg:h-9 lg:w-[140px]"
           />
           <p className="max-w-[360px] text-[28px] leading-[33px] lg:text-[34px] lg:leading-[39px]">
@@ -122,6 +123,7 @@ export default function Footer() {
       <img
         src={matchaMan}
         alt=""
+        loading="lazy"
         className="pointer-events-none absolute right-4 -bottom-[45px] h-[115px] w-24 object-contain opacity-90 lg:right-[340px] lg:-bottom-[70px] lg:h-[180px] lg:w-[150px]"
       />
     </footer>
