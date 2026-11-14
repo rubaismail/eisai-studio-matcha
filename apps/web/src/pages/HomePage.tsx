@@ -4,6 +4,7 @@ import { getMenu } from '../api/menu';
 import hero600 from '../assets/home/hero-600.webp';
 import hero900 from '../assets/home/hero-900.webp';
 import hero1170 from '../assets/home/hero-1170.webp';
+import heroShade from '../assets/home/hero-shade.png';
 import heroWide1440 from '../assets/home/hero-wide-1440.webp';
 import heroWide1920 from '../assets/home/hero-wide-1920.webp';
 import heroWide2400 from '../assets/home/hero-wide-2400.webp';
@@ -111,7 +112,12 @@ export default function HomePage() {
             className="absolute inset-0 size-full object-cover object-[center_60%] lg:object-[center_70%]"
           />
         </picture>
-        <div className="absolute inset-0 bg-linear-to-b from-transparent from-25% via-ink/35 via-55% to-ink/80" />
+        {/* An image, not a CSS gradient: Firefox stutters redrawing a large
+            see-through gradient while scrolling. */}
+        <div
+          className="absolute inset-0 bg-[length:100%_100%]"
+          style={{ backgroundImage: `url(${heroShade})` }}
+        />
         <div className="absolute inset-x-4 bottom-8 flex flex-col gap-3.5 lg:inset-x-[58px] lg:bottom-16 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-3.5 text-white lg:gap-[18px]">
             <p className={`${label} text-lime`}>Your Shade, Your Whisk.</p>
