@@ -1,0 +1,49 @@
+@startuml
+' Sequence: logging in (POST /api/auth/login), then calling a protected route.
+' Source: apps/api/src/controllers/login.controller.ts, middleware/requireAuth.ts, requireAdmin.ts
+autonumber
+actor User
+participant "Website or\nmobile app" as Client
+participant "Nginx\n(api.eisaistudio.com)" as Nginx
+participant "Express API" as API
+database "MongoDB" as DB
+
+User -> Client : enter email + password
+Client -> Nginx : POST /api/auth/login {email, password}
+Nginx -> API : forward request
+API -> API : rate limit (20 per IP, 5 per email / 15 min)
+alt too many attempts
+  API --> Client : 429 Too many login attempts
+end
+API -> API : validate body (only email + password, valid email)
+alt invalid body
+  API --> Client : 400 Invalid login request
+end
+API -> DB : find user by lower-cased email
+DB --> API : user (with passwordHash) or none
+API -> API : bcrypt compare\n(dummy hash when no user, so timing is the same)
+alt unknown email or wrong password
+  API --> Client : 401 Invalid email or password
+else email not verified
+  API --> Client : 403 Please verify your email first
+else success
+  API -> API : sign JWT (HS256, sub = user id, expires in 1 h)
+  API --> Nginx : 200 {token, user {_id, email, role}}
+  Nginx --> Client : 200 {token, user}
+  Client -> Client : store token\n(web: localStorage, app: secure storage)
+  Client --> User : show account, or admin page for admins
+end
+
+== Later: protected request (e.g. GET /api/admin/menu) ==
+Client -> API : GET /api/admin/menu\nAuthorization: Bearer <token>
+API -> API : requireAuth: verify JWT signature + expiry
+API -> DB : find user by token subject
+alt missing, invalid or expired token, or user gone/unverified
+  API --> Client : 401
+else not an admin
+  API --> Client : 403 Admin access required
+else admin
+  API -> DB : find all menu items
+  API --> Client : 200 {items}
+end
+@enduml

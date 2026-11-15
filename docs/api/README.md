@@ -143,6 +143,23 @@ npx --yes --package=@apidevtools/swagger-cli@4.0.4 swagger-cli validate docs/api
 
 Schema validation checks OpenAPI structure and references. Review endpoint examples, access rules and actual server behavior separately; an accepted schema is not a substitute for integration tests.
 
+## Live demo
+
+The spec's first server is production, `https://api.eisaistudio.com/api`. Run these from any terminal to show the live API answering the way the spec says. Checked against production on November 15, 2026; every status matched the spec.
+
+| Call | Expected (from the spec) | Shows |
+| --- | --- | --- |
+| `curl https://api.eisaistudio.com/api/health` | `200 {"status":"ok"}` | API is up |
+| `curl https://api.eisaistudio.com/api/menu` | `200 {"items":[...]}` | Public menu, only available items |
+| `curl https://api.eisaistudio.com/api/menu/seasonal` | `200 {"items":[...]}` | Seasonal filter |
+| `curl https://api.eisaistudio.com/api/admin/menu` | `401 {"error":"Authentication required"}` | Admin routes need a token |
+| `curl -X POST -H 'Content-Type: application/json' -d '{"email":"nobody@example.com","password":"wrong-password-1"}' https://api.eisaistudio.com/api/auth/login` | `401 {"error":"Invalid email or password"}` | Login rejects bad credentials |
+| `curl "https://api.eisaistudio.com/api/auth/reset-password/check?token=x"` | `400` | Invalid reset links are rejected |
+
+To show an admin call, log in with an admin account, copy `token` from the response, and run `curl -H "Authorization: Bearer <token>" https://api.eisaistudio.com/api/admin/menu` (`200`, every item including hidden ones). Don't paste a real token into slides or shared notes.
+
+**"Try it out" in SwaggerHub:** the API only accepts browser requests from `https://eisaistudio.com` (CORS, set by `WEB_ORIGIN`). A request sent straight from SwaggerHub's page is blocked by the browser, so use the curl calls above, or let SwaggerHub send the request through its own proxy if your workspace offers that option.
+
 
 ### Account email configuration
 

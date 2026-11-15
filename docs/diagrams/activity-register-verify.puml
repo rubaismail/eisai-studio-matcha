@@ -1,0 +1,46 @@
+@startuml
+' Activity: creating an account, verifying the email, and logging in.
+' Source: apps/api/src/controllers/auth.controller.ts, login.controller.ts
+|Customer|
+start
+:Open "Create account"\n(website or app);
+:Enter first name, last name,\nemail and password;
+|API|
+:POST /api/auth/register;
+if (Input valid?) then (no)
+  |Customer|
+  :See 400 error, fix the form;
+  stop
+else (yes)
+endif
+|API|
+if (Email already registered?) then (yes)
+  |Customer|
+  :See 409 "Email address already registered.";
+  :Log in or reset password instead;
+  stop
+else (no)
+endif
+|API|
+:Hash password (bcrypt);
+:Create random token, store only\nits SHA-256 hash (expires in 15 min);
+:Save user with isVerified = false;
+:Send verification email (Mailtrap);
+:Return 201;
+|Customer|
+:See "Check your email" page;
+repeat
+  :Open the email link\n/verify-email?token=...;
+  |API|
+  :GET /api/auth/verify?token=...;
+  backward:Ask for a new email\n(POST /api/auth/resend-verification,\nonce per 60 s);
+repeat while (Token matches and not expired?) is (no: 400)
+-> yes;
+|API|
+:Set isVerified = true,\nremove token (single use);
+|Customer|
+:See "Email verified";
+:Log in (POST /api/auth/login);
+:Receive JWT, signed in for 1 hour;
+stop
+@enduml

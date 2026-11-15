@@ -11,8 +11,10 @@ info:
     tolerate additional response fields except the explicit safe login user projection. No
     checkout, favorites, refresh-token or logout endpoints.
 servers:
+  - url: https://api.eisaistudio.com/api
+    description: Production (live).
   - url: http://localhost:4000/api
-    description: Local development; replace with deployed API base URL for staging.
+    description: Local development.
 tags:
   - name: Auth
   - name: Menu

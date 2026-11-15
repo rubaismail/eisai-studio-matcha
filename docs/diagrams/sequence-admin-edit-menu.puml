@@ -1,0 +1,39 @@
+@startuml
+' Sequence: an admin edits a menu item and replaces its photo.
+' Source: apps/api/src/routes/upload.routes.ts, services/upload.ts, controllers/menu.controller.ts
+autonumber
+actor Admin
+participant "Admin page\n(website or app)" as Client
+participant "Express API" as API
+participant "Amazon S3\n(image bucket)" as S3
+database "MongoDB" as DB
+
+Admin -> Client : open item, change fields,\nchoose new photo
+Client -> API : POST /api/uploads (multipart image)\nAuthorization: Bearer <token>
+API -> API : requireAuth + requireAdmin
+API -> API : check type (JPEG, PNG, WebP) and size (5 MB),\ndecode image with sharp
+alt not an allowed image or too large
+  API --> Client : 400 / 413 / 415 with error message
+  Client --> Admin : show error, keep form open
+else valid image
+  API -> S3 : PutObject menu/<time>-<uuid>.<ext>
+  S3 --> API : stored
+  API --> Client : 201 {imageUrl}
+end
+
+Client -> API : PUT /api/menu/{id}\n{name, price, imageUrl, imageAlt, ...}
+API -> API : requireAuth + requireAdmin, validate body
+API -> DB : find menu item by id
+alt not found
+  API --> Client : 404 Menu item not found
+else found
+  API -> DB : save updated item
+  API --> Client : 200 {item}
+  Client --> Admin : show saved item in list
+end
+
+== Customers see the change ==
+Client -> API : GET /api/menu (no token)
+API -> DB : find items where isAvailable = true
+API --> Client : 200 {items} with new imageUrl
+@enduml
