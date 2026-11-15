@@ -32,7 +32,7 @@ These rules complete the README's outline and are implementation requirements fo
 - **Partial and case-insensitive:** an item matches when its `name`, `description` or `inspiredBy` contains the text anywhere, in any case. `mat` finds "Iced Matcha Latte"; `ROAST` finds a description of "Roasted green tea".
 - **Literal text:** characters like `.`, `*`, `(` or `+` are matched as typed, never as a pattern.
 - **Same rules as the menu:** hidden items (`isAvailable: false`) never appear, results are sorted by name, and no matches returns `{ "items": [] }`.
-- **Input:** surrounding spaces are trimmed; a blank search returns the whole menu. More than 100 characters after trimming, or a repeated `search` parameter, returns `400`.
+- **Input:** surrounding spaces are trimmed; a blank search returns the whole menu. More than 100 characters after trimming, control characters (such as a null byte), or a repeated `search` parameter returns `400`.
 - **Clients:** the website's menu page searches through this endpoint, 250 ms after the last keystroke. Requests without `search` behave exactly as before, so the Flutter app is unaffected and still filters locally.
 
 ## Inspiration and accessible photo descriptions

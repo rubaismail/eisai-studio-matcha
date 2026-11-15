@@ -140,8 +140,9 @@ test('typing quickly sends one search, after the pause', async () => {
   await screen.findByText('4 drinks');
   for (const value of ['m', 'ma', 'man', 'mang'])
     fireEvent.change(search(), { target: { value } });
-  // Until the server answers, the current list stays as it is.
+  // Until the server answers, the current list stays and the count says why.
   expect(tileNames()).toHaveLength(4);
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
   await waitFor(() => expect(tileNames()).toEqual(['Mango Dango']));
   expect(searchCalls(fetchMock)).toEqual(['/api/menu?search=mang']);
 });
@@ -187,7 +188,12 @@ test('a failed search can be retried', async () => {
   ).toBeInTheDocument();
   expect(tileNames()).toEqual([]);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Try again →' }));
+  const tryAgain = screen.getByRole('button', { name: 'Try again →' });
+  expect(tryAgain).toBeEnabled();
+  fireEvent.click(tryAgain);
+  // The click shows it's working until the answer arrives.
+  expect(tryAgain).toBeDisabled();
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
   expect(await screen.findByText('1 drink')).toBeInTheDocument();
   expect(tileNames()).toEqual(['Tokyo Rose']);
 });

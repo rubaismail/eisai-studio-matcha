@@ -124,6 +124,18 @@ test('GET /api/menu rejects a repeated or overly long search', async () => {
   assert.equal(find.mock.callCount(), 0);
 });
 
+test('GET /api/menu rejects control characters such as a null byte', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  const nul = await request(createApp()).get('/api/menu?search=a%00b');
+  const tab = await request(createApp()).get('/api/menu?search=a%09b');
+
+  assert.equal(nul.status, 400);
+  assert.equal(tab.status, 400);
+  assert.deepEqual(nul.body, { error: 'search must not contain control characters' });
+  assert.equal(find.mock.callCount(), 0);
+});
+
 // GET /api/menu/seasonal - Seasonal menu
 
 test('GET /api/menu/seasonal returns available seasonal items', async () => {

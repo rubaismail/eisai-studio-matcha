@@ -163,6 +163,13 @@ export async function listMenu(req: Request, res: Response) {
     res.status(400).json({ error: `search must be ${MAX_SEARCH_LENGTH} characters or fewer` });
     return;
   }
+  // MongoDB can't store a null byte in a pattern, and no drink name has
+  // control characters, so reject them up front instead of failing with a 500.
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(text)) {
+    res.status(400).json({ error: 'search must not contain control characters' });
+    return;
+  }
 
   const filter: Record<string, unknown> = { isAvailable: true };
   if (text) {

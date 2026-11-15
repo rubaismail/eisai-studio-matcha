@@ -246,7 +246,7 @@ Lists available menu items, sorted by name. No authentication or request body re
 GET /api/menu?search=mat
 ```
 
-returns `Iced Matcha Latte` (and any other item containing "mat"). Spaces around the text are trimmed, a blank search returns the whole menu, and characters like `.` or `*` are matched literally. A search over 100 characters, or a repeated `search` parameter, returns `400`. No matches returns `{ "items": [] }`.
+returns `Iced Matcha Latte` (and any other item containing "mat"). Spaces around the text are trimmed, a blank search returns the whole menu, and characters like `.` or `*` are matched literally. A search over 100 characters (after trimming), one containing control characters, or a repeated `search` parameter returns `400`. No matches returns `{ "items": [] }`.
 
 Returns HTTP `200`:
 

@@ -41,7 +41,12 @@ const classicMatchas = [
 export const SEARCH_DELAY_MS = 250;
 
 // The server's answer for one search text.
-type SearchResult = { text: string; items: MenuItem[]; failed: boolean };
+type SearchResult = {
+  text: string;
+  attempt: number;
+  items: MenuItem[];
+  failed: boolean;
+};
 
 const stateBox = 'flex flex-col items-start gap-4 border-t border-ink py-14';
 const stateTitle =
@@ -79,7 +84,7 @@ export default function MenuPage() {
   }, [attempt]);
 
   // Search on the server (partial, case-insensitive match). Until the answer
-  // arrives, the previous results stay on screen.
+  // arrives, the previous results stay on screen and the count says so.
   useEffect(() => {
     if (!searchText) return;
     let active = true;
@@ -87,10 +92,21 @@ export default function MenuPage() {
       getMenu(searchText)
         .then((found) => {
           if (active)
-            setSearch({ text: searchText, items: found, failed: false });
+            setSearch({
+              text: searchText,
+              attempt: searchAttempt,
+              items: found,
+              failed: false,
+            });
         })
         .catch(() => {
-          if (active) setSearch({ text: searchText, items: [], failed: true });
+          if (active)
+            setSearch({
+              text: searchText,
+              attempt: searchAttempt,
+              items: [],
+              failed: true,
+            });
         });
     }, SEARCH_DELAY_MS);
     return () => {
@@ -125,11 +141,18 @@ export default function MenuPage() {
   const emptyMenu = ready && items.length === 0;
   const searching = searchText !== '' && search !== null;
   const searchFailed = ready && searching && search.failed;
+  // Waiting for the server to answer the text now in the box.
+  const searchPending =
+    searchText !== '' &&
+    (search === null ||
+      search.text !== searchText ||
+      search.attempt !== searchAttempt);
   const matches = searching ? search.items : items;
   const shown = ready && !searchFailed ? matches.filter(current.has) : [];
 
   let count = '';
   if (status === 'loading') count = 'Loading the menu…';
+  else if (ready && !emptyMenu && searchPending) count = 'Searching…';
   else if (ready && !emptyMenu && !searchFailed)
     count = `${shown.length} ${shown.length === 1 ? 'drink' : 'drinks'}`;
 
@@ -288,6 +311,7 @@ export default function MenuPage() {
             <button
               type="button"
               onClick={retrySearch}
+              disabled={searchPending}
               className={primaryButton}
             >
               Try again →

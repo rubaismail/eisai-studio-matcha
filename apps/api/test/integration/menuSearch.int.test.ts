@@ -54,6 +54,11 @@ test('no search returns the whole public menu', async () => {
   assert.equal(res.body.items.length, 3);
 });
 
+test('a null byte is a 400, not a database error', async () => {
+  const res = await request(app).get('/api/menu?search=a%00b');
+  assert.equal(res.status, 400);
+});
+
 test('regex characters are searched as plain text', async () => {
   const res = await request(app).get('/api/menu').query({ search: '.*' });
   assert.deepEqual(names(res), []);

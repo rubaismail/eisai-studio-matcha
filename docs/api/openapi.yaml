@@ -440,11 +440,11 @@ paths:
           required: false
           schema:
             type: string
-            maxLength: 100
           example: mat
           description: >-
             Text to look for. Surrounding spaces are trimmed; after trimming it must be at most 100
-            characters. Send it once; a repeated search parameter returns 400.
+            characters and contain no control characters. Send it once; a repeated search
+            parameter returns 400.
       responses:
         '200':
           description: List available menu items (only matches when search is given)
@@ -470,7 +470,9 @@ paths:
                     createdAt: '2026-10-20T12:00:00.000Z'
                     updatedAt: '2026-10-20T12:00:00.000Z'
         '400':
-          description: The search parameter was repeated or is longer than 100 characters.
+          description: >-
+            The search parameter was repeated, is longer than 100 characters after trimming, or
+            contains control characters.
           content:
             application/json:
               schema:
