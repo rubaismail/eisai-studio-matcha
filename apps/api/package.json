@@ -11,7 +11,6 @@
     "test": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks test/*.test.ts",
     "test:integration": "node --import ./test/setup-env.mjs --import tsx --test --experimental-test-module-mocks --test-concurrency=1 test/integration/*.int.test.ts",
     "seed": "tsx src/scripts/seed.ts",
-    "demo:api": "tsx test/demo/demoServer.ts",
     "preflight": "node dist/scripts/preflight.js"
   },
   "dependencies": {
