@@ -1,0 +1,273 @@
+# Website unit/component tests (Vitest + Testing Library, jsdom; API calls mocked)
+# Commit: 5311392 (main)
+# Run: 2026-11-15T21:52Z, Node v24.21.0, Vitest 5.0.4, macOS 13.5.2 arm64
+# Command: npm test -w @eisai/web -- --reporter=verbose
+
+
+> @eisai/web@0.0.0 test
+> vitest run --reporter=verbose
+
+
+ RUN  v5.0.4 <repo>/apps/web
+
+ ✓ src/pages/ResetPasswordPage.test.tsx > removes the token from the address bar and only checks the link 165ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a used or expired link says so as soon as it opens 67ms
+ ✓ src/pages/AdminPage.test.tsx > loads all items from the admin endpoint with the saved token 206ms
+ ✓ src/pages/LoginPage.test.tsx > requires a password before calling the API 194ms
+ ✓ src/pages/LoginPage.test.tsx > rejects an email address the API would reject 33ms
+ ✓ src/pages/LoginPage.test.tsx > sends exactly email and password, then saves the session 56ms
+ ✓ src/pages/RegisterPage.test.tsx > an empty form shows every message and focuses the first field 203ms
+ ✓ src/pages/RegisterPage.test.tsx > names made of spaces are rejected, like the API 59ms
+ ✓ src/pages/RegisterPage.test.tsx > short and mismatched passwords are caught before sending 21ms
+ ✓ src/components/MenuItemForm.test.tsx > opens the form as a panel beside the list, which is hidden on narrow screens 270ms
+ ✓ src/components/MenuItemForm.test.tsx > the list shows normally when no form is open 8ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > if the check fails (offline) the form still shows 28ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > if the check fails (a server error) the form still shows 15ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > if the check fails (the rate limit) the form still shows 31ms
+ ✓ src/pages/AdminPage.test.tsx > links to the add and edit forms and labels each checkbox 93ms
+ ✓ src/pages/AdminPage.test.tsx > counts a drink as on home only when it is also on the menu 55ms
+ ✓ src/pages/LoginPage.test.tsx > sends staff to the menu editor after logging in 21ms
+ ✓ src/pages/LoginPage.test.tsx > returns to the page that asked for a login 26ms
+ ✓ src/pages/LoginPage.test.tsx > 401 shows the incorrect email or password alert 43ms
+ ✓ src/pages/RegisterPage.test.tsx > sends exactly the four fields and goes to Check your inbox 52ms
+ ✓ src/pages/RegisterPage.test.tsx > passwords are sent exactly as typed, spaces included 21ms
+ ✓ src/components/MenuItemForm.test.tsx > + Add a drink opens the add panel and Cancel closes it, refreshes the list and returns focus 78ms
+ ✓ src/components/MenuItemForm.test.tsx > shows a message when the drink to edit doesn’t exist 15ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > sends the token in the query and only the password in the body 53ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a reload after the token left the address bar still shows the form 69ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a reload after success shows Password updated 22ms
+ ✓ src/pages/LoginPage.test.tsx > 403 asks to verify the email and can resend the link 120ms
+ ✓ src/pages/RegisterPage.test.tsx > 409 says the email is taken and links to log in 80ms
+ ✓ src/pages/AdminPage.test.tsx > Recommended: disables the row while saving and updates from the server reply 123ms
+ ✓ src/components/MenuItemForm.test.tsx > shows required-field errors linked to their fields, with a focused summary 105ms
+ ✓ src/pages/LoginPage.test.tsx > 429 disables logging in and says how long to wait 18ms
+ ✓ src/pages/LoginPage.test.tsx > uses the API wait time when it is readable 17ms
+ ✓ src/pages/LoginPage.test.tsx > a server error shows a general message 17ms
+ ✓ src/pages/LoginPage.test.tsx > a network failure asks the visitor to check their connection 36ms
+ ✓ src/pages/LoginPage.test.tsx > prevents a second submit while logging in 22ms
+ ✓ src/pages/RegisterPage.test.tsx > 400 shows a form-level message 104ms
+ ✓ src/pages/RegisterPage.test.tsx > 429 shows a form-level message 41ms
+ ✓ src/pages/RegisterPage.test.tsx > 500 shows a form-level message 16ms
+ ✓ src/pages/RegisterPage.test.tsx > a network failure asks the visitor to check their connection 42ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > checks both passwords before sending 105ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > rejects passwords over 72 bytes, like the API 19ms
+ ✓ src/components/MenuItemForm.test.tsx > rejects an invalid price (-2) 109ms
+ ✓ src/components/MenuItemForm.test.tsx > rejects an invalid price (abc) 52ms
+ ✓ src/pages/AdminPage.test.tsx > On home: disables the row while saving and updates from the server reply 132ms
+ ✓ src/pages/AdminPage.test.tsx > Recommended: leaves the row unchanged and shows an error when saving fails 48ms
+ ✓ src/pages/LoginPage.test.tsx > explains when the session expired on the menu editor 8ms
+ ✓ src/pages/LoginPage.test.tsx > signed-in visitors skip the form 2ms
+ ✓ src/pages/LoginPage.test.tsx > links to password reset and account creation 9ms
+ ✓ src/pages/LoginPage.test.tsx > focus goes to the first invalid field 11ms
+ ✓ src/pages/LoginPage.test.tsx > an old expired token alone does not show the session-expired note 3ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > repeat clicks send one request 58ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a link that expires while the form is open (400 on submit) offers a new one 28ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a link without a token shows Link expired 5ms
+ ✓ src/pages/RegisterPage.test.tsx > cannot be submitted twice while sending 34ms
+ ✓ src/pages/RegisterPage.test.tsx > signed-in visitors skip the form 6ms
+ ✓ src/pages/RegisterPage.test.tsx > links back to log in 7ms
+ ✓ src/pages/RegisterPage.test.tsx > three clicks before the page re-renders still send one request 25ms
+ ✓ src/pages/LoginPage.test.tsx > resending verification uses the address that was refused, not an edited one 83ms
+ ✓ src/pages/LoginPage.test.tsx > three clicks before the page re-renders still send one request 18ms
+ ✓ src/pages/LoginPage.test.tsx > resending from the login page explains the resend limit 69ms
+ ✓ src/pages/AdminPage.test.tsx > On home: leaves the row unchanged and shows an error when saving fails 78ms
+ ✓ src/pages/AdminPage.test.tsx > keeps a space between the action and the drink name 46ms
+ ✓ src/pages/AdminPage.test.tsx > shows the empty state 12ms
+ ✓ src/pages/AdminPage.test.tsx > shows an error when the list fails to load 19ms
+ ✓ src/components/MenuItemForm.test.tsx > rejects an invalid price (6.5.0) 87ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > the reset limit (429) keeps the form and says how long to wait 74ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a server error keeps the form so it can be tried again 47ms
+ ✓ src/pages/RegisterPage.test.tsx > passes when the link was sent, for the resend cooldown 61ms
+ ✓ src/pages/RegisterPage.test.tsx > the "already exists" message goes away once the email is changed 57ms
+ ✓ src/pages/RegisterPage.test.tsx > a field’s message clears as soon as it is edited 14ms
+ ✓ src/pages/RegisterPage.test.tsx > the sign-up limit (429) disables the button and asks to try later 50ms
+ ✓ src/pages/AccountPage.test.tsx > shows the signed-in email and a reset password link 128ms
+ ✓ src/pages/AccountPage.test.tsx > Log out signs out and goes home, not to the login page 19ms
+ ✓ src/pages/AccountPage.test.tsx > Delete account opens a confirm step that takes focus and explains it’s permanent 35ms
+ ✓ src/pages/AdminPage.test.tsx > disables the checkbox while saving and updates from the server reply 93ms
+ ✓ src/components/MenuItemForm.test.tsx > requires a photo description once there is a photo 192ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > leaving while the reset is sending does not replace the new page 92ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a signed-in visitor is signed out after resetting 54ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > empty password fields show text placeholders, not dots 23ms
+ ✓ src/pages/ResetPasswordPage.test.tsx > a network failure asks the visitor to check their connection and keeps the form 40ms
+ ✓ src/pages/AccountPage.test.tsx > Cancel closes the step, clears the password and returns focus 85ms
+ ✓ src/pages/AccountPage.test.tsx > Escape closes the step, clears the password and returns focus 45ms
+ ✓ src/components/MenuItemForm.test.tsx > rejects the wrong file type in the browser without uploading 48ms
+ ✓ src/components/MenuItemForm.test.tsx > rejects a photo over 5 MB in the browser without uploading 35ms
+ ✓ src/pages/AdminPage.test.tsx > leaves the row unchanged and shows an error when saving fails 58ms
+ ✓ src/pages/AdminPage.test.tsx > dialog is labelled, takes focus, and Escape closes it and returns focus 45ms
+ ✓ src/pages/AccountPage.test.tsx > an empty password shows an inline error and sends nothing 59ms
+ ✓ src/pages/AdminPage.test.tsx > dialog keeps Tab inside it in both directions 74ms
+ ✓ src/pages/AdminPage.test.tsx > removes the row only after the delete succeeds 74ms
+ ✓ src/components/MenuItemForm.test.tsx > disables Save while uploading and keeps the input when the upload fails 94ms
+ ✓ src/components/MenuItemForm.test.tsx > uses the drink name as the preview alt when the photo has no description 27ms
+ ✓ src/components/MenuItemForm.test.tsx > uses the typed name as the alt for a new photo until it is described 42ms
+ ✓ src/pages/AccountPage.test.tsx > a wrong password (403) shows an error, keeps the step open and stays signed in 144ms
+ ✓ src/pages/AccountPage.test.tsx > the only admin account (409) shows the API’s message 46ms
+ ✓ src/pages/AccountPage.test.tsx > too many attempts (429) shows the wait time from Retry-After 31ms
+ ✓ src/App.test.tsx > Log out in the navbar on My account goes home, not to log in 517ms
+ ✓ src/pages/AdminPage.test.tsx > keeps the row and dialog open and shows an error when delete fails 82ms
+ ✓ src/components/MenuItemForm.test.tsx > replacing a photo requires confirming the old description, then sends both together 125ms
+ ✓ src/pages/AccountPage.test.tsx > too many attempts (429) without Retry-After says to try again later 31ms
+ ✓ src/pages/AccountPage.test.tsx > a network error shows the generic message 43ms
+ ✓ src/pages/AdminPage.test.tsx > Hide instead hides the drink and is not offered for hidden drinks 120ms
+ ✓ src/components/MenuItemForm.test.tsx > replacing a photo and updating the description needs no extra confirmation 83ms
+ ✓ src/components/MenuItemForm.test.tsx > creates a drink with the defaults, closes the panel and refreshes the list 97ms
+ ✓ src/pages/AccountPage.test.tsx > the confirm button is disabled while deleting, so it can’t be sent twice 61ms
+ ✓ src/pages/AccountPage.test.tsx > success signs out like Log out, goes home and shows the message once 100ms
+ ✓ src/pages/AdminPage.test.tsx > Hide instead can’t start while a Recommended save is pending, and the drink ends up hidden 148ms
+ ✓ src/components/MenuItemForm.test.tsx > disables Save while saving so it can’t be submitted twice 72ms
+ ✓ src/pages/AdminPage.test.tsx > a pending Hide instead from the dialog also locks the drink’s row 80ms
+ ✓ src/pages/AdminPage.test.tsx > Edit does nothing while a save for that drink is pending 63ms
+ ✓ src/App.test.tsx > Log out in the navbar on the menu editor goes home 379ms
+ ✓ src/App.test.tsx > signed-out visitors to /admin/new land on the login page 37ms
+ ✓ src/App.test.tsx > the footer shows on public pages but not the menu editor 42ms
+ ✓ src/App.test.tsx > customers who open the menu editor see Staff only with the footer 14ms
+ ✓ src/components/MenuItemForm.test.tsx > keeps everything typed and shows an error when saving fails 85ms
+ ✓ src/App.test.tsx > Log out with unsaved menu edits: Cancel keeps the edits and the login 56ms
+ ✓ src/App.test.tsx > Log out with unsaved menu edits: confirming leaves and signs out 57ms
+ ✓ src/components/MenuItemForm.test.tsx > edit pre-fills the drink, sends only changed fields, and closes the panel 112ms
+ ✓ src/components/MenuItemForm.test.tsx > Cancel without changes closes the panel without asking 30ms
+ ✓ src/components/MenuItemForm.test.tsx > Cancel with unsaved changes asks first and only leaves when confirmed 58ms
+ ✓ src/components/PopUpCarousel.test.tsx > has all eight slides, with photos between the videos 174ms
+ ✓ src/components/PopUpCarousel.test.tsx > every video in view plays by itself 27ms
+ ✓ src/App.test.tsx > Find us on the menu editor goes to the home page footer 43ms
+ ✓ src/App.test.tsx > signed-in admins who open /login go to the menu editor 59ms
+ ✓ src/components/PopUpCarousel.test.tsx > tapping a video pauses it, and tapping again plays it 99ms
+ ✓ src/components/PopUpCarousel.test.tsx > pausing one video stops autoplay for the whole row 45ms
+ ✓ src/components/PopUpCarousel.test.tsx > each video describes what happens in it, for screen readers 29ms
+ ✓ src/components/MenuItemForm.test.tsx > the preview tile updates live as the drink is filled in 56ms
+ ✓ src/components/MenuItemForm.test.tsx > the preview photo uses the description as alt, or the drink name when empty 53ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > a good link verifies once and removes the token from the address bar 127ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > an expired or used link (400) offers a new one 85ms
+ ✓ src/App.test.tsx > Our story, Products and unknown addresses have their own pages 91ms
+ ✓ src/components/PopUpCarousel.test.tsx > nothing plays by itself for visitors who prefer less motion 35ms
+ ✓ src/components/PopUpCarousel.test.tsx > a video the browser refuses to play shows its play button 40ms
+ ✓ src/components/PopUpCarousel.test.tsx > a play cut short by a pause still autoplays later 44ms
+ ✓ src/components/MenuItemForm.test.tsx > the preview is display-only and adds nothing to the tab order 76ms
+ ✓ src/pages/CheckEmailPage.test.tsx > shows the address the email went to 204ms
+ ✓ src/pages/CheckEmailPage.test.tsx > Resend email sends to that address, then waits a minute 43ms
+ ✓ src/pages/CheckEmailPage.test.tsx > the resend limit (429) says how long to wait 49ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > the Link expired form sends a new link 59ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > no token at all shows Link expired without calling the API 34ms
+ ✓ src/App.test.tsx > Find us scrolls to the schedule, again on a repeat click 83ms
+ ✓ src/App.test.tsx > sets a page title for each route 62ms
+ ✓ src/App.test.tsx > skip link is the first focusable element and moves focus to main 21ms
+ ✓ src/components/PopUpCarousel.test.tsx > photos, videos and still frames only download once the row is close 19ms
+ ✓ src/pages/CheckEmailPage.test.tsx > a failed resend can be tried again right away 56ms
+ ✓ src/pages/CheckEmailPage.test.tsx > opened without an address, it asks for one before resending 25ms
+ ✓ src/pages/CheckEmailPage.test.tsx > ignores an address that is not a string 10ms
+ ✓ src/pages/CheckEmailPage.test.tsx > three quick clicks on Resend send one request 23ms
+ ✓ src/pages/CheckEmailPage.test.tsx > right after sign-up, Resend waits out the API’s one-minute cooldown 5ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > a server error can be retried with the same link 43ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > a network failure shows the retry screen 52ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > reloading after verifying shows the result without re-sending 15ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > screen readers hear each result 23ms
+ ✓ src/pages/VerifyEmailPage.test.tsx > a check that fails after leaving the page is retried on the next visit 20ms
+ ✓ src/components/MenuItemForm.test.tsx > the edit form and the drink’s list row never save at the same time 175ms
+ ✓ src/components/PopUpCarousel.test.tsx > videos pause off screen, even one the visitor started 108ms
+ ✓ src/components/PopUpCarousel.test.tsx > a video that fails to load says so 29ms
+ ✓ src/components/PopUpCarousel.test.tsx > arrow buttons move one card at a time 19ms
+ ✓ src/components/PopUpCarousel.test.tsx > the Instagram link opens in a new tab 10ms
+ ✓ src/pages/CheckEmailPage.test.tsx > a link sent over a minute ago can be resent right away 4ms
+ ✓ src/pages/CheckEmailPage.test.tsx > the wait belongs to one address, so fixing a typo is not blocked 32ms
+ ✓ src/components/MenuItemForm.test.tsx > switching to another form with unsaved changes asks first; declining keeps everything 70ms
+ ✓ src/components/MenuItemForm.test.tsx > opening another drink’s Edit with unsaved changes asks first 93ms
+ ✓ src/components/MenuItemForm.test.tsx > the browser Back button is guarded too 89ms
+ ✓ src/components/MenuItemForm.test.tsx > leaving a form without changes doesn’t ask 123ms
+ ✓ src/pages/MenuPage.test.tsx > shows each drink without a price, with its photo and details 262ms
+ ✓ src/pages/MenuPage.test.tsx > filter chips show counts and narrow the list 55ms
+ ✓ src/components/MenuItemForm.test.tsx > a delayed save can’t close or change a newer form, but still updates the list 135ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > sends the email and shows the same message whether or not the account exists 240ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > prefills the address passed by My account 28ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > checks the address before sending 30ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > repeat clicks send one request 24ms
+ ✓ src/pages/MenuPage.test.tsx > search matches the name, inspiration and ingredients 85ms
+ ✓ src/pages/MenuPage.test.tsx > no matches offers to clear the search 53ms
+ ✓ src/components/MenuItemForm.test.tsx > a list reload that started before a save finished can’t restore the old values 185ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > Back from Check your inbox returns to the form with the address 44ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > leaving while the link is sending does not pull the visitor back 9ms
+ ✓ src/pages/MenuPage.test.tsx > a filter with no drinks offers to show them all 71ms
+ ✓ src/pages/MenuPage.test.tsx > a load error can be retried 23ms
+ ✓ src/components/MenuItemForm.test.tsx > a list reload that overlaps a checkbox save can’t undo it 81ms
+ ✓ src/components/MenuItemForm.test.tsx > create sends the category typed in 51ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > Resend waits a minute after the first link, then sends again 112ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > a reload keeps Check your inbox and the remaining wait 9ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > the email limit (429) on the form says how long to wait 33ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > the limit on Resend says how long to wait 19ms
+ ✓ src/pages/ForgotPasswordPage.test.tsx > a failed send stays on the form and can be tried again 58ms
+ ✓ src/pages/MenuPage.test.tsx > an empty menu says so instead of showing filters 132ms
+ ✓ src/pages/MenuPage.test.tsx > a drink without a photo still shows its tile 35ms
+ ✓ src/components/MenuItemForm.test.tsx > editing only the category sends only the category 58ms
+ ✓ src/components/MenuItemForm.test.tsx > editing another field doesn’t send the category 83ms
+ ✓ src/auth/guards.test.tsx > signed-out visitors to /admin are sent to log in and back 28ms
+ ✓ src/auth/guards.test.tsx > an expired session is passed to the login page 3ms
+ ✓ src/components/Navbar.test.tsx > signed-out visitors see an Account link to log in 163ms
+ ✓ src/components/Navbar.test.tsx > customers see My account and Log out, but not the menu editor 17ms
+ ✓ src/components/Navbar.test.tsx > staff also see the menu editor 27ms
+ ✓ src/components/Navbar.test.tsx > Log out signs out and shows the Account link again 39ms
+ ✓ src/auth/guards.test.tsx > signed-in customers see "Staff only" instead of the dashboard 105ms
+ ✓ src/auth/guards.test.tsx > "Log in with a staff account" signs out and returns to /admin after 10ms
+ ✓ src/auth/guards.test.tsx > admins see the dashboard 11ms
+ ✓ src/auth/guards.test.tsx > any signed-in user can open a RequireAuth page 11ms
+ ✓ src/auth/guards.test.tsx > signed-out visitors to a RequireAuth page are sent to log in 3ms
+ ✓ src/components/MenuItemForm.test.tsx > an empty category shows an error linked to the field 70ms
+ ✓ src/components/Navbar.test.tsx > the phone menu opens, traps focus on its close button, and closes with Escape 83ms
+ ✓ src/components/Navbar.test.tsx > site links go to their pages, and Find us to the home schedule 47ms
+ ✓ src/components/Navbar.test.tsx > the phone menu lists every site link 45ms
+ ✓ src/components/MenuItemForm.test.tsx > create locks editable fields while saving and restores them on failure 142ms
+ ✓ src/components/MenuItemForm.test.tsx > edit locks editable fields while saving and restores them on failure 120ms
+ ✓ src/components/Navbar.test.tsx > only the current page is marked current, not home-page sections 18ms
+ ✓ src/components/Navbar.test.tsx > Products is marked current on the products page 8ms
+ ✓ src/components/Navbar.test.tsx > the Menu link is marked current on the menu page 8ms
+ ✓ src/components/Navbar.test.tsx > Instagram is in the footer, not the navbar 56ms
+ ✓ src/components/Navbar.test.tsx > the phone menu closes when a link to the current page is tapped 45ms
+ ✓ src/pages/HomePage.test.tsx > the hero links to the menu and the schedule 226ms
+ ✓ src/pages/HomePage.test.tsx > Eisai’s Special shows drinks featured on home, like the mobile app 85ms
+ ✓ src/pages/HomePage.test.tsx > with nothing featured it says so and still links to the menu 106ms
+ ✓ src/App.lazyError.test.tsx > a page that fails to download shows a reload message and keeps the navbar 509ms
+ ✓ src/App.lazyError.test.tsx > going to a working page after the error shows that page 50ms
+ ✓ src/pages/HomePage.test.tsx > if the menu can’t load it offers to try again 109ms
+ ✓ src/pages/HomePage.test.tsx > Eisai’s Special holds its space while the menu loads 78ms
+ ✓ src/pages/HomePage.test.tsx > the hero sizes match the preload in index.html 32ms
+ ✓ src/pages/NotFoundPage.test.tsx > offers a way home and to the menu 140ms
+ ✓ src/pages/ProductsPage.test.tsx > says products are coming soon and links to the menu and Instagram 145ms
+ ✓ src/pages/PrivacyPage.test.tsx > has one page title, a last-updated date and every policy section 131ms
+ ✓ src/pages/PrivacyPage.test.tsx > gives a working contact email for privacy requests 15ms
+ ✓ src/pages/PrivacyPage.test.tsx > links back to the home page 10ms
+ ✓ src/pages/PrivacyPage.test.tsx > does not describe features that do not exist yet 11ms
+ ✓ src/pages/PrivacyPage.test.tsx > says accounts can be deleted from the Account page 25ms
+ ✓ src/pages/OurStoryPage.test.tsx > has one page title and a heading for each part of the story 184ms
+ ✓ src/components/Footer.test.tsx > Follow along shows the Instagram icon with the handle 184ms
+ ✓ src/components/Footer.test.tsx > links to the privacy policy 17ms
+ ✓ src/auth/AuthProvider.test.tsx > restores a saved session after a reload 18ms
+ ✓ src/auth/AuthProvider.test.tsx > an expired saved token signs out and is reported as expired 2ms
+ ✓ src/auth/AuthProvider.test.tsx > a damaged saved user is ignored 2ms
+ ✓ src/auth/AuthProvider.test.tsx > signs out when the token expires while the page is open 4ms
+ ✓ src/auth/AuthProvider.test.tsx > a 401 on a signed-in request ends the session as expired 9ms
+ ✓ src/auth/AuthProvider.test.tsx > a 401 on a request without a token does not end the session 3ms
+ ✓ src/auth/AuthProvider.test.tsx > signing out clears the saved session without marking it expired 4ms
+ ✓ src/auth/AuthProvider.test.tsx > a slow 401 for an old token does not sign out a newer login 1ms
+ ✓ src/auth/AuthProvider.test.tsx > logging in still works when the browser blocks storage 3ms
+ ✓ src/api/auth.test.ts > deleteAccount posts only the password, with the login token 2ms
+ ✓ src/api/auth.test.ts > a wrong password (403) rejects with the status and doesn’t sign out 1ms
+ ✓ src/api/auth.test.ts > the only admin (409) passes on the API’s message 0ms
+ ✓ src/api/auth.test.ts > rate limiting (429) carries the Retry-After wait 1ms
+ ✓ src/api/auth.test.ts > a network failure rejects with a NetworkError, not an ApiError 0ms
+ ✓ src/api/auth.test.ts > a cancelled request rejects with the AbortError unchanged 0ms
+ ✓ src/pageTitle.test.ts > names every page and falls back to "Page not found" 1ms
+ ✓ src/auth/validation.test.ts > email must look like an address, ignoring outer spaces 1ms
+ ✓ src/auth/validation.test.ts > new passwords need 8 characters, counting emoji as one 0ms
+ ✓ src/auth/validation.test.ts > new passwords are limited to 72 bytes, like the API 0ms
+ ✓ src/auth/validation.test.ts > passwords are not trimmed 0ms
+ ✓ src/auth/validation.test.ts > the confirmation must match exactly 0ms
+
+ Test Files  25 passed (25)
+      Tests  251 passed (251)
+   Start at  16:52:59
+   Duration  5.64s (tests 45%, environment 40%, transform 6%, setup 5%, import 4%)
+
+Environment  jsdom was created 25 times · 14.32s total, 40% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
