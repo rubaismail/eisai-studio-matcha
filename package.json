@@ -14,7 +14,6 @@
     "setup": "node scripts/setup.mjs",
     "dev": "concurrently --names api,web --prefix-colors green,magenta \"npm run dev -w @eisai/api\" \"npm run dev -w @eisai/web\"",
     "seed": "npm run seed -w @eisai/api",
-    "demo:api": "npm run demo:api -w @eisai/api",
     "test": "npm run test --workspaces",
     "test:integration": "npm run test:integration -w @eisai/api",
     "lint": "eslint .",
