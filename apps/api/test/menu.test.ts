@@ -10,7 +10,9 @@ import { MenuItem } from '../src/models/MenuItem.js';
 import { User } from '../src/models/User.js';
 
 const adminUserId = '507f1f77bcf86cd799439011';
-const validPngBuffer = readFileSync(new URL('./fixtures/images/valid.png', import.meta.url));
+const validPngBuffer = readFileSync(
+  new URL('./fixtures/images/valid.png', import.meta.url),
+);
 
 function createAuthHeader(role: 'admin' | 'customer' = 'admin') {
   mock.method(User, 'findById', async () => ({
@@ -55,6 +57,83 @@ test('GET /api/menu returns an empty list', async () => {
 
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, { items: [] });
+});
+
+// GET /api/menu?search= - Menu search (course requirement: server-side, partial match)
+
+test('GET /api/menu?search= searches name, description and inspiredBy, case-insensitively', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  const res = await request(createApp())
+    .get('/api/menu')
+    .query({ search: '  MAT  ' });
+
+  assert.equal(res.status, 200);
+  const filter = find.mock.calls[0].arguments[0] as unknown as {
+    isAvailable: boolean;
+    $or: Record<string, RegExp>[];
+  };
+  assert.equal(filter.isAvailable, true);
+  const patterns = filter.$or.map((clause) => Object.entries(clause)[0]);
+  assert.deepEqual(
+    patterns.map(([field]) => field),
+    ['name', 'description', 'inspiredBy'],
+  );
+  for (const [, pattern] of patterns) {
+    assert.ok(
+      pattern.test('Iced Matcha Latte'),
+      'partial, case-insensitive match',
+    );
+    assert.equal(pattern.flags, 'i');
+  }
+});
+
+test('GET /api/menu?search= treats regex characters as plain text', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  await request(createApp()).get('/api/menu').query({ search: '.*' });
+
+  const filter = find.mock.calls[0].arguments[0] as unknown as {
+    $or: { name: RegExp }[];
+  };
+  const pattern = filter.$or[0].name;
+  assert.equal(pattern.test('Iced Matcha Latte'), false);
+  assert.equal(pattern.test('Special .* blend'), true);
+});
+
+test('GET /api/menu with an empty or blank search lists every available item', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  await request(createApp()).get('/api/menu').query({ search: '   ' });
+
+  assert.deepEqual(find.mock.calls[0].arguments[0], { isAvailable: true });
+});
+
+test('GET /api/menu rejects a repeated or overly long search', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  const repeated = await request(createApp()).get(
+    '/api/menu?search=a&search=b',
+  );
+  const tooLong = await request(createApp())
+    .get('/api/menu')
+    .query({ search: 'x'.repeat(101) });
+
+  assert.equal(repeated.status, 400);
+  assert.equal(tooLong.status, 400);
+  assert.equal(find.mock.callCount(), 0);
+});
+
+test('GET /api/menu rejects control characters such as a null byte', async () => {
+  const find = mock.method(MenuItem, 'find', () => ({ sort: async () => [] }));
+
+  const nul = await request(createApp()).get('/api/menu?search=a%00b');
+  const tab = await request(createApp()).get('/api/menu?search=a%09b');
+
+  assert.equal(nul.status, 400);
+  assert.equal(tab.status, 400);
+  assert.deepEqual(nul.body, { error: 'search must not contain control characters' });
+  assert.equal(find.mock.callCount(), 0);
 });
 
 // GET /api/menu/seasonal - Seasonal menu
@@ -158,12 +237,16 @@ test('POST /api/menu creates an item for admins', async () => {
     isAvailable: true,
   };
 
-  const create = mock.method(MenuItem, 'create', async (payload: Record<string, unknown>) => ({
-    ...payload,
-    _id: 'menu-1',
-    createdAt: '2026-10-20T00:00:00.000Z',
-    updatedAt: '2026-10-20T00:00:00.000Z',
-  }));
+  const create = mock.method(
+    MenuItem,
+    'create',
+    async (payload: Record<string, unknown>) => ({
+      ...payload,
+      _id: 'menu-1',
+      createdAt: '2026-10-20T00:00:00.000Z',
+      updatedAt: '2026-10-20T00:00:00.000Z',
+    }),
+  );
 
   const res = await request(createApp())
     .post('/api/menu')
@@ -204,7 +287,9 @@ test('POST /api/menu rejects invalid data or non-admins', async () => {
     .send('{"name":"Matcha","price":1e400}');
 
   assert.equal(infinitePrice.status, 400);
-  assert.deepEqual(infinitePrice.body, { error: 'Price must be a nonnegative finite number' });
+  assert.deepEqual(infinitePrice.body, {
+    error: 'Price must be a nonnegative finite number',
+  });
 
   const forbidden = await request(createApp())
     .post('/api/menu')
@@ -250,7 +335,9 @@ test('PUT /api/menu/:id hides and unhides items', async () => {
   assert.equal(publicHidden.status, 200);
   assert.deepEqual(publicHidden.body.items, []);
 
-  const adminVisible = await request(createApp()).get('/api/admin/menu').set('Authorization', createAuthHeader('admin'));
+  const adminVisible = await request(createApp())
+    .get('/api/admin/menu')
+    .set('Authorization', createAuthHeader('admin'));
   assert.equal(adminVisible.status, 200);
   assert.deepEqual(adminVisible.body.items.length, 1);
   assert.equal(adminVisible.body.items[0].name, 'Matcha Latte');
@@ -291,7 +378,9 @@ test('PUT /api/menu/:id rejects nonfinite prices', async () => {
     .send('{"price":1e400}');
 
   assert.equal(res.status, 400);
-  assert.deepEqual(res.body, { error: 'Price must be a nonnegative finite number' });
+  assert.deepEqual(res.body, {
+    error: 'Price must be a nonnegative finite number',
+  });
 });
 
 test('PUT /api/menu/:id returns 404 for unknown IDs', async () => {
@@ -337,10 +426,14 @@ test('DELETE /api/menu/:id returns 404 for unknown IDs', async () => {
 // New menu metadata: tea bases, recommendations, featured status
 
 test('POST /api/menu stores tea bases and independent display flags', async () => {
-  const create = mock.method(MenuItem, 'create', async (payload: Record<string, unknown>) => ({
-    ...payload,
-    _id: '507f1f77bcf86cd799439055',
-  }));
+  const create = mock.method(
+    MenuItem,
+    'create',
+    async (payload: Record<string, unknown>) => ({
+      ...payload,
+      _id: '507f1f77bcf86cd799439055',
+    }),
+  );
   const authorization = createAuthHeader('admin');
 
   const res = await request(createApp())
@@ -432,7 +525,11 @@ test('PUT /api/menu/:id updates featured, seasonal and recommended independently
   const update = await request(createApp())
     .put(url)
     .set('Authorization', authorization)
-    .send({ teaBases: ['matcha', 'hojicha'], isRecommended: true, isSeasonal: false });
+    .send({
+      teaBases: ['matcha', 'hojicha'],
+      isRecommended: true,
+      isSeasonal: false,
+    });
   assert.equal(update.status, 200);
   assert.deepEqual(item.teaBases, ['matcha', 'hojicha']);
   assert.equal(item.isRecommended, true);
@@ -441,11 +538,16 @@ test('PUT /api/menu/:id updates featured, seasonal and recommended independently
 });
 
 test('GET /api/menu excludes unavailable featured items', async () => {
-  const find = mock.method(MenuItem, 'find', (query: Record<string, unknown>) => ({
-    sort: async () => query.isAvailable === true
-      ? [{ name: 'Available Drink', isAvailable: true, isFeatured: true }]
-      : [],
-  }));
+  const find = mock.method(
+    MenuItem,
+    'find',
+    (query: Record<string, unknown>) => ({
+      sort: async () =>
+        query.isAvailable === true
+          ? [{ name: 'Available Drink', isAvailable: true, isFeatured: true }]
+          : [],
+    }),
+  );
 
   const res = await request(createApp()).get('/api/menu');
   assert.equal(res.status, 200);
@@ -457,7 +559,9 @@ test('GET /api/menu excludes unavailable featured items', async () => {
 // Upload route
 
 test('POST /api/uploads accepts an admin-uploaded image URL', async () => {
-  const send = mock.method(S3Client.prototype, 'send', async () => ({ ok: true }));
+  const send = mock.method(S3Client.prototype, 'send', async () => ({
+    ok: true,
+  }));
 
   const res = await request(createApp())
     .post('/api/uploads')
@@ -474,8 +578,12 @@ test('POST /api/uploads accepts an admin-uploaded image URL', async () => {
 });
 
 test('POST /api/uploads rejects malformed PNG content before S3 upload', async () => {
-  const send = mock.method(S3Client.prototype, 'send', async () => ({ ok: true }));
-  const invalidPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00]);
+  const send = mock.method(S3Client.prototype, 'send', async () => ({
+    ok: true,
+  }));
+  const invalidPng = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00,
+  ]);
 
   const res = await request(createApp())
     .post('/api/uploads')

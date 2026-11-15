@@ -240,6 +240,14 @@ The client asks for confirmation and the password before sending this request, t
 
 Lists available menu items, sorted by name. No authentication or request body required. Items with `isAvailable: false` are excluded.
 
+**Search:** add the optional `search` query parameter to get only the items whose name, description or "inspired by" text contains it. Matching is partial and case-insensitive, and the server does it, so clients don't filter for themselves:
+
+```http
+GET /api/menu?search=mat
+```
+
+returns `Iced Matcha Latte` (and any other item containing "mat"). Spaces around the text are trimmed, a blank search returns the whole menu, and characters like `.` or `*` are matched literally. A search over 100 characters (after trimming), one containing control characters, or a repeated `search` parameter returns `400`. No matches returns `{ "items": [] }`.
+
 Returns HTTP `200`:
 
 ```json

@@ -25,6 +25,16 @@ These rules complete the README's outline and are implementation requirements fo
 - Errors use `{ "error": "..." }`; clients branch on HTTP status, not exact prose. Health's disconnected `503` uses `{ "status": "database disconnected" }` instead. Login returns only `_id`, `email` and `role` in its user projection; database models are not response DTOs. Other response objects allow extra fields so clients ignore incidental metadata such as Mongoose `__v`.
 
 
+## Menu search
+
+`GET /api/menu?search=<text>` is the search API. The server does the matching; clients send what the user typed and show what comes back.
+
+- **Partial and case-insensitive:** an item matches when its `name`, `description` or `inspiredBy` contains the text anywhere, in any case. `mat` finds "Iced Matcha Latte"; `ROAST` finds a description of "Roasted green tea".
+- **Literal text:** characters like `.`, `*`, `(` or `+` are matched as typed, never as a pattern.
+- **Same rules as the menu:** hidden items (`isAvailable: false`) never appear, results are sorted by name, and no matches returns `{ "items": [] }`.
+- **Input:** surrounding spaces are trimmed; a blank search returns the whole menu. More than 100 characters after trimming, control characters (such as a null byte), or a repeated `search` parameter returns `400`.
+- **Clients:** the website's menu page searches through this endpoint, 250 ms after the last keystroke. Requests without `search` behave exactly as before, so the Flutter app is unaffected and still filters locally.
+
 ## Inspiration and accessible photo descriptions
 
 The existing menu create/update endpoints accept `inspiredBy` and `imageAlt`; all menu responses (including seasonal and admin aliases) return both strings. Both default to `""` on new items and on reads of legacy records without the fields. No data migration is required.
@@ -151,6 +161,7 @@ The spec's first server is production, `https://api.eisaistudio.com/api`. Run th
 | --- | --- | --- |
 | `curl https://api.eisaistudio.com/api/health` | `200 {"status":"ok"}` | API is up |
 | `curl https://api.eisaistudio.com/api/menu` | `200 {"items":[...]}` | Public menu, only available items |
+| `curl "https://api.eisaistudio.com/api/menu?search=mat"` | `200 {"items":[...]}` | Server-side search, partial and case-insensitive |
 | `curl https://api.eisaistudio.com/api/menu/seasonal` | `200 {"items":[...]}` | Seasonal filter |
 | `curl https://api.eisaistudio.com/api/admin/menu` | `401 {"error":"Authentication required"}` | Admin routes need a token |
 | `curl -X POST -H 'Content-Type: application/json' -d '{"email":"nobody@example.com","password":"wrong-password-1"}' https://api.eisaistudio.com/api/auth/login` | `401 {"error":"Invalid email or password"}` | Login rejects bad credentials |
