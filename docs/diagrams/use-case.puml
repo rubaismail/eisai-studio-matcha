@@ -1,0 +1,69 @@
+@startuml
+' Use cases for the Eisai Studio website (React) and mobile app (Flutter).
+' Both clients call the same API at https://api.eisaistudio.com/api.
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor Visitor
+actor Customer
+actor "Admin (staff)" as Admin
+actor "Mailtrap\n(email service)" as Mailtrap <<system>>
+actor "Amazon S3\n(image storage)" as S3 <<system>>
+
+Customer -|> Visitor
+Admin -|> Customer
+
+rectangle "Eisai Studio (website + mobile app)" {
+  usecase "Browse menu" as UC_Menu
+  usecase "View seasonal drinks" as UC_Seasonal
+  usecase "View drink details" as UC_Details
+  usecase "Read our story, products,\nlocation and privacy policy" as UC_Info
+
+  usecase "Create account" as UC_Register
+  usecase "Verify email" as UC_Verify
+  usecase "Resend verification email" as UC_Resend
+  usecase "Log in" as UC_Login
+  usecase "Reset forgotten password" as UC_Reset
+  usecase "View account" as UC_Account
+  usecase "Delete account" as UC_Delete
+
+  usecase "View full menu\n(including hidden items)" as UC_AdminMenu
+  usecase "Add menu item" as UC_Add
+  usecase "Edit menu item" as UC_Edit
+  usecase "Delete menu item" as UC_Remove
+  usecase "Upload drink photo" as UC_Upload
+}
+
+Visitor --> UC_Menu
+Visitor --> UC_Seasonal
+Visitor --> UC_Info
+Visitor --> UC_Register
+Visitor --> UC_Verify
+Visitor --> UC_Resend
+Visitor --> UC_Login
+Visitor --> UC_Reset
+
+UC_Details .> UC_Menu : <<extend>>
+
+Customer --> UC_Account
+Customer --> UC_Delete
+
+Admin --> UC_AdminMenu
+Admin --> UC_Add
+Admin --> UC_Edit
+Admin --> UC_Remove
+
+UC_Add ..> UC_Login : <<include>>
+UC_Edit ..> UC_Login : <<include>>
+UC_Remove ..> UC_Login : <<include>>
+UC_AdminMenu ..> UC_Login : <<include>>
+UC_Delete ..> UC_Login : <<include>>
+UC_Upload .> UC_Add : <<extend>>
+UC_Upload .> UC_Edit : <<extend>>
+
+UC_Register --> Mailtrap
+UC_Resend --> Mailtrap
+UC_Reset --> Mailtrap
+UC_Upload --> S3
+@enduml
