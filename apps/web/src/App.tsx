@@ -15,7 +15,8 @@ import AccountLayout from './components/AccountLayout';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import Spinner from './components/Spinner';
-import { primaryButton } from './components/styles';
+import { focusRing, primaryButton } from './components/styles';
+import { pageTitle } from './pageTitle';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -120,11 +121,27 @@ export default function App() {
   const { user } = useAuth();
   // No footer for staff on admin pages (Staff only keeps it).
   const isAdmin = useMatch('/admin/*') !== null && user?.role === 'admin';
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    document.title = pageTitle(pathname);
+  }, [pathname]);
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
+      {/* First stop for keyboard users: jumps past the header links. */}
+      <a
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+        }}
+        className={`sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-white focus:px-4 focus:py-3 focus:font-mono focus:text-[14px] focus:tracking-[0.08em] focus:text-ink focus:uppercase focus:underline ${focusRing}`}
+      >
+        Skip to main content
+      </a>
       <Navbar />
-      <main className="flex-1">
+      <main id="main" ref={mainRef} tabIndex={-1} className="flex-1 outline-none">
         <PageErrorBoundary pathname={pathname}>
           <Suspense fallback={<PageLoading />}>
             <Routes>
