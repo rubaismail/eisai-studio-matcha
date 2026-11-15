@@ -16,6 +16,7 @@ Admin -|> Customer
 
 rectangle "Eisai Studio (website + mobile app)" {
   usecase "Browse menu" as UC_Menu
+  usecase "Search menu\n(partial name or ingredient)" as UC_Search
   usecase "View seasonal drinks" as UC_Seasonal
   usecase "View drink details" as UC_Details
   usecase "Read our story, products,\nlocation and privacy policy" as UC_Info
@@ -45,6 +46,7 @@ Visitor --> UC_Login
 Visitor --> UC_Reset
 
 UC_Details .> UC_Menu : <<extend>>
+UC_Search .> UC_Menu : <<extend>>
 
 Customer --> UC_Account
 Customer --> UC_Delete
