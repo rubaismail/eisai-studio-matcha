@@ -189,3 +189,22 @@ test('Find us scrolls to the schedule, again on a repeat click', async () => {
   // jsdom has no scrollIntoView of its own.
   delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
 });
+
+// Issue #27: each page gets its own tab title, and keyboard users can skip the header.
+test('sets a page title for each route', async () => {
+  const router = renderApp('/menu');
+  await waitFor(() => expect(document.title).toBe('Menu | Eisai Studio'));
+  await router.navigate('/our-story');
+  await waitFor(() => expect(document.title).toBe('Our story | Eisai Studio'));
+  await router.navigate('/');
+  await waitFor(() => expect(document.title).toBe('Eisai Studio'));
+});
+
+test('skip link is the first focusable element and moves focus to main', () => {
+  renderApp('/menu');
+  const skip = screen.getByRole('link', { name: 'Skip to main content' });
+  const focusable = document.querySelectorAll<HTMLElement>('a[href], button');
+  expect(focusable[0]).toBe(skip);
+  fireEvent.click(skip);
+  expect(document.activeElement).toBe(screen.getByRole('main'));
+});
