@@ -18,7 +18,9 @@ The sequence and activity diagrams follow the code in `apps/api/src` (routes, co
 With Java installed, from the repository root:
 
 ```sh
-java -jar plantuml.jar -tpng docs/diagrams/*.puml
+java -jar plantuml.jar -Playout=smetana -tpng docs/diagrams/*.puml
 ```
+
+`-Playout=smetana` uses PlantUML's built-in layout, so Graphviz doesn't need to be installed. Without it, the ERD, class and use-case diagrams need Graphviz (`brew install graphviz`). The new images were exported with PlantUML 1.2024.7.
 
 Get `plantuml.jar` from [plantuml.com/download](https://plantuml.com/download). The VS Code "PlantUML" extension can also preview and export.
