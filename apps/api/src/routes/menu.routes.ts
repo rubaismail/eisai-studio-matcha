@@ -14,6 +14,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 const router = Router();
 
 // GET /api/menu - List available menu items
+// GET /api/menu?search=mat - Search them (partial, case-insensitive)
 router.get('/', listMenu);
 
 // GET /api/menu/seasonal - List available seasonal items

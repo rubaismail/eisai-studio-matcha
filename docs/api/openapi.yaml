@@ -423,17 +423,31 @@ paths:
   /menu:
     get:
       operationId: listMenu
-      summary: List available menu items
+      summary: List or search available menu items
       description: >-
         Public list sorted by name ascending. Exclude isAvailable=false. No pagination in this
-        baseline; an empty list is {"items": []}.
+        baseline; an empty list is {"items": []}. With the optional search parameter, the server
+        returns only items whose name, description or inspiredBy contains the text (partial,
+        case-insensitive match, e.g. "mat" finds "Iced Matcha Latte"). Characters such as . * ( )
+        are matched literally. A blank search returns the full list.
       tags:
         - Menu
       security: []
       x-implementation-status: implemented
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: mat
+          description: >-
+            Text to look for. Surrounding spaces are trimmed; after trimming it must be at most 100
+            characters. Send it once; a repeated search parameter returns 400.
       responses:
         '200':
-          description: List available menu items
+          description: List available menu items (only matches when search is given)
           content:
             application/json:
               schema:
@@ -455,6 +469,14 @@ paths:
                     isAvailable: true
                     createdAt: '2026-10-20T12:00:00.000Z'
                     updatedAt: '2026-10-20T12:00:00.000Z'
+        '400':
+          description: The search parameter was repeated or is longer than 100 characters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: search must be 100 characters or fewer
         '500':
           $ref: '#/components/responses/ServerError'
     post:

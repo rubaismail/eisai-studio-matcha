@@ -141,8 +141,36 @@ function validateMenuPayload(payload: Record<string, unknown>, { allowCreate }: 
 
 }
 
-export async function listMenu(_req: Request, res: Response) {
-  const items = await MenuItem.find({ isAvailable: true }).sort({ name: 1 });
+// Longest search the API accepts. Longer text can't match a drink anyway.
+export const MAX_SEARCH_LENGTH = 100;
+
+// Treat every character literally, so "1.5" or "(oat)" is plain text, not a pattern.
+function escapeRegex(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// GET /api/menu?search=text - available items, optionally narrowed by a search.
+// The search is case-insensitive and matches any part of the name, description
+// or "inspired by" text, so "mat" finds "Iced Matcha Latte".
+export async function listMenu(req: Request, res: Response) {
+  const { search } = req.query;
+  if (search !== undefined && typeof search !== 'string') {
+    res.status(400).json({ error: 'search must be a single text value' });
+    return;
+  }
+  const text = (search ?? '').trim();
+  if (text.length > MAX_SEARCH_LENGTH) {
+    res.status(400).json({ error: `search must be ${MAX_SEARCH_LENGTH} characters or fewer` });
+    return;
+  }
+
+  const filter: Record<string, unknown> = { isAvailable: true };
+  if (text) {
+    const pattern = new RegExp(escapeRegex(text), 'i');
+    filter.$or = [{ name: pattern }, { description: pattern }, { inspiredBy: pattern }];
+  }
+
+  const items = await MenuItem.find(filter).sort({ name: 1 });
   res.json({ items });
 }
 

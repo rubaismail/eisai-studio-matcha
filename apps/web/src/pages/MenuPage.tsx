@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getMenu } from '../api/menu';
+import { getMenu, MAX_SEARCH_LENGTH } from '../api/menu';
 import searchIcon from '../assets/search-icon.svg';
 import DrinkTile from '../components/DrinkTile';
 import { focusRing, label, primaryButton } from '../components/styles';
@@ -37,13 +37,11 @@ const classicMatchas = [
   { name: 'Shun Midori', notes: 'Mellow Umami, Creamy, Pistachio' },
 ];
 
-function matchesSearch(item: MenuItem, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return [item.name, item.inspiredBy, item.description].some((text) =>
-    text?.toLowerCase().includes(q),
-  );
-}
+// Wait this long after the last keystroke before asking the server to search.
+export const SEARCH_DELAY_MS = 250;
+
+// The server's answer for one search text.
+type SearchResult = { text: string; items: MenuItem[]; failed: boolean };
 
 const stateBox = 'flex flex-col items-start gap-4 border-t border-ink py-14';
 const stateTitle =
@@ -59,7 +57,10 @@ export default function MenuPage() {
   const [attempt, setAttempt] = useState(0);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [search, setSearch] = useState<SearchResult | null>(null);
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchText = query.trim();
 
   useEffect(() => {
     let active = true;
@@ -77,21 +78,59 @@ export default function MenuPage() {
     };
   }, [attempt]);
 
+  // Search on the server (partial, case-insensitive match). Until the answer
+  // arrives, the previous results stay on screen.
+  useEffect(() => {
+    if (!searchText) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      getMenu(searchText)
+        .then((found) => {
+          if (active)
+            setSearch({ text: searchText, items: found, failed: false });
+        })
+        .catch(() => {
+          if (active) setSearch({ text: searchText, items: [], failed: true });
+        });
+    }, SEARCH_DELAY_MS);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchText, searchAttempt]);
+
   function retry() {
     setStatus('loading');
     setAttempt((n) => n + 1);
   }
 
+  function changeQuery(value: string) {
+    setQuery(value);
+    // A blank box shows the whole menu, so forget the old results.
+    if (!value.trim()) setSearch(null);
+  }
+
+  function clearSearch() {
+    changeQuery('');
+    searchRef.current?.focus();
+  }
+
+  // Keeps the error up until the new answer arrives.
+  function retrySearch() {
+    setSearchAttempt((n) => n + 1);
+  }
+
   const current = filters.find((f) => f.id === filter)!;
-  const shown = items.filter(
-    (item) => current.has(item) && matchesSearch(item, query),
-  );
   const ready = status === 'ready';
   const emptyMenu = ready && items.length === 0;
+  const searching = searchText !== '' && search !== null;
+  const searchFailed = ready && searching && search.failed;
+  const matches = searching ? search.items : items;
+  const shown = ready && !searchFailed ? matches.filter(current.has) : [];
 
   let count = '';
   if (status === 'loading') count = 'Loading the menu…';
-  else if (ready && !emptyMenu)
+  else if (ready && !emptyMenu && !searchFailed)
     count = `${shown.length} ${shown.length === 1 ? 'drink' : 'drinks'}`;
 
   return (
@@ -183,7 +222,8 @@ export default function MenuPage() {
                 ref={searchRef}
                 type="search"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => changeQuery(e.target.value)}
+                maxLength={MAX_SEARCH_LENGTH}
                 placeholder="Search drinks"
                 className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-placeholder"
               />
@@ -237,21 +277,36 @@ export default function MenuPage() {
           </div>
         )}
 
-        {ready && !emptyMenu && shown.length === 0 && (
+        {searchFailed && (
+          <div className={stateBox}>
+            <p className={`${label} text-ink-muted`}>Search</p>
+            <h2 className={stateTitle}>A little hiccup.</h2>
+            <p className={stateText}>
+              We couldn’t search the menu right now. Check your connection and
+              try again.
+            </p>
+            <button
+              type="button"
+              onClick={retrySearch}
+              className={primaryButton}
+            >
+              Try again →
+            </button>
+          </div>
+        )}
+
+        {ready && !emptyMenu && !searchFailed && shown.length === 0 && (
           <div className={stateBox}>
             <h2 className={stateTitle}>No matches this time.</h2>
-            {query.trim() ? (
+            {searching ? (
               <>
                 <p className={stateText}>
-                  No drinks match “{query.trim()}”. Try a different search or
+                  No drinks match “{search.text}”. Try a different search or
                   clear it to see the menu.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery('');
-                    searchRef.current?.focus();
-                  }}
+                  onClick={clearSearch}
                   className={primaryButton}
                 >
                   Clear search

@@ -1,8 +1,15 @@
 import { apiGet, apiRequest, apiUpload } from './client';
 import type { MenuItem } from '../types/menu';
 
-export async function getMenu(): Promise<MenuItem[]> {
-  const data = await apiGet<{ items: MenuItem[] }>('/menu');
+// Longest search the API accepts (MAX_SEARCH_LENGTH in the API's menu controller).
+export const MAX_SEARCH_LENGTH = 100;
+
+// Available items. With a search, the server returns only the drinks whose
+// name, description or "inspired by" text contains it (any case).
+export async function getMenu(search?: string): Promise<MenuItem[]> {
+  const text = search?.trim();
+  const path = text ? `/menu?search=${encodeURIComponent(text)}` : '/menu';
+  const data = await apiGet<{ items: MenuItem[] }>(path);
   return data.items;
 }
 
