@@ -50,9 +50,9 @@
   - [Architecture](#%EF%B8%8F-architecture)
   - [Repository map](#%EF%B8%8F-repository-map)
   - [Run it locally](#-run-it-locally)
-  - [Configuration](#-configuration)
+  - [Configuration](#%EF%B8%8F-configuration)
   - [Deploying](#-deploying)
-  - [Running the server](#-running-the-server)
+  - [Running the server](#%EF%B8%8F-running-the-server)
   - [Mobile app](#-mobile-app)
   - [Known gaps and next steps](#-known-gaps-and-next-steps)
   - [Gotchas we learned the hard way](#-gotchas-we-learned-the-hard-way)
@@ -123,7 +123,7 @@ Anyone can create a customer account on the website. Staff (admin) access is del
 To add a staff member:
 
 1. They create an account on [eisaistudio.com](https://eisaistudio.com/register) and verify their email.
-2. A developer with server access promotes that account to admin (steps in [Running the server](#-running-the-server)).
+2. A developer with server access promotes that account to admin (steps in [Running the server](#%EF%B8%8F-running-the-server)).
 3. They sign out and back in to see **Menu editor**.
 
 To remove someone's access, a developer demotes or deletes their account the same way.
@@ -145,7 +145,7 @@ To remove someone's access, a developer demotes or deletes their account the sam
 | What you see                                          | Likely cause                                                           | Who fixes it                                                                                      |
 | ----------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | The whole site won't load                             | Server stopped, AWS billing problem or spend limit hit, domain expired | Check **AWS Settings → Billing** and that the domain is paid in GoDaddy, then call your developer |
-| Site loads but the menu says "Couldn't load the menu" | The API stopped                                                        | Developer: [Running the server](#-running-the-server)                                             |
+| Site loads but the menu says "Couldn't load the menu" | The API stopped                                                        | Developer: [Running the server](#%EF%B8%8F-running-the-server)                                    |
 | Customers don't get verification emails               | Mailtrap token, sending limit or account issue                         | Check your Mailtrap dashboard for errors, then call your developer                                |
 | Menu editor won't let you in                          | Not signed in with the staff account, or it lost the admin role        | Developer can check the account                                                                   |
 | Everything suddenly says "Access Denied" in AWS       | A spend limit was reached                                              | Project owner checks **AWS Settings → Billing**                                                   |
