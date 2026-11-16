@@ -1,6 +1,6 @@
 # Lightsail staging deployment
 
-Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. The Eisai project's selected Region is US East (Ohio), `us-east-2`, using AWS profile `eisai`. All Regional resources must remain in this Region. The user selected Lightsail. Production runs on a 2 GB Lightsail instance at `eisaistudio.com` / `api.eisaistudio.com`, with a $20/month budget alert and daily automatic snapshots; see [production-handoff.md](production-handoff.md#ownership-and-billing) for billing, backups and the remaining maintenance-owner confirmation. These instructions do not provision AWS resources.
+Issue #22. Target: one client-owned Linux Lightsail instance for Nginx, the built React site, one Node API process and authenticated MongoDB. The Eisai project's selected Region is US East (Ohio), `us-east-2`, using AWS profile `eisai`. All Regional resources must remain in this Region. The user selected Lightsail. Production runs on a 2 GB Lightsail instance at `eisaistudio.com` / `api.eisaistudio.com`, with a $20/month budget alert and daily automatic snapshots; see [production-handoff.md](production-handoff.md#billing-email-and-backups) for billing and backups. These instructions do not provision AWS resources.
 
 ## Production server as built (November 2026)
 
@@ -169,7 +169,7 @@ PR #71 implements `POST /api/auth/forgot-password` and `POST /api/auth/reset-pas
 
 ## Server prerequisites
 
-1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing (done for production; see [Ownership and billing](production-handoff.md#ownership-and-billing)). Choose a supported Ubuntu LTS image compatible with the selected MongoDB release (currently Ubuntu 22.04; see "Why Ubuntu 22.04 and not 24.04" above). Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
+1. Obtain individual access to the client-owned AWS account (#2). Confirm a monthly budget, named maintenance owner and AWS billing alert before purchasing (done for production; see [Billing](production-handoff.md#billing)). Choose a supported Ubuntu LTS image compatible with the selected MongoDB release (currently Ubuntu 22.04; see "Why Ubuntu 22.04 and not 24.04" above). Start with enough RAM for MongoDB plus Node and build tools; measure before selecting/resizing the bundle. Keep staging and production databases and credentials separate.
 2. Attach a static IP, select a staging hostname and point its DNS to that IP. The template assumes the website and API share one HTTPS origin. Permit public TCP 80/443; permit SSH only from authorized administrator IPs. Apply the same restrictions to IPv6 if enabled. Do not expose 4000 or 27017. Configure the host firewall too.
 3. Install Node 24 and npm, Nginx, Git, MongoDB server, MongoDB Database Tools and a certificate renewal client using their official instructions for that OS. Install Node at `/usr/bin/node`, or adjust both paths in the service file. Do not use a developer's nvm path in systemd. Run `node --version` before building.
 4. Configure MongoDB persistent storage, bind only to loopback and enable authorization. Bootstrap the database administrator locally, then create an application user with `readWrite` on `eisai_staging` only. Use a separate backup identity. Enable `mongod` on boot. Keep staging test data non-sensitive. Atlas remains local-development-only for this project.
@@ -223,7 +223,7 @@ If smoke tests fail, switch the symlink back to the recorded previous release an
 
 ## Backups and tested restore
 
-**Production today:** Lightsail automatic snapshots of the whole server run daily at 03:00 UTC, and Lightsail keeps the last seven. How to test a restore from a snapshot, and the status of the `mongodump` setup below, are tracked in [production-handoff.md](production-handoff.md#unfinished-production-work).
+**Production today:** Lightsail automatic snapshots of the whole server run daily at 03:00 UTC, and Lightsail keeps the last seven. How to restore from a snapshot is in [production-handoff.md](production-handoff.md#backups).
 
 Use MongoDB Database Tools, a separate restricted backup identity and a private backup S3 bucket separate from image storage. Enable encryption, versioning and lifecycle retention according to the client's agreed retention policy. Restrict delete permissions so application credentials cannot delete backups. Enable Lightsail snapshots as an additional recovery layer, not the only backup.
 
@@ -255,7 +255,7 @@ Production status (November 13, 2026). Evidence: [live acceptance test](test-res
 - [x] Provision first admin through [the restricted admin process](admin-account-setup.md). Test create/edit/hide/unhide/delete with test menu data; customer JWT cannot access admin routes.
 - [ ] Upload a valid image larger than 1 MiB but no larger than 5 MiB, confirm its public URL loads, and reject an oversized image. Remove disposable test objects through an authorized maintenance identity.
 - [ ] Verify proxy-aware rate limits cannot be bypassed with forged forwarding headers; check CORS from the actual website and configure Flutter's API base URL.
-- [ ] Test certificate renewal, service reboot recovery, alerting, backup restore and rollback. Billing alerting and daily snapshots are set up (#22); record the remaining results in [production-handoff.md](production-handoff.md#not-yet-verified).
+- [ ] Test certificate renewal, service reboot recovery, alerting, backup restore and rollback. Billing alerting and daily snapshots are set up (#22); restore steps are in [production-handoff.md](production-handoff.md#backups).
 
 ## References
 

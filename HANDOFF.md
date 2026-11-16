@@ -149,7 +149,7 @@ To remove someone's access, a developer demotes or deletes their account the sam
 | Menu editor won't let you in                          | Not signed in with the staff account, or it lost the admin role        | Developer can check the account                                                                   |
 | Everything suddenly says "Access Denied" in AWS       | A spend limit was reached                                              | Project owner checks **AWS Settings → Billing**                                                   |
 
-Before a developer does anything risky, there are **daily backups of the whole server** (the last seven days). See [Backups](docs/production-handoff.md#unfinished-production-work).
+Before a developer does anything risky, there are **daily backups of the whole server** (the last seven days). See [Backups](docs/production-handoff.md#backups).
 
 ## ⚖️ Before adding new features
 

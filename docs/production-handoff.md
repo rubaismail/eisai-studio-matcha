@@ -6,13 +6,13 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 
 ## What is live
 
-| Component     | Where                                             | Notes                                                                                                                                                                                                                                                                                                |
-| ------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                                                                               |
-| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`. Empty: nothing seeded.                                                                                                                                                                                                                                                  |
-| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload not yet tested live.                                                                                                                                                                                                                                                     |
-| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                                                                                    |
-| DNS           | GoDaddy                                           | `A @ → 18.189.160.224` (website), `CNAME www → @`, `A api → 18.189.160.224`, plus Mailtrap records `mt29` (client account), `mt98` (old personal account, to delete), `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
+| Component     | Where                                             | Notes                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API           | `https://api.eisaistudio.com/api/...`             | Node 24, systemd service `eisai-api`, behind Nginx. Let's Encrypt TLS, auto-renewed by certbot (first certificate expires 2027-02-04).                                                                                                    |
+| Database      | MongoDB 8.0 on the same Lightsail instance        | Database `eisai_production`: the live menu and customer accounts.                                                                                                                                                                         |
+| Image storage | Lightsail bucket `eisai-menu-images-8402db`       | Public object reads. Upload tested live November 12, 2026.                                                                                                                                                                                |
+| Server        | Lightsail `eisai-prod`, Ubuntu 22.04, `us-east-2` | Static IP `18.189.160.224`. SSH only through the Lightsail console's browser SSH.                                                                                                                                                         |
+| DNS           | GoDaddy                                           | `A @ → 18.189.160.224` (website), `CNAME www → @`, `A api → 18.189.160.224`, plus Mailtrap records `mt29`, `mt-link`, `rwmt1._domainkey`, `rwmt2._domainkey`. Microsoft 365 email records (MX, autodiscover, SPF, etc.) were not changed. |
 
 ### Verified on November 7, 2026
 
@@ -21,62 +21,42 @@ This repository is public. Never put secrets, AWS account IDs, or customer data 
 - `GET /api/admin/menu` with no login → 401.
 - `npm run check` (lint, type checks, all tests, both builds) passed on the server for commit `d9d91e0`.
 - Live email through the client's Mailtrap account: register → resend-verification → verification email received → verify link → `Email verified`. A direct Mailtrap API send from the server also succeeded.
-- A verified account was promoted to `admin` with the database shell ([admin-account-setup.md](admin-account-setup.md)). It is a team member's temporary account; see the credentials checklist below.
+- A verified account was promoted to `admin` with the database shell ([admin-account-setup.md](admin-account-setup.md)).
 
 ### Verified on November 12–13, 2026
 
 - Website sign-up, delivered verification email, verify, login, logout, forgot/reset password and account deletion; admin menu create/edit/hide/delete with photo upload; public bucket images; anonymous and customer requests rejected from admin routes. Evidence: [live acceptance test](test-results/live-acceptance-2026-11-12.md).
 - From outside the server, only HTTPS (443) answers. MongoDB (27017), the API port (4000) and SSH (22) are not publicly reachable.
-- Lightsail automatic snapshots are enabled and succeeding daily (see [Backups](#unfinished-production-work)).
-- AWS budget alert created (see [Ownership and billing](#ownership-and-billing)).
+- Lightsail automatic snapshots are enabled and succeeding daily (see [Backups](#backups)).
+- AWS budget alert created (see [Billing](#billing)).
 
-### Not yet verified
+## Billing, email and backups
 
-- Reboot recovery and a certificate renewal dry run (`sudo certbot renew --dry-run`).
-- Restoring from a backup (see the backups item below).
-- The rest of the [live acceptance checklist](deployment.md#live-acceptance-checklist).
+Reference notes. Nothing here needs action unless something changes.
 
-## Must change before handoff to the client
+### Billing
 
-Things set up temporarily under a team member's identity, or not finished yet.
-
-### Ownership and billing
-
-- [ ] **AWS plan:** the project is on the AWS **Free plan** ($100 credits, ends **April 26, 2027**, or earlier if credits run out at about $13/month). Upgrade to the paid plan in **AWS Settings → Billing** before then, or the server, database and bucket are lost.
-- [ ] Make sure the client owns the AWS project and invite maintainers as team members in AWS Settings. Remove student team members' access at the end of the engagement.
-- [x] **Budget alert** (November 13, 2026): AWS Budgets `Eisai-Monthly-Cost`, **$20/month**, credits and refunds excluded so it tracks real usage even while credits pay the bill. Emails `contact@eisaistudio.com` when actual spend passes 85% and 100%, and when spend is forecast to pass 100%. Free (alerts only). Normal spend is about $13–15/month. View or change it in the **Billing and Cost Management console → Budgets**. Alerts are checked about once a day.
-- [ ] **Spend limit:** after upgrading to the paid plan, set one in **AWS Settings → Billing** (project owner only). Set it well above normal spend, for example $50. **If the limit is hit, AWS pauses the project and the website and API go down,** so the budget alert above is the early warning and the spend limit is only a last-resort cap.
-- [ ] GoDaddy is currently accessed through delegate access. Confirm the client keeps full ownership, and remove delegate access when the work is done.
+- The AWS project is on the **Free plan** ($100 credits, ends **April 26, 2027**, or earlier if credits run out at about $13/month). Upgrade to the paid plan in **AWS Settings → Billing** before then, or the server, database and bucket are lost.
+- **Budget alert:** AWS Budgets `Eisai-Monthly-Cost`, **$20/month**, credits and refunds excluded so it tracks real usage even while credits pay the bill. Emails `contact@eisaistudio.com` when actual spend passes 85% and 100%, and when spend is forecast to pass 100%. Normal spend is about $13–15/month. View or change it in the **Billing and Cost Management console → Budgets**.
+- **Spend limit (paid plan only):** set in **AWS Settings → Billing** by the project owner. Keep it well above normal spend, for example $50. **If the limit is hit, AWS pauses the project and the website and API go down.**
 
 ### Email (Mailtrap)
 
-Mailtrap now runs on the client's account (`contact@eisaistudio.com`). Done on November 7, 2026:
+- Mailtrap runs on the client's account (`contact@eisaistudio.com`), sending domain `eisaistudio.com` (verified). GoDaddy records it needs: `CNAME mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` and `_dmarc`. Don't delete them.
+- The server uses API token `eisai-prod-api` (Admin on `eisaistudio.com` only), set as `MAILTRAP_TOKEN`. To replace it, create a new token with the same permissions, set it with `sudo eisai-set-secrets` (see the paste warning under [Day-to-day operations](#day-to-day-operations)), confirm email still sends, then delete the old token.
+- `EMAIL_FROM` is `no-reply@eisaistudio.com`. Change it to a real Microsoft 365 mailbox if the client wants replies.
 
-- Sending domain `eisaistudio.com` (not `www.`) is **Verified**, with sender information and the compliance check complete. Its domain verification record is `CNAME mt29 → smtp.mailtrap.live` in GoDaddy. DKIM (`rwmt1`/`rwmt2._domainkey`), DMARC (`_dmarc`) and `mt-link` are the same for every Mailtrap account.
-- API token `eisai-prod-api`: Admin on `eisaistudio.com` only (Mailtrap ticks "View Email Content" automatically with Admin), never expires. It is set on the server as `MAILTRAP_TOKEN`.
+### Backups
 
-Remaining:
+- Lightsail **automatic snapshots** of `eisai-prod` run daily at 03:00 UTC, and Lightsail keeps the seven most recent. Each snapshot is the whole server: code, MongoDB data and `/etc/eisai` secrets.
+- **To restore** (or test a restore): Lightsail console → **Snapshots** → latest `eisai-prod` snapshot → **Create new instance** (same `us-east-2`, same 2 GB bundle). For a test, don't attach the static IP, check `curl -s localhost:4000/api/health` in browser SSH, then delete the test instance. For a real restore, move the static IP `eisai-prod-ip` to the new instance.
+- Snapshots live in the same AWS project, so they are lost if the project is. For a stronger setup, add a daily `mongodump` to a private bucket ([deployment.md](deployment.md#backups-and-tested-restore)).
 
-- [ ] Delete the `eisaistudio.com` domain and its token from the team member's personal Mailtrap account. Then delete the old verification record `CNAME mt98` in GoDaddy. Do **not** delete `mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` or `_dmarc`.
-- [ ] To replace the token later, create a new one with the same permissions, set it with `sudo eisai-set-secrets` (see the paste warning under [Day-to-day operations](#day-to-day-operations)), confirm email still sends, then delete the old token.
-- [ ] `EMAIL_FROM` is `no-reply@eisaistudio.com`. If the client wants replies, change it to a real Microsoft 365 mailbox.
+### Other notes
 
-### Credentials to rotate or hand over
-
-- [ ] **Bucket access key:** created by a team member. Create a new key in Lightsail (bucket → Permissions), set it with `sudo eisai-set-secrets`, then delete the old key. A Lightsail bucket allows at most two keys.
-- [ ] **Certbot notification email:** change it to the client's or maintainer's address: `sudo certbot update_account --email NEW_ADDRESS`.
-- [ ] **MongoDB admin credentials** live in `/etc/eisai/mongo-admin.env` on the server (root-only). Copy them into the client's password manager. The app uses a separate, limited user.
-- [ ] `JWT_SECRET` and the database app password were generated on the server and never left it. No rotation is needed unless the server is compromised. Rotating `JWT_SECRET` logs everyone out.
-- [ ] **Temporary developer admin accounts:** remove any admin accounts team members made for testing. List admins with `db.users.find({role: "admin"}, {email: 1})` in the database shell (see Day-to-day operations), then demote with `db.users.updateOne({email: "DEV_EMAIL"}, {$set: {role: "customer"}})` or delete with `db.users.deleteOne({email: "DEV_EMAIL"})`. Only the client's own admin account should be left.
-
-### Unfinished production work
-
-- [x] **Backups (server snapshots):** Lightsail **automatic snapshots** of `eisai-prod` are on, taken daily at 03:00 UTC (11 PM / 10 PM Eastern); Lightsail keeps the seven most recent. Confirmed succeeding daily since November 8, 2026. Each snapshot is the whole server: code, MongoDB data and `/etc/eisai` secrets. Snapshot storage adds a small monthly cost.
-- [ ] **Test a restore** (about 20 minutes, then delete the copy): Lightsail console → **Snapshots** → latest `eisai-prod` automatic snapshot → **Create new instance** (same `us-east-2`, same 2 GB bundle). Don't attach the static IP or change DNS, so the copy gets no real traffic. Connect with browser SSH, check `curl -s localhost:4000/api/health` and the menu count in the database shell, then **delete the test instance** so it stops costing money. Record the date and result here.
-- [ ] **Optional, stronger backups:** a daily `mongodump` to a private backup bucket, so the database can be restored without the whole server ([deployment.md](deployment.md#backups-and-tested-restore)). Snapshots alone are lost if the AWS project itself is lost.
-- [ ] **Monitoring:** nothing alerts if the server or API goes down. Add Lightsail metric alarms (CPU, status checks) and an uptime check on `/api/health`.
-- [ ] **OS end of support:** Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
-- [ ] Optional hardening: the API still shows its Nginx version (`Server: nginx/1.18.0 (Ubuntu)`). Add `server_tokens off;` to the `server` blocks in `/etc/nginx/sites-available/eisai-api`, then `sudo nginx -t && sudo systemctl reload nginx`. The website already hides it.
+- MongoDB admin credentials are in `/etc/eisai/mongo-admin.env` on the server (root-only). The app uses a separate, limited user.
+- `JWT_SECRET` and the database app password were generated on the server and never left it. Rotating `JWT_SECRET` logs everyone out.
+- Ubuntu 22.04 standard support ends April 2027. Moving to a newer Ubuntu depends on MongoDB fixing the kernel 6.19+ bug ([why](deployment.md#why-ubuntu-2204-and-not-2404)).
 
 ## Privacy and legal
 
