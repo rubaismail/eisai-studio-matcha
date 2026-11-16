@@ -50,6 +50,7 @@ Built by **Team 11**, led by **Ruba Ismail**.
 
 ## 🗺️ Where to find things
 
+- **Taking over the site (Eisai Studio or a new developer):** [HANDOFF.md](HANDOFF.md)
 - **Tasks and dates:** [Team 11 Roadmap](https://github.com/users/rubaismail/projects/13/views/1?groupedBy%5BcolumnId%5D=425722583)
 - **Where your code goes and how to open a PR:** [docs/team-guide.md](docs/team-guide.md)
 - **API endpoints, authentication and examples:** [API reference](docs/api/README.md)
