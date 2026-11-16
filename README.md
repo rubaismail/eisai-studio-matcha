@@ -28,7 +28,7 @@
 
 This is the source code for **[eisaistudio.com](https://eisaistudio.com)**: the website, API and mobile app for **Eisai Studio**, a matcha pop-up at UCF.
 
-It started as our **COP 4331C Large Project**. Instead of building a pretend app for a pretend business, we decided to find a real client and build something they'd actually use. Eisai said yes, so everything here ships to real customers. 💜
+It started as our **COP 4331C Large Project**. Instead of building a pretend app for a pretend business, we decided to find a real client and build something they'd actually use. Eisai said yes, so everything here ships to real customers.
 
 ## 🎋 The team
 
