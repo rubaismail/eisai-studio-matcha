@@ -45,7 +45,6 @@
   - [Costs and key dates](#-costs-and-key-dates)
   - [If something looks broken](#-if-something-looks-broken)
   - [Before adding new features](#%EF%B8%8F-before-adding-new-features)
-  - [Handoff checklist](#-handoff-checklist)
 - **For developers**
   - [Architecture](#%EF%B8%8F-architecture)
   - [Repository map](#%EF%B8%8F-repository-map)
@@ -87,7 +86,7 @@ These are the services the site depends on. **Eisai Studio should own every one 
 | **GoDaddy**               | The `eisaistudio.com` domain and its DNS records | GoDaddy account                                                                                                                               | Website and email addresses stop resolving                                   |
 | **Mailtrap**              | Sends verification and password-reset emails     | Mailtrap account `contact@eisaistudio.com`                                                                                                    | Customers can't verify accounts or reset passwords                           |
 | **Microsoft 365**         | Your business email inbox                        | Unchanged by this project                                                                                                                     | Not affected by the website                                                  |
-| **GitHub**                | The source code                                  | This repository. Ask for it to be transferred to an Eisai-owned account, or keep a fork                                                       | The site keeps running; changing it gets harder                              |
+| **GitHub**                | The source code                                  | This repository (public). A new developer can request access to it                                                                            | The site keeps running from the server                                       |
 | **Website admin account** | Opens the menu editor                            | An `eisaistudio.com` account with the admin role                                                                                              | A developer can promote a new account ([how](#-giving-someone-staff-access)) |
 
 > [!TIP]
@@ -137,7 +136,7 @@ To remove someone's access, a developer demotes or deletes their account the sam
 | Every month                           | AWS budget alert `Eisai-Monthly-Cost` emails `contact@eisaistudio.com` if spend heads past **$20** | If an alert arrives, ask your developer what changed. Change the amount in the **Billing and Cost Management console → Budgets**.                         |
 | **Before April 26, 2027**             | The AWS **Free plan credits end** (sooner if the $100 credit runs out)                             | ⚠️ **Upgrade to the paid plan in AWS Settings → Billing.** If you don't, AWS closes the free plan and **the server, database and photos are deleted.**    |
 | After upgrading                       | You can set a spend limit                                                                          | Set it well above normal spend, for example $50. **If the limit is hit, AWS pauses the project and the website goes down**, so don't set it close to $15. |
-| February 9, 2027 (and every ~90 days) | The website's security certificate renews                                                          | Nothing. It renews automatically. A developer can test the renewal (see [checklist](#-handoff-checklist)).                                                |
+| February 9, 2027 (and every ~90 days) | The website's security certificate renews                                                          | Nothing. It renews automatically.                                                                                                                         |
 | **April 2027**                        | Ubuntu 22.04, the server's operating system, reaches end of standard support                       | Have a developer plan the upgrade ([details](#-known-gaps-and-next-steps)).                                                                               |
 
 ## 🩹 If something looks broken
@@ -165,31 +164,6 @@ Some common add-ons bring legal requirements with them. Plan for them **before**
 - ♿ **Accessibility** is the biggest lawsuit risk for Florida business websites. Keep new pages keyboard-friendly with alt text, and **don't install "accessibility overlay" widgets**.
 
 Whenever what the site collects or shares changes, the privacy policy must be updated in the same release. Full details: [Privacy and legal](docs/production-handoff.md#privacy-and-legal). This is general guidance from the team, not legal advice.
-
-## ✅ Handoff checklist
-
-Things to finish so Eisai fully owns the site and no student account is needed. Step-by-step instructions for each are in [production-handoff.md](docs/production-handoff.md#must-change-before-handoff-to-the-client).
-
-**Eisai Studio (owner)**
-
-- [ ] Confirm Eisai owns the AWS project. Invite the future developer as a team member in **AWS Settings**, then remove student team members.
-- [ ] **Upgrade AWS to the paid plan** before April 26, 2027, then set a spend limit (for example $50).
-- [ ] Confirm full ownership of the GoDaddy account and remove the team's delegate access.
-- [ ] Store every login from [Your accounts](#-your-accounts) in a password manager, with two-factor sign-in on.
-- [ ] Decide whether customer emails should come from `no-reply@eisaistudio.com` (current) or a real inbox that accepts replies.
-- [ ] Decide who maintains the site next and add them to [Who built this](#-who-built-this).
-
-**Developer (before the team leaves)**
-
-- [ ] Rotate the photo bucket access key so it isn't the one a student created.
-- [ ] Change the certificate notification email to Eisai's or the maintainer's address.
-- [ ] Hand the MongoDB admin credentials (`/etc/eisai/mongo-admin.env` on the server) to Eisai's password manager.
-- [ ] Remove every student's temporary admin account; leave only Eisai's.
-- [ ] Remove the old Mailtrap domain from the team member's personal account and delete GoDaddy record `mt98` (keep `mt29`, `mt-link`, `rwmt1`/`rwmt2._domainkey` and `_dmarc`).
-- [ ] Test restoring a backup snapshot once, and record the date.
-- [ ] Run `sudo certbot renew --dry-run` and reboot the server once to confirm it comes back by itself.
-- [ ] Turn off Mailtrap click tracking for account emails.
-- [ ] Transfer the GitHub repository to Eisai, or give Eisai owner access.
 
 ---
 
@@ -262,7 +236,7 @@ docs/
   diagrams/       ERD, class, use-case, sequence and activity diagrams (.puml + .png)
   test-results/   Lighthouse, accessibility, live acceptance and mobile test evidence
   deployment.md            How the server is built and updated (the long version)
-  production-handoff.md    Live status, remaining checklist, day-to-day commands
+  production-handoff.md    Live status and day-to-day commands
 scripts/      npm run setup
 ```
 
@@ -378,16 +352,16 @@ Performance and accessibility baselines to compare against: [Lighthouse results]
 
 ## 📚 All the other docs
 
-| Doc                                                               | Read it when                                                     |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [README](README.md)                                               | Setting up a laptop                                              |
-| [Team guide](docs/team-guide.md)                                  | Learning where code goes and the PR workflow                     |
-| [API docs](docs/api/README.md) · [OpenAPI](docs/api/openapi.yaml) | Changing or calling an endpoint                                  |
-| [Deployment](docs/deployment.md)                                  | Understanding how the server is built and updated                |
-| [Production handoff](docs/production-handoff.md)                  | Day-to-day operations, the detailed checklist, privacy and legal |
-| [Admin account setup](docs/admin-account-setup.md)                | The rules around staff accounts                                  |
-| [Diagrams](docs/diagrams/README.md)                               | Getting the big picture                                          |
-| [Mobile release](docs/mobile-demo.md)                             | Building or installing the Android app                           |
+| Doc                                                               | Read it when                                      |
+| ----------------------------------------------------------------- | ------------------------------------------------- |
+| [README](README.md)                                               | Setting up a laptop                               |
+| [Team guide](docs/team-guide.md)                                  | Learning where code goes and the PR workflow      |
+| [API docs](docs/api/README.md) · [OpenAPI](docs/api/openapi.yaml) | Changing or calling an endpoint                   |
+| [Deployment](docs/deployment.md)                                  | Understanding how the server is built and updated |
+| [Production handoff](docs/production-handoff.md)                  | Day-to-day operations, privacy and legal          |
+| [Admin account setup](docs/admin-account-setup.md)                | The rules around staff accounts                   |
+| [Diagrams](docs/diagrams/README.md)                               | Getting the big picture                           |
+| [Mobile release](docs/mobile-demo.md)                             | Building or installing the Android app            |
 
 ---
 
@@ -395,11 +369,10 @@ Performance and accessibility baselines to compare against: [Lighthouse results]
 
 Built in fall 2026 by **Team 11** for COP 4331C at UCF, led by **Ruba Ismail**. The full team is listed in the [README](README.md#-the-team).
 
-| Role                     | Who                                                        |
-| ------------------------ | ---------------------------------------------------------- |
-| Business owner           | Eisai Studio · `contact@eisaistudio.com`                   |
-| Maintainer after handoff | _To be decided by Eisai Studio_                            |
-| Original project lead    | Ruba Ismail ([@rubaismail](https://github.com/rubaismail)) |
+| Role                  | Who                                                        |
+| --------------------- | ---------------------------------------------------------- |
+| Business owner        | Eisai Studio · `contact@eisaistudio.com`                   |
+| Original project lead | Ruba Ismail ([@rubaismail](https://github.com/rubaismail)) |
 
 ---
 
